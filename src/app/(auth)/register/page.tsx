@@ -28,19 +28,33 @@ export default function RegisterPage() {
     setLoading(true)
     setError(null)
 
-    if (!email.endsWith('@studenti.unipd.it')) {
-      setError('Usa la tua email istituzionale @studenti.unipd.it')
+    const isInstitutional = email.endsWith('@studenti.unipd.it')
+    
+    // ✅ CONTROLLO DINAMICO SU DATABASE
+    let isWhitelisted = false
+    if (!isInstitutional) {
+      const { data } = await (supabase as any)
+        .from('whitelist_esterni')
+        .select('email')
+        .eq('email', email.toLowerCase())
+        .maybeSingle() // maybeSingle è meglio di single() qui per evitare errori se non trova nulla
+      
+      if (data) isWhitelisted = true
+    }
+
+    if (!isInstitutional && !isWhitelisted) {
+      setError('Usa la tua email istituzionale @studenti.unipd.it o chiedi l\'accesso come tester.')
       setLoading(false)
       return
     }
 
-    // 1. Registrazione su Supabase Auth
+    // 3. Registrazione su Supabase Auth
     const { data: authData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
-        // Passiamo i dati extra anche qui per sicurezza (utile se usi i trigger SQL)
+        // Passiamo i dati extra anche qui per sicurezza
         data: { nome, cognome } 
       },
     })
@@ -54,12 +68,12 @@ export default function RegisterPage() {
     const userId = authData.user?.id
 
     if (userId) {
-      // 2. Creazione del profilo pubblico (se non hai un trigger SQL automatico)
+      // 4. Creazione del profilo pubblico
       await supabase.from('studente').insert([
         { id: userId, nome, cognome, email }
       ] as any)
 
-      // 3. Salvataggio delle informazioni universitarie per l'Emote!
+      // 5. Salvataggio delle informazioni universitarie per l'Emote!
       if (corsoId && annoInizio && annoAppartenenza) {
         const { error: corsoError } = await supabase.from('studente_corso').insert([
           {
@@ -76,7 +90,13 @@ export default function RegisterPage() {
       }
     }
 
-    alert("Controlla la tua email @studenti.unipd.it per confermare l'account!")
+    // ✅ 6. Messaggio di conferma dinamico
+    if (isInstitutional) {
+      alert("Controlla la tua email @studenti.unipd.it per confermare l'account!")
+    } else {
+      alert("Controlla la tua email per confermare l'account, tester!")
+    }
+    
     router.push('/')
     setLoading(false)
   }
