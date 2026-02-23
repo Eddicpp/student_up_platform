@@ -59,45 +59,57 @@ export default function TeamWorkspacePage() {
   const [hoveredMember, setHoveredMember] = useState<string | null>(null)
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null)
 
-  // Estrai colore dominante dall'immagine
+  // 1. MODIFICA: Try-Catch aggiunto per proteggere l'esecuzione del Canvas (CORS error prevention)
   const extractColor = (imageUrl: string) => {
+    if (!imageUrl) return;
+    
     const img = new Image()
     img.crossOrigin = 'Anonymous'
     img.src = imageUrl
 
     img.onload = () => {
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
+      try {
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
 
-      const size = 50
-      canvas.width = size
-      canvas.height = size
-      ctx.drawImage(img, 0, 0, size, size)
+        const size = 50
+        canvas.width = size
+        canvas.height = size
+        ctx.drawImage(img, 0, 0, size, size)
 
-      const imageData = ctx.getImageData(0, 0, size, size).data
-      let r = 0, g = 0, b = 0, count = 0
+        const imageData = ctx.getImageData(0, 0, size, size).data
+        let r = 0, g = 0, b = 0, count = 0
 
-      for (let i = 0; i < imageData.length; i += 4) {
-        const red = imageData[i]
-        const green = imageData[i + 1]
-        const blue = imageData[i + 2]
-        const brightness = (red + green + blue) / 3
+        for (let i = 0; i < imageData.length; i += 4) {
+          const red = imageData[i]
+          const green = imageData[i + 1]
+          const blue = imageData[i + 2]
+          const brightness = (red + green + blue) / 3
 
-        if (brightness > 30 && brightness < 220) {
-          r += red
-          g += green
-          b += blue
-          count++
+          if (brightness > 30 && brightness < 220) {
+            r += red
+            g += green
+            b += blue
+            count++
+          }
         }
-      }
 
-      if (count > 0) {
-        r = Math.round(r / count)
-        g = Math.round(g / count)
-        b = Math.round(b / count)
-        setDominantColor(`${r}, ${g}, ${b}`)
+        if (count > 0) {
+          r = Math.round(r / count)
+          g = Math.round(g / count)
+          b = Math.round(b / count)
+          setDominantColor(`${r}, ${g}, ${b}`)
+        }
+      } catch (e) {
+        console.error("Errore estrazione colore (possibile problema CORS):", e)
+        setDominantColor('239, 68, 68') // Fallback a rosso standard
       }
+    }
+    
+    img.onerror = () => {
+      console.warn("Impossibile caricare l'immagine per l'estrazione del colore.")
+      setDominantColor('239, 68, 68')
     }
   }
 
@@ -138,7 +150,7 @@ export default function TeamWorkspacePage() {
           .single()
 
         if (!myParticipation || myParticipation.stato !== 'accepted') {
-          router.replace('/dashboard/my-projects')
+          router.replace('/dashboard/my_teams') // Corretto: indirizziamo a my_teams
           return
         }
       }
@@ -217,6 +229,7 @@ export default function TeamWorkspacePage() {
   }
 
   const fetchMessages = async () => {
+    if (!bandoId) return;
     const { data } = await (supabase
       .from('messaggio_team' as any)
       .select(`
@@ -233,7 +246,9 @@ export default function TeamWorkspacePage() {
   }
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || sendingMessage) return
+    // 2. MODIFICA: Controllo di sicurezza fondamentale. Evita crash se currentUser non è ancora pronto.
+    if (!newMessage.trim() || sendingMessage || !currentUser?.id || !bandoId) return
+    
     setSendingMessage(true)
 
     const { error } = await (supabase
@@ -247,7 +262,10 @@ export default function TeamWorkspacePage() {
     if (!error) {
       setNewMessage('')
       await fetchMessages()
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      // Scroll to bottom
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      }, 100)
     }
 
     setSendingMessage(false)
@@ -260,6 +278,7 @@ export default function TeamWorkspacePage() {
   }
 
   const handleLeaveTeam = async () => {
+    if (!currentUser?.id || !bandoId) return;
     if (!window.confirm("Sei sicuro di voler abbandonare il team? Non potrai più rientrare.")) return
 
     const { data: myPart } = await supabase
@@ -276,12 +295,14 @@ export default function TeamWorkspacePage() {
         .update({ stato: 'abandoned' } as any)
         .eq('id', myPart.id)
 
-      router.push('/dashboard')
+      router.push('/dashboard/my_teams') // Corretto: indirizziamo alla dashboard dei team
     }
   }
 
   useEffect(() => {
-    fetchTeamData()
+    if (bandoId) {
+       fetchTeamData()
+    }
   }, [bandoId])
 
   // Realtime messages
@@ -295,7 +316,9 @@ export default function TeamWorkspacePage() {
         schema: 'public',
         table: 'messaggio_team',
         filter: `bando_id=eq.${bandoId}`
-      }, () => {
+      }, (payload) => {
+        // 3. MODIFICA: Invece di fare fetch di tutto, potremmo appendere il payload
+        // Ma per ora manteniamo il fetch garantendo che bandoId sia valido
         fetchMessages()
       })
       .subscribe()
@@ -303,7 +326,15 @@ export default function TeamWorkspacePage() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [bandoId])
+  }, [bandoId]) // rimosso fetchMessages dalle dipendenze se l'hai mai messo, per evitare loop
+
+  // Rileva lo scroll iniziale della chat
+  useEffect(() => {
+    if (messages.length > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages])
+
 
   if (loading) {
     return (
@@ -321,6 +352,12 @@ export default function TeamWorkspacePage() {
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-600 font-medium">{error}</p>
+          <button 
+            onClick={() => router.push('/dashboard/my_teams')}
+            className="mt-4 px-4 py-2 bg-gray-100 rounded-lg text-sm font-medium hover:bg-gray-200"
+          >
+            Torna ai Miei Team
+          </button>
         </div>
       </div>
     )
@@ -354,13 +391,14 @@ export default function TeamWorkspacePage() {
         {/* Back button */}
         <div className="absolute top-4 left-4 sm:top-6 sm:left-6">
           <button 
-            onClick={() => router.push('/dashboard/my-projects')}
+            // 4. MODIFICA: Aggiornato percorso di ritorno
+            onClick={() => router.push('/dashboard/my_teams')}
             className="flex items-center gap-2 bg-white/10 backdrop-blur-md text-white px-4 py-2 rounded-xl font-medium text-sm hover:bg-white/20 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            I miei progetti
+            I miei team
           </button>
         </div>
 
@@ -532,7 +570,7 @@ export default function TeamWorkspacePage() {
                   />
                   <button
                     onClick={sendMessage}
-                    disabled={!newMessage.trim() || sendingMessage}
+                    disabled={!newMessage.trim() || sendingMessage || !currentUser?.id}
                     className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {sendingMessage ? '...' : 'Invia'}
