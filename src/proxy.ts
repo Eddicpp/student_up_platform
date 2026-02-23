@@ -8,6 +8,25 @@ export async function proxy(request: NextRequest) {
     },
   })
 
+  // --- AGGIUNTA: Configurazione Content Security Policy ---
+  // Permettiamo 'unsafe-eval' per Next.js e i domini di Supabase per i dati
+  const cspHeader = `
+    default-src 'self';
+    script-src 'self' 'unsafe-eval' 'unsafe-inline' *.supabase.co;
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' blob: data: *.supabase.co;
+    font-src 'self';
+    object-src 'none';
+    base-uri 'self';
+    form-action 'self';
+    frame-ancestors 'none';
+    connect-src 'self' *.supabase.co;
+    upgrade-insecure-requests;
+  `.replace(/\s{2,}/g, ' ').trim();
+
+  response.headers.set('Content-Security-Policy', cspHeader);
+  // --------------------------------------------------------
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -23,6 +42,7 @@ export async function proxy(request: NextRequest) {
               headers: request.headers,
             },
           })
+          response.headers.set('Content-Security-Policy', cspHeader); // Ri-applichiamo il CSP sulla nuova risposta
           response.cookies.set({ name, value, ...options })
         },
         remove(name: string, options: CookieOptions) {
@@ -32,6 +52,7 @@ export async function proxy(request: NextRequest) {
               headers: request.headers,
             },
           })
+          response.headers.set('Content-Security-Policy', cspHeader); // Ri-applichiamo il CSP
           response.cookies.set({ name, value: '', ...options })
         },
       },
