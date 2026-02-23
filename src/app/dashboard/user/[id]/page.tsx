@@ -48,8 +48,10 @@ export default function PublicProfilePage() {
 
         // Uniamo i dati del corso al profilo
         if (corsoAttuale) {
-          studente.corso_studi = (corsoAttuale.corso as any)?.nome
-          studente.anno_corso = new Date().getFullYear() - corsoAttuale.anno_inizio + 1
+          Object.assign(studente, {
+            corso_studi: (corsoAttuale.corso as any)?.nome,
+            anno_corso: new Date().getFullYear() - corsoAttuale.anno_inizio + 1
+          });
         }
 
         setProfileData(studente)
@@ -142,7 +144,6 @@ export default function PublicProfilePage() {
                 cognome={profileData.cognome}
                 isStaff={profileData.is_system_admin}
                 size="md"
-                layout="horizontal"
               />
               
               <div className="pb-2">
