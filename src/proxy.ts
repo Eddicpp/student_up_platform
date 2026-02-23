@@ -2,20 +2,15 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  })
-
-  // --- AGGIUNTA: Configurazione Content Security Policy ---
-  // Permettiamo 'unsafe-eval' per Next.js e i domini di Supabase per i dati
+  // 1. Definiamo la policy
+  // 'unsafe-eval' serve per far funzionare Next.js
+  // *.supabase.co serve per permettere al sito di parlare con il tuo database e caricare immagini
   const cspHeader = `
     default-src 'self';
     script-src 'self' 'unsafe-eval' 'unsafe-inline' *.supabase.co;
     style-src 'self' 'unsafe-inline';
     img-src 'self' blob: data: *.supabase.co;
-    font-src 'self';
+    font-src 'self' data:;
     object-src 'none';
     base-uri 'self';
     form-action 'self';
@@ -24,8 +19,14 @@ export async function proxy(request: NextRequest) {
     upgrade-insecure-requests;
   `.replace(/\s{2,}/g, ' ').trim();
 
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  })
+
+  // Applichiamo la policy alla risposta iniziale
   response.headers.set('Content-Security-Policy', cspHeader);
-  // --------------------------------------------------------
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -42,7 +43,8 @@ export async function proxy(request: NextRequest) {
               headers: request.headers,
             },
           })
-          response.headers.set('Content-Security-Policy', cspHeader); // Ri-applichiamo il CSP sulla nuova risposta
+          // Riapplichiamo la policy ogni volta che viene generata una nuova risposta per i cookie
+          response.headers.set('Content-Security-Policy', cspHeader);
           response.cookies.set({ name, value, ...options })
         },
         remove(name: string, options: CookieOptions) {
@@ -52,7 +54,7 @@ export async function proxy(request: NextRequest) {
               headers: request.headers,
             },
           })
-          response.headers.set('Content-Security-Policy', cspHeader); // Ri-applichiamo il CSP
+          response.headers.set('Content-Security-Policy', cspHeader);
           response.cookies.set({ name, value: '', ...options })
         },
       },
