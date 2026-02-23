@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import SuperAvatar from '@/components/SuperAvatar'
 
 export default function ManageApplicationPage() {
   const params = useParams()
@@ -12,90 +11,130 @@ export default function ManageApplicationPage() {
   const bandoId = params?.id as string
   const supabase = createClient()
 
-  // STATI
+  // Stati
   const [project, setProject] = useState<any>(null)
   const [applications, setApplications] = useState<any[]>([])
+  const [teamMembers, setTeamMembers] = useState<any[]>([])
   const [selectedApp, setSelectedApp] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   
-  // STATO FILTRO E MODAL
+  // Colore dominante
+  const [dominantColor, setDominantColor] = useState('239, 68, 68')
+  
+  // Tab e modali
+  const [activeTab, setActiveTab] = useState<'candidature' | 'team' | 'impostazioni'>('candidature')
   const [filter, setFilter] = useState<'pending' | 'accepted' | 'rejected'>('pending')
   const [showModal, setShowModal] = useState(false)
   const [modalAction, setModalAction] = useState<'accepted' | 'rejected' | 'pending' | null>(null)
+  
+  // Form impostazioni
+  const [linksForm, setLinksForm] = useState({ github: '', drive: '' })
+  const [savingLinks, setSavingLinks] = useState(false)
 
-  // STATISTICHE DERIVATE
+  // Estrai colore dominante
+  const extractColor = (imageUrl: string) => {
+    const img = new Image()
+    img.crossOrigin = 'Anonymous'
+    img.src = imageUrl
+
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+
+      const size = 50
+      canvas.width = size
+      canvas.height = size
+      ctx.drawImage(img, 0, 0, size, size)
+
+      const imageData = ctx.getImageData(0, 0, size, size).data
+      let r = 0, g = 0, b = 0, count = 0
+
+      for (let i = 0; i < imageData.length; i += 4) {
+        const red = imageData[i]
+        const green = imageData[i + 1]
+        const blue = imageData[i + 2]
+        const brightness = (red + green + blue) / 3
+
+        if (brightness > 30 && brightness < 220) {
+          r += red
+          g += green
+          b += blue
+          count++
+        }
+      }
+
+      if (count > 0) {
+        r = Math.round(r / count)
+        g = Math.round(g / count)
+        b = Math.round(b / count)
+        setDominantColor(`${r}, ${g}, ${b}`)
+      }
+    }
+  }
+
+  // Statistiche
   const stats = {
     total: applications.length,
     pending: applications.filter(a => a.stato === 'pending').length,
     accepted: applications.filter(a => a.stato === 'accepted').length,
+    rejected: applications.filter(a => a.stato === 'rejected').length,
   }
 
-  // FETCH DATI
+  // Fetch dati
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true)
       
-      // 1. Prendi il Progetto
+      // Progetto
       const { data: projectData } = await supabase
         .from('bando')
         .select('*')
         .eq('id', bandoId)
         .single()
       
-      if (projectData) setProject(projectData)
+      if (projectData) {
+        setProject(projectData)
+        const projectAny = projectData as any
+        setLinksForm({
+          github: projectAny.github_url || '',
+          drive: projectAny.drive_url || ''
+        })
+        if (projectData.foto_url) {
+          extractColor(projectData.foto_url)
+        }
+      }
 
-      // 2. Prendi le Candidature (Includendo l'email per il Broadcast!)
+      // Candidature
       const { data: appsData } = await supabase
         .from('partecipazione')
         .select(`
           *,
-          studente:studente_id ( id, nome, cognome, avatar_url, bio, email )
+          studente:studente_id (
+            id, nome, cognome, avatar_url, bio, email,
+            studente_corso (
+              anno_inizio,
+              corso:corso_id ( nome )
+            )
+          )
         `)
         .eq('bando_id', bandoId)
         .order('data_candidatura', { ascending: false })
 
       if (appsData) setApplications(appsData)
+
+      // Team members (accepted)
+      const members = appsData?.filter(a => a.stato === 'accepted') || []
+      setTeamMembers(members)
+
       setLoading(false)
     }
 
     if (bandoId) fetchData()
   }, [bandoId, supabase])
 
-  // --- AZIONI EXTRA: BROADCAST ED ELIMINAZIONE ---
-
-  const handleBroadcast = () => {
-    // Prende le email di tutti i membri 'accepted'
-    const teamEmails = applications
-      .filter(a => a.stato === 'accepted' && a.studente?.email)
-      .map(a => a.studente.email)
-      .join(',') // Unisce le email separate da virgola (BCC standard)
-    
-    if (!teamEmails) {
-      alert("⚠️ Nessun membro confermato nel team a cui inviare il messaggio!")
-      return
-    }
-
-    // Apre il client di posta predefinito con le mail in Copia Nascosta (BCC)
-    const subject = encodeURIComponent(`Aggiornamento Team: ${project?.titolo}`)
-    window.location.href = `mailto:?bcc=${teamEmails}&subject=${subject}`
-  }
-
-  const handleDeleteProject = async () => {
-    const confirmation = prompt(`⚠️ ATTENZIONE: Stai per eliminare definitivamente il progetto "${project?.titolo}".\n\nScrivi ELIMINA per confermare:`)
-    
-    if (confirmation === 'ELIMINA') {
-      const { error } = await supabase.from('bando').delete().eq('id', bandoId)
-      if (!error) {
-        alert("Progetto eliminato con successo.")
-        router.push('/dashboard')
-      } else {
-        alert("Errore durante l'eliminazione: " + error.message)
-      }
-    }
-  }
-
-  // --- AZIONI CANDIDATURA ---
+  // Azioni candidatura
   const handleAction = async () => {
     if (!selectedApp || !modalAction) return
     setActionLoading(true)
@@ -110,261 +149,568 @@ export default function ManageApplicationPage() {
         app.id === selectedApp.id ? { ...app, stato: modalAction } : app
       ))
       setSelectedApp({ ...selectedApp, stato: modalAction })
-    } else {
-      alert("Errore: " + error.message)
+      
+      // Aggiorna team members
+      if (modalAction === 'accepted') {
+        setTeamMembers(prev => [...prev, { ...selectedApp, stato: 'accepted' }])
+      } else {
+        setTeamMembers(prev => prev.filter(m => m.id !== selectedApp.id))
+      }
     }
     
     setActionLoading(false)
     setShowModal(false)
   }
 
-  if (loading) return <div className="p-20 text-center font-black animate-pulse text-red-800">CARICAMENTO QUARTIER GENERALE...</div>
-  if (!project) return <div className="p-20 text-center font-black">Progetto non trovato.</div>
+  // Gestione ruoli
+  const handleRoleChange = async (partecipazioneId: string, nuovoRuolo: 'admin' | 'membro') => {
+    if (!window.confirm(`Cambiare ruolo in ${nuovoRuolo.toUpperCase()}?`)) return
+
+    const { error } = await supabase
+      .from('partecipazione')
+      .update({ ruolo: nuovoRuolo } as any)
+      .eq('id', partecipazioneId)
+      
+    if (!error) {
+      setTeamMembers(prev => prev.map(m => 
+        m.id === partecipazioneId ? { ...m, ruolo: nuovoRuolo } : m
+      ))
+      setApplications(prev => prev.map(a => 
+        a.id === partecipazioneId ? { ...a, ruolo: nuovoRuolo } : a
+      ))
+    }
+  }
+
+  const handleKickMember = async (partecipazioneId: string) => {
+    if (!window.confirm('Rimuovere questo membro dal team?')) return
+
+    const { error } = await supabase
+      .from('partecipazione')
+      .delete()
+      .eq('id', partecipazioneId)
+      
+    if (!error) {
+      setTeamMembers(prev => prev.filter(m => m.id !== partecipazioneId))
+      setApplications(prev => prev.filter(a => a.id !== partecipazioneId))
+    }
+  }
+
+  // Impostazioni progetto
+  const handleToggleStatus = async () => {
+    const nuovoStato = project.stato === 'aperto' ? 'chiuso' : 'aperto'
+    const messaggio = nuovoStato === 'chiuso' 
+      ? "Chiudere le candidature?" 
+      : "Riaprire le candidature?"
+      
+    if (!window.confirm(messaggio)) return
+
+    const { error } = await supabase
+      .from('bando')
+      .update({ stato: nuovoStato })
+      .eq('id', bandoId)
+      
+    if (!error) {
+      setProject((prev: any) => ({ ...prev, stato: nuovoStato }))
+    }
+  }
+
+  const handleSaveLinks = async () => {
+    setSavingLinks(true)
+    
+    const { error } = await supabase
+      .from('bando')
+      .update({
+        github_url: linksForm.github,
+        drive_url: linksForm.drive
+      } as any)
+      .eq('id', bandoId)
+    
+    if (!error) {
+      setProject((prev: any) => ({ 
+        ...prev, 
+        github_url: linksForm.github, 
+        drive_url: linksForm.drive 
+      }))
+    }
+    
+    setSavingLinks(false)
+  }
+
+  const handleDeleteProject = async () => {
+    const confirmation = prompt(`Scrivi "ELIMINA" per confermare l'eliminazione di "${project?.titolo}"`)
+    
+    if (confirmation === 'ELIMINA') {
+      const { error } = await supabase.from('bando').delete().eq('id', bandoId)
+      if (!error) {
+        router.push('/dashboard')
+      }
+    }
+  }
+
+  const handleBroadcast = () => {
+    const teamEmails = teamMembers
+      .filter(m => m.studente?.email)
+      .map(m => m.studente.email)
+      .join(',')
+    
+    if (teamEmails) {
+      const subject = encodeURIComponent(`[${project?.titolo}] Aggiornamento`)
+      window.location.href = `mailto:?bcc=${teamEmails}&subject=${subject}`
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-gray-300 border-t-red-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500 font-medium">Caricamento...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!project) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <p className="text-gray-500">Progetto non trovato</p>
+      </div>
+    )
+  }
 
   const filteredApps = applications.filter(a => a.stato === filter)
 
   return (
-    <div className="max-w-7xl mx-auto pb-20 px-4 space-y-8">
-      
-      {/* 🚀 1. HERO BANNER E STATISTICHE */}
-      <div className="relative rounded-[3rem] overflow-hidden shadow-2xl border-4 border-black bg-black group">
-        
-        {/* Immagine di Copertina Sfocata/Scurita */}
-        <div className="absolute inset-0 opacity-40">
-          {project.foto_url ? (
-            <img src={project.foto_url} alt="Cover" className="w-full h-full object-cover blur-sm scale-105" />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-red-900 to-black" />
-          )}
-        </div>
-
-        <div className="relative z-10 p-8 md:p-12 flex flex-col md:flex-row gap-8 items-start md:items-end justify-between min-h-[300px]">
-          
-          <div className="space-y-4 flex-1">
-            <span className="bg-red-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg">
-              Quartier Generale
-            </span>
-            <h1 className="text-4xl md:text-6xl font-black text-white uppercase italic tracking-tighter leading-none drop-shadow-xl">
-              {project.titolo}
-            </h1>
-            
-            {/* 📊 Statistiche Rapide */}
-            <div className="flex flex-wrap gap-4 pt-4">
-              <div className="bg-white/10 backdrop-blur-md border border-white/20 px-6 py-3 rounded-2xl">
-                <p className="text-white/60 text-[10px] font-black uppercase tracking-widest mb-1">Candidati Totali</p>
-                <p className="text-3xl font-black text-white leading-none">{stats.total}</p>
-              </div>
-              <div className="bg-orange-500/20 backdrop-blur-md border border-orange-500/30 px-6 py-3 rounded-2xl">
-                <p className="text-orange-200 text-[10px] font-black uppercase tracking-widest mb-1">Da Valutare</p>
-                <p className="text-3xl font-black text-orange-400 leading-none">{stats.pending}</p>
-              </div>
-              <div className="bg-green-500/20 backdrop-blur-md border border-green-500/30 px-6 py-3 rounded-2xl">
-                <p className="text-green-200 text-[10px] font-black uppercase tracking-widest mb-1">Team Attuale</p>
-                <p className="text-3xl font-black text-green-400 leading-none">{stats.accepted}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottoni Azione Progetto */}
-          <div className="flex flex-col gap-3 w-full md:w-auto">
-            {/* ✉️ Broadcast Message */}
-            <button 
-              onClick={handleBroadcast}
-              className="flex items-center justify-center gap-2 bg-white text-black font-black uppercase tracking-widest text-xs px-6 py-4 rounded-2xl hover:bg-gray-200 transition-colors shadow-xl"
-            >
-              ✉️ Invia Email al Team
-            </button>
-            <div className="flex gap-3">
-              <Link 
-                href={`/dashboard/create-project?edit=${project.id}`}
-                className="flex-1 text-center bg-white/10 backdrop-blur-md text-white font-black uppercase tracking-widest text-xs px-6 py-4 rounded-2xl border border-white/20 hover:bg-white/20 transition-colors"
-              >
-                ✏️ Modifica
-              </Link>
+    <div 
+      className="min-h-screen pb-20 transition-colors duration-700"
+      style={{ backgroundColor: `rgba(${dominantColor}, 0.08)` }}
+    >
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-4">
               <button 
-                onClick={handleDeleteProject}
-                className="flex-1 bg-red-950/50 backdrop-blur-md text-red-400 font-black uppercase tracking-widest text-xs px-6 py-4 rounded-2xl border border-red-900 hover:bg-red-600 hover:text-white hover:border-red-600 transition-colors"
+                onClick={() => router.push(`/dashboard/my_teams/${bandoId}`)}
+                className="p-2 hover:bg-gray-100 rounded-xl text-gray-500 hover:text-gray-900 transition-colors"
               >
-                🗑️ Elimina
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
               </button>
+              <div>
+                <p className="text-xs text-gray-500 font-medium mb-1">Gestione Progetto</p>
+                <h1 className="text-xl font-bold text-gray-900">{project.titolo}</h1>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${
+                project.stato === 'chiuso' 
+                  ? 'bg-gray-100 text-gray-600' 
+                  : 'bg-green-100 text-green-700'
+              }`}>
+                {project.stato === 'chiuso' ? '🔒 Chiuso' : '🟢 Aperto'}
+              </span>
             </div>
           </div>
 
-        </div>
-      </div>
-
-
-      {/* 🚀 2. GESTIONE CANDIDATI (Layout Originale con Filtri) */}
-      <div className="flex gap-4 border-b-2 border-gray-200 pb-4 overflow-x-auto">
-        <button onClick={() => setFilter('pending')} className={`text-xl font-black uppercase tracking-tighter transition-all whitespace-nowrap ${filter === 'pending' ? 'text-black' : 'text-gray-300 hover:text-gray-500'}`}>
-          ⏳ In Attesa ({stats.pending})
-        </button>
-        <button onClick={() => setFilter('accepted')} className={`text-xl font-black uppercase tracking-tighter transition-all whitespace-nowrap ${filter === 'accepted' ? 'text-green-600' : 'text-gray-300 hover:text-gray-500'}`}>
-          ✅ Accettati ({stats.accepted})
-        </button>
-        <button onClick={() => setFilter('rejected')} className={`text-xl font-black uppercase tracking-tighter transition-all whitespace-nowrap ${filter === 'rejected' ? 'text-red-800' : 'text-gray-300 hover:text-gray-500'}`}>
-          ❌ Scartati ({stats.total - stats.pending - stats.accepted})
-        </button>
-      </div>
-
-      <div className="grid lg:grid-cols-3 gap-8 min-h-[600px]">
-        {/* LISTA SINISTRA */}
-        <div className="lg:col-span-1 flex flex-col gap-4 max-h-[800px] overflow-y-auto pr-2 pb-10 custom-scrollbar">
-          {filteredApps.length === 0 ? (
-            <div className="text-center p-10 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
-              <span className="text-4xl block mb-2 opacity-50">👻</span>
-              <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">Nessun candidato in questa lista</p>
-            </div>
-          ) : (
-            filteredApps.map((app) => (
+          {/* Tabs */}
+          <div className="flex gap-1 mt-6 bg-gray-100 p-1 rounded-xl w-fit">
+            {[
+              { id: 'candidature' as const, label: 'Candidature', icon: '📨', count: stats.pending },
+              { id: 'team' as const, label: 'Team', icon: '👥', count: stats.accepted },
+              { id: 'impostazioni' as const, label: 'Impostazioni', icon: '⚙️' },
+            ].map(tab => (
               <button
-                key={app.id}
-                onClick={() => setSelectedApp(app)}
-                className={`w-full text-left p-5 rounded-[2rem] border-4 transition-all duration-300 flex items-center gap-4 ${
-                  selectedApp?.id === app.id 
-                    ? 'border-black bg-black text-white shadow-xl scale-[1.02]' 
-                    : 'border-transparent bg-white hover:bg-gray-50 hover:border-gray-200 shadow-sm'
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-white shadow-sm text-gray-900'
+                    : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                <div className="shrink-0">
-                  {app.studente?.avatar_url ? (
-                    <img src={app.studente.avatar_url} className="w-14 h-14 rounded-full object-cover border-2 border-white/20" />
-                  ) : (
-                    <div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center font-black text-gray-500 text-xl border-2 border-white/20">
-                      {app.studente?.nome?.[0]}{app.studente?.cognome?.[0]}
-                    </div>
-                  )}
-                </div>
-                <div className="overflow-hidden">
-                  <p className={`font-black uppercase tracking-tight truncate leading-none mb-1 ${selectedApp?.id === app.id ? 'text-white' : 'text-black'}`}>
-                    {app.studente?.nome} {app.studente?.cognome}
-                  </p>
-                  <p className={`text-[10px] font-bold uppercase tracking-widest truncate ${selectedApp?.id === app.id ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {new Date(app.data_candidatura).toLocaleDateString('it-IT')}
-                  </p>
-                </div>
+                <span>{tab.icon}</span>
+                {tab.label}
+                {tab.count !== undefined && tab.count > 0 && (
+                  <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
+                    activeTab === tab.id ? 'bg-red-100 text-red-600' : 'bg-gray-200 text-gray-600'
+                  }`}>
+                    {tab.count}
+                  </span>
+                )}
               </button>
-            ))
-          )}
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+        
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
+            <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
+            <p className="text-xs text-gray-500 font-medium mt-1">Totale candidature</p>
+          </div>
+          <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200">
+            <p className="text-3xl font-bold text-amber-600">{stats.pending}</p>
+            <p className="text-xs text-amber-700 font-medium mt-1">In attesa</p>
+          </div>
+          <div className="bg-green-50 rounded-2xl p-4 border border-green-200">
+            <p className="text-3xl font-bold text-green-600">{stats.accepted}</p>
+            <p className="text-xs text-green-700 font-medium mt-1">Nel team</p>
+          </div>
+          <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200">
+            <p className="text-3xl font-bold text-gray-600">{stats.rejected}</p>
+            <p className="text-xs text-gray-500 font-medium mt-1">Rifiutate</p>
+          </div>
         </div>
 
-        {/* DETTAGLIO DESTRA */}
-        <div className="lg:col-span-2">
-          {selectedApp ? (
-            <div className="bg-white h-full rounded-[4rem] border-4 border-gray-100 shadow-2xl p-8 md:p-12 animate-in fade-in slide-in-from-right-8 relative overflow-hidden">
-              <div className="relative z-10 flex flex-col h-full">
-                
-                <div className="flex items-start justify-between mb-8 pb-8 border-b-2 border-gray-50">
-                  <div className="flex items-center gap-6">
-                    {selectedApp.studente?.avatar_url ? (
-                      <img src={selectedApp.studente.avatar_url} className="w-24 h-24 rounded-[2rem] object-cover shadow-lg" />
-                    ) : (
-                      <div className="w-24 h-24 rounded-[2rem] bg-gray-100 flex items-center justify-center font-black text-gray-400 text-3xl shadow-inner">
-                        {selectedApp.studente?.nome?.[0]}{selectedApp.studente?.cognome?.[0]}
+        {/* Tab: Candidature */}
+        {activeTab === 'candidature' && (
+          <div className="space-y-6">
+            {/* Filtri */}
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {[
+                { id: 'pending' as const, label: 'In Attesa', count: stats.pending, color: 'amber' },
+                { id: 'accepted' as const, label: 'Accettate', count: stats.accepted, color: 'green' },
+                { id: 'rejected' as const, label: 'Rifiutate', count: stats.rejected, color: 'gray' },
+              ].map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setFilter(f.id)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm whitespace-nowrap transition-all ${
+                    filter === f.id
+                      ? f.color === 'amber' ? 'bg-amber-500 text-white' :
+                        f.color === 'green' ? 'bg-green-500 text-white' :
+                        'bg-gray-700 text-white'
+                      : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {f.label}
+                  <span className={`px-1.5 py-0.5 rounded-full text-xs ${
+                    filter === f.id ? 'bg-white/20' : 'bg-gray-100'
+                  }`}>
+                    {f.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Lista candidature */}
+            <div className="grid lg:grid-cols-3 gap-6">
+              {/* Lista sinistra */}
+              <div className="lg:col-span-1 space-y-3 max-h-[600px] overflow-y-auto">
+                {filteredApps.length === 0 ? (
+                  <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
+                    <span className="text-4xl block mb-2">📭</span>
+                    <p className="text-gray-500 text-sm">Nessuna candidatura</p>
+                  </div>
+                ) : (
+                  filteredApps.map(app => (
+                    <button
+                      key={app.id}
+                      onClick={() => setSelectedApp(app)}
+                      className={`w-full text-left p-4 rounded-2xl border-2 transition-all ${
+                        selectedApp?.id === app.id
+                          ? 'border-gray-900 bg-gray-900 text-white'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <img 
+                          src={app.studente?.avatar_url || '/default-avatar.png'} 
+                          alt=""
+                          className="w-10 h-10 rounded-xl object-cover"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-semibold truncate ${selectedApp?.id === app.id ? 'text-white' : 'text-gray-900'}`}>
+                            {app.studente?.nome} {app.studente?.cognome}
+                          </p>
+                          <p className={`text-xs ${selectedApp?.id === app.id ? 'text-gray-400' : 'text-gray-500'}`}>
+                            {new Date(app.data_candidatura).toLocaleDateString('it-IT')}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+
+              {/* Dettaglio destra */}
+              <div className="lg:col-span-2">
+                {selectedApp ? (
+                  <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                    {/* Header */}
+                    <div className="flex items-start gap-4 mb-6 pb-6 border-b border-gray-100">
+                      <img 
+                        src={selectedApp.studente?.avatar_url || '/default-avatar.png'} 
+                        alt=""
+                        className="w-16 h-16 rounded-2xl object-cover"
+                      />
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-gray-900">
+                          {selectedApp.studente?.nome} {selectedApp.studente?.cognome}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          {selectedApp.studente?.studente_corso?.[0]?.corso?.nome || 'Corso non specificato'}
+                        </p>
+                        <Link 
+                          href={`/dashboard/user/${selectedApp.studente?.id}`}
+                          className="inline-block mt-2 text-xs font-medium text-blue-600 hover:text-blue-700"
+                        >
+                          Vedi profilo completo →
+                        </Link>
+                      </div>
+                    </div>
+
+                    {/* Bio */}
+                    {selectedApp.studente?.bio && (
+                      <div className="mb-6">
+                        <p className="text-xs font-medium text-gray-500 mb-2">Bio</p>
+                        <p className="text-sm text-gray-600 italic">"{selectedApp.studente.bio}"</p>
                       </div>
                     )}
-                    <div>
-                      <h2 className="text-3xl font-black text-black uppercase tracking-tighter leading-none mb-2">
-                        {selectedApp.studente?.nome} {selectedApp.studente?.cognome}
-                      </h2>
-                      <Link href={`/dashboard/user/${selectedApp.studente?.id}`} className="inline-block bg-gray-100 text-gray-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white transition-colors">
-                        Vedi Profilo Completo →
-                      </Link>
+
+                    {/* Messaggio */}
+                    <div className="mb-6">
+                      <p className="text-xs font-medium text-gray-500 mb-2">Messaggio di candidatura</p>
+                      <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                        <p className="text-gray-700 whitespace-pre-wrap">
+                          {selectedApp.messaggio || <span className="italic text-gray-400">Nessun messaggio</span>}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Azioni */}
+                    {selectedApp.stato === 'pending' ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        <button 
+                          onClick={() => { setModalAction('rejected'); setShowModal(true) }}
+                          className="py-3 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl font-medium text-sm transition-colors"
+                        >
+                          ❌ Rifiuta
+                        </button>
+                        <button 
+                          onClick={() => { setModalAction('accepted'); setShowModal(true) }}
+                          className="py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          ✅ Accetta
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
+                        <p className={`font-medium text-sm ${
+                          selectedApp.stato === 'accepted' ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {selectedApp.stato === 'accepted' ? '✅ Nel team' : '❌ Rifiutata'}
+                        </p>
+                        <button 
+                          onClick={() => { setModalAction('pending'); setShowModal(true) }}
+                          className="text-xs text-gray-500 hover:text-gray-700 underline"
+                        >
+                          Riporta in attesa
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 h-full min-h-[400px] flex items-center justify-center">
+                    <div className="text-center">
+                      <span className="text-5xl block mb-3">👤</span>
+                      <p className="text-gray-500 font-medium">Seleziona una candidatura</p>
                     </div>
                   </div>
-                </div>
-
-                <div className="flex-1">
-                  <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Lettera di Presentazione / Ruolo</h3>
-                  <div className="bg-gray-50 p-8 rounded-[2rem] border-2 border-gray-100">
-                    <p className="text-gray-700 font-medium leading-relaxed whitespace-pre-wrap text-lg">
-                      {selectedApp.messaggio || <span className="italic opacity-50">Nessun messaggio fornito dal candidato.</span>}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="pt-8 mt-8 border-t-2 border-gray-50">
-                  {selectedApp.stato === 'pending' ? (
-                    <div className="grid grid-cols-2 gap-4">
-                      <button 
-                        onClick={() => { setModalAction('rejected'); setShowModal(true) }}
-                        className="bg-red-50 text-red-800 py-6 rounded-[2rem] font-black uppercase tracking-widest text-sm hover:bg-red-800 hover:text-white transition-all border-2 border-transparent hover:border-red-900"
-                      >
-                        ❌ Scarta
-                      </button>
-                      <button 
-                        onClick={() => { setModalAction('accepted'); setShowModal(true) }}
-                        className="bg-green-500 text-white py-6 rounded-[2rem] font-black uppercase tracking-widest text-sm shadow-xl hover:bg-green-400 hover:scale-[1.02] active:scale-95 transition-all border-b-4 border-green-700 active:border-b-0"
-                      >
-                        ✅ Accetta nel Team
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between bg-black/5 p-6 rounded-[2rem] border-2 border-dashed border-black/10">
-                      <p className={`font-black uppercase tracking-widest text-sm ${selectedApp.stato === 'accepted' ? 'text-green-600' : 'text-red-600'}`}>
-                        {selectedApp.stato === 'accepted' ? "✅ Utente nel team" : "❌ Candidatura scartata"}
-                      </p>
-                      {/* Tasto per ripescare/cacciare qualcuno */}
-                      <button 
-                        onClick={() => { setModalAction('pending'); setShowModal(true) }}
-                        className="text-[10px] font-black text-gray-500 hover:text-black uppercase tracking-widest underline underline-offset-4"
-                      >
-                        Riporta in Attesa
-                      </button>
-                    </div>
-                  )}
-                </div>
-
+                )}
               </div>
             </div>
-          ) : (
-            <div className="bg-gray-50 h-full min-h-[500px] rounded-[4rem] border-4 border-dashed border-gray-200 flex flex-col items-center justify-center p-10 text-center">
-              <span className="text-8xl block mb-6 opacity-20">👤</span>
-              <h3 className="text-2xl font-black text-gray-400 uppercase italic">Seleziona un candidato</h3>
-              <p className="text-gray-400 font-bold text-sm mt-2 max-w-sm">Clicca su uno dei profili nella lista a sinistra per leggere la sua presentazione.</p>
-            </div>
-          )}
-        </div>
-      </div>
+          </div>
+        )}
 
-      {/* MODAL DI CONFERMA */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-[3rem] p-10 max-w-md w-full shadow-2xl border-4 border-black animate-in zoom-in-95 duration-200">
-            <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-4 text-center">
-              Sei sicuro?
-            </h3>
-            <p className="text-gray-600 font-medium text-center mb-8">
-              Stai per {
-                modalAction === 'accepted' ? 'ACCETTARE' : 
-                modalAction === 'rejected' ? 'SCARTARE' : 
-                'RIPORTARE IN ATTESA' // ✅ Gestisce il caso 'pending'
-              } 
-              <span className="font-black text-black block mt-1">
-                {selectedApp?.studente?.nome} {selectedApp?.studente?.cognome}
-              </span>
-            </p>
-            <div className="flex flex-col gap-3">
-              <button 
-                onClick={handleAction} disabled={actionLoading}
-                className={`py-4 rounded-2xl font-black uppercase tracking-widest text-sm text-white transition-all ${
-                  modalAction === 'accepted' ? 'bg-green-600 hover:bg-green-500' : 
-                  modalAction === 'rejected' ? 'bg-red-800 hover:bg-red-700' : 'bg-orange-500 hover:bg-orange-400'
+        {/* Tab: Team */}
+        {activeTab === 'team' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">Membri del Team ({teamMembers.length})</h2>
+              <button
+                onClick={handleBroadcast}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium text-sm transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Email a tutti
+              </button>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {teamMembers.map(member => (
+                <div key={member.id} className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
+                  <div className="flex items-start gap-3 mb-4">
+                    <img 
+                      src={member.studente?.avatar_url || '/default-avatar.png'} 
+                      alt=""
+                      className="w-12 h-12 rounded-xl object-cover"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 truncate">
+                        {member.studente?.nome} {member.studente?.cognome}
+                      </p>
+                      <p className={`text-xs font-medium ${
+                        member.ruolo === 'admin' ? 'text-blue-600' : 'text-gray-400'
+                      }`}>
+                        {member.ruolo === 'admin' ? '🛡️ Admin' : '👤 Membro'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    {member.ruolo !== 'admin' ? (
+                      <button
+                        onClick={() => handleRoleChange(member.id, 'admin')}
+                        className="flex-1 py-2 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      >
+                        Promuovi Admin
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleRoleChange(member.id, 'membro')}
+                        className="flex-1 py-2 text-xs font-medium text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                      >
+                        Rimuovi Admin
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleKickMember(member.id)}
+                      className="py-2 px-3 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      ❌
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {teamMembers.length === 0 && (
+                <div className="col-span-full bg-white rounded-2xl border-2 border-dashed border-gray-200 p-8 text-center">
+                  <span className="text-4xl block mb-2">👥</span>
+                  <p className="text-gray-500">Nessun membro nel team</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Tab: Impostazioni */}
+        {activeTab === 'impostazioni' && (
+          <div className="space-y-6 max-w-2xl">
+            {/* Link */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Link di Progetto</h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">GitHub Repository</label>
+                  <input
+                    type="url"
+                    value={linksForm.github}
+                    onChange={(e) => setLinksForm({ ...linksForm, github: e.target.value })}
+                    placeholder="https://github.com/..."
+                    className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Google Drive</label>
+                  <input
+                    type="url"
+                    value={linksForm.drive}
+                    onChange={(e) => setLinksForm({ ...linksForm, drive: e.target.value })}
+                    placeholder="https://drive.google.com/..."
+                    className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
+                  />
+                </div>
+                <button
+                  onClick={handleSaveLinks}
+                  disabled={savingLinks}
+                  className="w-full py-3 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
+                >
+                  {savingLinks ? 'Salvataggio...' : 'Salva Link'}
+                </button>
+              </div>
+            </div>
+
+            {/* Stato progetto */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Stato Candidature</h3>
+              <p className="text-sm text-gray-500 mb-4">
+                {project.stato === 'aperto' 
+                  ? 'Il progetto è aperto e accetta nuove candidature.'
+                  : 'Il progetto è chiuso, nessuna nuova candidatura possibile.'
+                }
+              </p>
+              <button
+                onClick={handleToggleStatus}
+                className={`w-full py-3 rounded-xl font-medium transition-colors ${
+                  project.stato === 'aperto'
+                    ? 'bg-amber-100 hover:bg-amber-200 text-amber-700'
+                    : 'bg-green-100 hover:bg-green-200 text-green-700'
                 }`}
               >
-                {actionLoading ? 'Attendi...' : 'Sì, Conferma'}
+                {project.stato === 'aperto' ? '🔒 Chiudi Candidature' : '🔓 Riapri Candidature'}
               </button>
-              <button 
-                onClick={() => setShowModal(false)} disabled={actionLoading}
-                className="py-4 rounded-2xl font-black uppercase tracking-widest text-sm bg-gray-100 text-gray-600 hover:bg-gray-200"
+            </div>
+
+            {/* Danger Zone */}
+            <div className="bg-red-50 rounded-2xl border border-red-200 p-6">
+              <h3 className="text-lg font-semibold text-red-700 mb-2">⚠️ Zona Pericolosa</h3>
+              <p className="text-sm text-red-600 mb-4">
+                Queste azioni sono irreversibili.
+              </p>
+              <button
+                onClick={handleDeleteProject}
+                className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors"
+              >
+                🗑️ Elimina Progetto
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Modal conferma */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Conferma azione</h3>
+            <p className="text-gray-500 mb-6">
+              {modalAction === 'accepted' && `Accettare ${selectedApp?.studente?.nome} nel team?`}
+              {modalAction === 'rejected' && `Rifiutare la candidatura di ${selectedApp?.studente?.nome}?`}
+              {modalAction === 'pending' && `Riportare ${selectedApp?.studente?.nome} in attesa?`}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowModal(false)}
+                disabled={actionLoading}
+                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
               >
                 Annulla
+              </button>
+              <button
+                onClick={handleAction}
+                disabled={actionLoading}
+                className={`flex-1 py-3 rounded-xl font-medium text-white transition-colors ${
+                  modalAction === 'accepted' ? 'bg-green-600 hover:bg-green-700' :
+                  modalAction === 'rejected' ? 'bg-red-600 hover:bg-red-700' :
+                  'bg-amber-500 hover:bg-amber-600'
+                }`}
+              >
+                {actionLoading ? '...' : 'Conferma'}
               </button>
             </div>
           </div>
         </div>
       )}
-      
     </div>
   )
 }

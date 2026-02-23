@@ -1,45 +1,112 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-import SuperAvatar from '@/components/SuperAvatar'
+interface TeamMember {
+  id: string
+  nome: string
+  cognome: string
+  avatar_url: string | null
+  email: string
+  bio: string | null
+  ruolo_team: 'admin' | 'membro'
+  nome_corso: string
+  anno_inizio_corso: number | null
+  partecipazione_id: string
+}
+
+interface Message {
+  id: string
+  testo: string
+  created_at: string
+  studente: {
+    id: string
+    nome: string
+    cognome: string
+    avatar_url: string | null
+  }
+}
 
 export default function TeamWorkspacePage() {
   const params = useParams()
   const bandoId = params?.id as string
   const supabase = createClient()
   const router = useRouter()
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // STATI DATI
+  // Stati dati
   const [project, setProject] = useState<any>(null)
-  const [teamMembers, setTeamMembers] = useState<any[]>([])
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [leader, setLeader] = useState<any>(null)
-  const [pendingApps, setPendingApps] = useState<any[]>([])
-  
-  // STATI RUOLI E PERMESSI
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [isOwner, setIsOwner] = useState(false)
   
-  // STATI MODALI E CARICAMENTO
+  // Colore dominante
+  const [dominantColor, setDominantColor] = useState('239, 68, 68')
+  
+  // Chat
+  const [messages, setMessages] = useState<Message[]>([])
+  const [newMessage, setNewMessage] = useState('')
+  const [sendingMessage, setSendingMessage] = useState(false)
+  
+  // UI
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false)
-  
-  // FORM MODIFICA LINK
-  const [linksForm, setLinksForm] = useState({ github: '', drive: '' })
-  const [isSavingLinks, setIsSavingLinks] = useState(false)
+  const [hoveredMember, setHoveredMember] = useState<string | null>(null)
+  const [copiedEmail, setCopiedEmail] = useState<string | null>(null)
 
-  // CARICAMENTO PRINCIPALE
+  // Estrai colore dominante dall'immagine
+  const extractColor = (imageUrl: string) => {
+    const img = new Image()
+    img.crossOrigin = 'Anonymous'
+    img.src = imageUrl
+
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+
+      const size = 50
+      canvas.width = size
+      canvas.height = size
+      ctx.drawImage(img, 0, 0, size, size)
+
+      const imageData = ctx.getImageData(0, 0, size, size).data
+      let r = 0, g = 0, b = 0, count = 0
+
+      for (let i = 0; i < imageData.length; i += 4) {
+        const red = imageData[i]
+        const green = imageData[i + 1]
+        const blue = imageData[i + 2]
+        const brightness = (red + green + blue) / 3
+
+        if (brightness > 30 && brightness < 220) {
+          r += red
+          g += green
+          b += blue
+          count++
+        }
+      }
+
+      if (count > 0) {
+        r = Math.round(r / count)
+        g = Math.round(g / count)
+        b = Math.round(b / count)
+        setDominantColor(`${r}, ${g}, ${b}`)
+      }
+    }
+  }
+
+  // Fetch dati
   const fetchTeamData = async () => {
     if (!bandoId) return
     setLoading(true)
-  
+
     try {
-      // 1. Capiamo chi è l'utente loggato
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         router.push('/login')
@@ -47,22 +114,21 @@ export default function TeamWorkspacePage() {
       }
       setCurrentUser(user)
 
-      // 2. Dati del Bando e dei Creatori
+      // Dati bando
       const { data: bandoData, error: bandoError } = await supabase
         .from('bando')
         .select(`
           *,
-          creatore_studente:creatore_studente_id (id, nome, cognome, avatar_url, email),
-          creatore_azienda:creatore_azienda_id (id, nome, logo_url, email)
+          creatore_studente:creatore_studente_id (id, nome, cognome, avatar_url, email, bio)
         `)
         .eq('id', bandoId)
         .single()
-  
+
       if (bandoError) throw bandoError
 
-      // BLOCCO DI SICUREZZA REALE:
-      const checkIsOwner = bandoData.creatore_studente_id === user.id || bandoData.creatore_azienda_id === user.id;
-
+      // Controllo accesso
+      const checkIsOwner = bandoData.creatore_studente_id === user.id
+      
       if (!checkIsOwner) {
         const { data: myParticipation } = await supabase
           .from('partecipazione')
@@ -71,47 +137,36 @@ export default function TeamWorkspacePage() {
           .eq('studente_id', user.id)
           .single()
 
-        // Se lo stato non è accepted (es. abandoned), lo buttiamo fuori subito
         if (!myParticipation || myParticipation.stato !== 'accepted') {
-          router.replace('/dashboard/my_projects')
+          router.replace('/dashboard/my-projects')
           return
         }
       }
-      
+
       setProject(bandoData)
-      setLinksForm({ 
-        github: (bandoData as any)?.github_url || '', 
-        drive: (bandoData as any)?.drive_url || '' 
-      })
-  
-      let detectedLeader = null;
-  
-      const cStudente = Array.isArray(bandoData?.creatore_studente) ? bandoData.creatore_studente[0] : bandoData?.creatore_studente;
-      const cAzienda = Array.isArray(bandoData?.creatore_azienda) ? bandoData.creatore_azienda[0] : bandoData?.creatore_azienda;
-  
-      if (cStudente && cStudente.id) {
-        detectedLeader = {
+      setIsOwner(checkIsOwner)
+
+      // Estrai colore dal banner
+      if (bandoData.foto_url) {
+        extractColor(bandoData.foto_url)
+      }
+
+      // Leader
+      const cStudente = bandoData?.creatore_studente
+      if (cStudente) {
+        setLeader({
           id: cStudente.id,
-          nome: `${cStudente.nome || ''} ${cStudente.cognome || ''}`.trim(),
+          nome: cStudente.nome,
+          cognome: cStudente.cognome,
           avatar_url: cStudente.avatar_url,
           email: cStudente.email,
+          bio: cStudente.bio,
           ruolo: 'Owner'
-        };
-      } else if (cAzienda && cAzienda.id) {
-        detectedLeader = {
-          id: cAzienda.id,
-          nome: cAzienda.nome || 'Azienda Sponsor',
-          avatar_url: cAzienda.logo_url,
-          email: cAzienda.email,
-          ruolo: 'Owner'
-        };
+        })
       }
-  
-      setLeader(detectedLeader);
-      setIsOwner(checkIsOwner);
-  
-      // 3. Membri del Team (Join con studente_corso per recuperare le info universitarie)
-      const { data: membersData, error: membersError } = await supabase
+
+      // Membri team
+      const { data: membersData } = await supabase
         .from('partecipazione')
         .select(`
           id, 
@@ -126,36 +181,34 @@ export default function TeamWorkspacePage() {
         `)
         .eq('bando_id', bandoId)
         .eq('stato', 'accepted')
-  
-      if (membersError) throw membersError
 
       const formattedMembers = membersData?.map((m: any) => {
-        const corsoInfo = m.studente?.studente_corso?.[0]; // Prendiamo il primo corso trovato
+        const corsoInfo = m.studente?.studente_corso?.[0]
         return {
           partecipazione_id: m.id,
-          ...m.studente,
-          ruolo_team: m.ruolo,
-          nome_corso: corsoInfo?.corso?.nome || 'Corso non specificato',
+          id: m.studente?.id,
+          nome: m.studente?.nome,
+          cognome: m.studente?.cognome,
+          avatar_url: m.studente?.avatar_url,
+          email: m.studente?.email,
+          bio: m.studente?.bio,
+          ruolo_team: m.ruolo || 'membro',
+          nome_corso: corsoInfo?.corso?.nome || 'Non specificato',
           anno_inizio_corso: corsoInfo?.anno_inizio
         }
-      }) || [];
+      }) || []
 
       setTeamMembers(formattedMembers)
 
-      // 4. Permessi Admin e Candidature Pendenti
-      const userMemberData = formattedMembers.find((m: any) => m.id === user?.id);
+      // Permessi
+      const userMemberData = formattedMembers.find(m => m.id === user?.id)
       if (checkIsOwner || userMemberData?.ruolo_team === 'admin') {
-         setIsAdmin(true);
-         
-         const { data: pending } = await supabase
-            .from('partecipazione')
-            .select('id, messaggio, studente:studente_id(nome, cognome, avatar_url)')
-            .eq('bando_id', bandoId)
-            .eq('stato', 'pending')
-         
-         setPendingApps(pending || [])
+        setIsAdmin(true)
       }
-  
+
+      // Messaggi chat
+      await fetchMessages()
+
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -163,402 +216,472 @@ export default function TeamWorkspacePage() {
     }
   }
 
-  useEffect(() => {
-    fetchTeamData()
-  }, [bandoId])
+  const fetchMessages = async () => {
+    const { data } = await (supabase
+      .from('messaggio_team' as any)
+      .select(`
+        id,
+        testo,
+        created_at,
+        studente:studente_id (id, nome, cognome, avatar_url)
+      `)
+      .eq('bando_id', bandoId)
+      .order('created_at', { ascending: true })
+      .limit(50) as any)
 
-  // --- AZIONI OWNER E ADMIN ---
-
-  const handleUpdateLinks = async () => {
-    setIsSavingLinks(true)
-    
-    // Aggiungiamo 'as any' all'oggetto che stiamo inviando
-    const { error } = await supabase.from('bando').update({
-      github_url: linksForm.github,
-      drive_url: linksForm.drive
-    } as any).eq('id', bandoId)
-    
-    if (!error) {
-      setProject((prev: any) => prev ? { ...prev, github_url: linksForm.github, drive_url: linksForm.drive } : prev)
-      setIsLinkModalOpen(false)
-    } else {
-      alert(`Errore: ${error.message}`)
-    }
-    setIsSavingLinks(false)
+    if (data) setMessages(data)
   }
 
-  const handleRoleChange = async (partecipazioneId: string, nuovoRuolo: 'admin' | 'membro') => {
-    if (!window.confirm(`Sei sicuro di voler cambiare il ruolo in ${nuovoRuolo.toUpperCase()}?`)) return;
-    
-    // Aggiungiamo 'as any' all'oggetto dell'update
-    const { error } = await supabase
-      .from('partecipazione')
-      .update({ ruolo: nuovoRuolo } as any)
-      .eq('id', partecipazioneId)
-      
+  const sendMessage = async () => {
+    if (!newMessage.trim() || sendingMessage) return
+    setSendingMessage(true)
+
+    const { error } = await (supabase
+      .from('messaggio_team' as any)
+      .insert({
+        bando_id: bandoId,
+        studente_id: currentUser.id,
+        testo: newMessage.trim()
+      }) as any)
+
     if (!error) {
-      fetchTeamData();
-    } else {
-      alert(`Impossibile cambiare ruolo: ${error.message}`)
+      setNewMessage('')
+      await fetchMessages()
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
+
+    setSendingMessage(false)
   }
 
-  const handleKickMember = async (partecipazioneId: string) => {
-    if (!window.confirm('ATTENZIONE: Stai per espellere questo utente dal team. Procedere?')) return;
-    const { error } = await supabase.from('partecipazione').delete().eq('id', partecipazioneId)
-    if (!error) {
-      fetchTeamData();
-    } else {
-      alert(`Impossibile rimuovere membro: ${error.message}`)
-    }
+  const copyEmail = (email: string) => {
+    navigator.clipboard.writeText(email)
+    setCopiedEmail(email)
+    setTimeout(() => setCopiedEmail(null), 2000)
   }
 
-  const handleToggleStatus = async () => {
-    const nuovoStato = project.stato === 'aperto' ? 'chiuso' : 'aperto';
-    const messaggio = nuovoStato === 'chiuso' 
-      ? "Sei sicuro di voler CHIUDERE le candidature? Il progetto apparirà oscurato in Home e nessuno potrà più candidarsi." 
-      : "Vuoi RIAPRIRE le candidature al pubblico?";
-      
-    if (!window.confirm(messaggio)) return;
+  const handleLeaveTeam = async () => {
+    if (!window.confirm("Sei sicuro di voler abbandonare il team? Non potrai più rientrare.")) return
 
-    const { error } = await supabase.from('bando').update({ stato: nuovoStato }).eq('id', bandoId);
-    if (!error) {
-      setProject((prev: any) => ({ ...prev, stato: nuovoStato }));
-    } else {
-      alert("Errore durante l'aggiornamento dello stato: " + error.message);
-    }
-  }
-
-   const handleLeaveTeam = async () => {
-    // 1. Chiediamo subito conferma (così sai che il bottone funziona)
-    if (!window.confirm("💀 SEI SICURO? Abbandonando il team non potrai più rientrare e il progetto ti verrà contrassegnato come abbandonato.")) return;
-
-    // 2. Peschiamo la tua partecipazione direttamente dal database (infallibile)
-    const { data: myPart, error: fetchError } = await supabase
+    const { data: myPart } = await supabase
       .from('partecipazione')
       .select('id')
       .eq('bando_id', bandoId)
       .eq('studente_id', currentUser.id)
       .eq('stato', 'accepted')
-      .single();
+      .single()
 
-    if (fetchError || !myPart) {
-      alert("Errore: impossibile trovare il tuo record nel database.");
-      console.error(fetchError);
-      return;
-    }
+    if (myPart) {
+      await supabase
+        .from('partecipazione')
+        .update({ stato: 'abandoned' } as any)
+        .eq('id', myPart.id)
 
-    // 3. Spariamo la modifica di stato a "abandoned"
-    const { error: updateError } = await supabase
-      .from('partecipazione')
-      .update({ stato: 'abandoned' } as any)
-      .eq('id', myPart.id);
-
-    if (!updateError) {
-      // 4. Redirezione fulminea alla Dashboard (Bacheca)
-      router.push('/dashboard'); 
-    } else {
-      alert(`Errore: ${updateError.message}`);
+      router.push('/dashboard')
     }
   }
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center font-black text-red-800 animate-pulse uppercase tracking-widest text-2xl italic">Caricamento Workspace...</div>
-  if (error) return <div className="p-20 text-center bg-red-50 min-h-screen"><p className="font-mono text-sm bg-black text-white p-4 rounded-xl inline-block">{error}</p></div>
+  useEffect(() => {
+    fetchTeamData()
+  }, [bandoId])
+
+  // Realtime messages
+  useEffect(() => {
+    if (!bandoId) return
+
+    const channel = supabase
+      .channel(`team-${bandoId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messaggio_team',
+        filter: `bando_id=eq.${bandoId}`
+      }, () => {
+        fetchMessages()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [bandoId])
+
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-gray-300 border-t-red-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500 font-medium">Caricamento workspace...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 font-medium">{error}</p>
+        </div>
+      </div>
+    )
+  }
+
+  const allMembers = leader ? [{ ...leader, ruolo_team: 'owner' as const }, ...teamMembers] : teamMembers
 
   return (
-    <div className="max-w-[1600px] mx-auto p-6 lg:p-10 pb-20 relative">
-      
-      {/* MODALE MODIFICA LINK */}
-      {isLinkModalOpen && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white p-10 rounded-[3rem] w-full max-w-lg shadow-2xl border-4 border-red-800">
-            <h3 className="text-3xl font-black italic uppercase text-red-900 mb-6">Modifica Link Operativi</h3>
-            <div className="space-y-4 mb-8">
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Link GitHub Repository</label>
-                <input 
-                  type="url" 
-                  value={linksForm.github} 
-                  onChange={e => setLinksForm({...linksForm, github: e.target.value})} 
-                  placeholder="https://github.com/..." 
-                  className="w-full mt-2 p-4 bg-gray-50 border-2 border-gray-200 rounded-2xl outline-none focus:border-red-800 transition-all font-medium" 
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Link Google Drive</label>
-                <input 
-                  type="url" 
-                  value={linksForm.drive} 
-                  onChange={e => setLinksForm({...linksForm, drive: e.target.value})} 
-                  placeholder="https://drive.google.com/..." 
-                  className="w-full mt-2 p-4 bg-gray-50 border-2 border-gray-200 rounded-2xl outline-none focus:border-red-800 transition-all font-medium" 
-                />
-              </div>
-            </div>
-            <div className="flex gap-4">
-              <button onClick={() => setIsLinkModalOpen(false)} className="flex-1 py-4 font-black uppercase text-xs text-gray-500 hover:bg-gray-100 rounded-2xl transition-all">Annulla</button>
-              <button onClick={handleUpdateLinks} disabled={isSavingLinks} className="flex-1 py-4 bg-red-800 text-white font-black uppercase text-xs rounded-2xl shadow-xl hover:bg-red-900 transition-all">
-                {isSavingLinks ? 'Salvataggio...' : 'Salva Link'}
-              </button>
-            </div>
-          </div>
+    <div 
+      className="min-h-screen pb-20 transition-colors duration-700"
+      style={{ backgroundColor: `rgba(${dominantColor}, 0.05)` }}
+    >
+      {/* Banner Header */}
+      <div className="relative h-64 sm:h-80 overflow-hidden">
+        {project?.foto_url ? (
+          <img 
+            src={project.foto_url} 
+            alt={project.titolo}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div 
+            className="w-full h-full"
+            style={{ background: `linear-gradient(135deg, rgb(${dominantColor}) 0%, rgba(${dominantColor}, 0.7) 100%)` }}
+          />
+        )}
+        
+        {/* Overlay gradient */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+        
+        {/* Back button */}
+        <div className="absolute top-4 left-4 sm:top-6 sm:left-6">
+          <button 
+            onClick={() => router.push('/dashboard/my-projects')}
+            className="flex items-center gap-2 bg-white/10 backdrop-blur-md text-white px-4 py-2 rounded-xl font-medium text-sm hover:bg-white/20 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            I miei progetti
+          </button>
         </div>
-      )}
 
-      {/* PANNELLO DI CONTROLLO ADMIN */}
-      {isAdmin && (project?.stato === 'aperto' || pendingApps.length > 0) && (
-        <div className="mb-10 bg-red-900 border-4 border-red-950 text-white rounded-[3rem] p-8 shadow-xl">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-            <div>
-              <h3 className="text-2xl font-black uppercase italic tracking-tight flex items-center gap-3">
-                <span>📋</span> Gestione Candidature
-              </h3>
-              <p className="text-red-300 text-sm font-bold mt-1">
-                {pendingApps.length > 0 ? `Hai ${pendingApps.length} nuove richieste in attesa di revisione.` : 'Nessuna nuova richiesta al momento.'}
-              </p>
-            </div>
-            <Link href={`/dashboard/projects/${bandoId}/manage`} className="bg-white text-red-900 px-8 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-transform shadow-lg text-center w-full sm:w-auto">
-              Vai al Pannello Gestione →
+        {/* Admin badge + settings */}
+        {isAdmin && (
+          <div className="absolute top-4 right-4 sm:top-6 sm:right-6 flex gap-2">
+            <Link
+              href={`/dashboard/projects/${bandoId}/manage`}
+              className="flex items-center gap-2 bg-white text-gray-900 px-4 py-2 rounded-xl font-medium text-sm hover:bg-gray-100 transition-colors shadow-lg"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Gestione
             </Link>
           </div>
-          
-          {pendingApps.length > 0 && (
-            <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar pt-4 border-t border-red-800/50">
-              {pendingApps.map(app => (
-                <Link key={app.id} href={`/dashboard/projects/${bandoId}/manage`} className="min-w-[250px] bg-white/10 border border-white/20 p-4 rounded-3xl hover:bg-white/20 transition-all group">
-                  <div className="flex items-center gap-3 mb-2">
-                    <img src={app.studente.avatar_url || '/default-avatar.png'} className="w-10 h-10 rounded-full object-cover" />
-                    <p className="font-black truncate">{app.studente.nome} {app.studente.cognome}</p>
-                  </div>
-                  <p className="text-[10px] text-red-200 line-clamp-2 italic">"{app.messaggio}"</p>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+        )}
 
-      {/* HEADER DINAMICO */}
-      <div className="mb-10">
-        
-        {/* TASTO INDIETRO MODIFICATO E POSIZIONATO IN ALTO A SINISTRA */}
-        <Link href="/dashboard/my_projects" className="mb-6 flex items-center gap-2 text-gray-400 hover:text-red-800 font-black text-[10px] uppercase tracking-widest transition-all w-fit group">
-          <span className="group-hover:-translate-x-1 transition-transform">←</span> Torna ai tuoi progetti
-        </Link>
-
-        <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b-8 border-red-800 pb-10">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-4">
-               <span className="bg-red-800 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-lg">Team Space</span>
-               {/* BADGE DI STATO DEL PROGETTO */}
-               <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-inner border-2 ${project?.stato === 'chiuso' ? 'bg-gray-200 text-gray-500 border-gray-300' : 'bg-green-100 text-green-700 border-green-200'}`}>
-                 Stato: {project?.stato}
-               </span>
+        {/* Project info */}
+        <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
+          <div className="max-w-5xl mx-auto">
+            <div className="flex items-center gap-2 mb-3">
+              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                project?.stato === 'chiuso' 
+                  ? 'bg-gray-500 text-white' 
+                  : 'bg-green-500 text-white'
+              }`}>
+                {project?.stato === 'chiuso' ? '🔒 Chiuso' : '🟢 Aperto'}
+              </span>
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/20 backdrop-blur-sm text-white">
+                Workspace
+              </span>
             </div>
-            <h1 className="text-5xl md:text-8xl font-black text-red-900 uppercase italic tracking-tighter leading-[0.85]">{project?.titolo}</h1>
-          </div>
-          
-          <div className="flex flex-col gap-3">
-            {/* BOTTONE CHIUDI/RIAPRI PROGETTO (Solo Owner) */}
-            {isOwner && (
-              <button 
-                onClick={handleToggleStatus}
-                className={`font-black text-[10px] uppercase px-8 py-4 rounded-2xl transition-all shadow-xl text-center border-4 ${project?.stato === 'aperto' ? 'bg-orange-100 text-orange-900 border-orange-200 hover:bg-orange-200' : 'bg-green-100 text-green-900 border-green-200 hover:bg-green-200'}`}
-              >
-                {project?.stato === 'aperto' ? '🛑 Chiudi Candidature' : '✅ Riapri Candidature'}
-              </button>
-            )}
-            {/* Il vecchio tasto "Esci dal Workspace" è stato rimosso in favore della freccia in alto */}
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-2">
+              {project?.titolo}
+            </h1>
+            <p className="text-white/80 text-sm sm:text-base max-w-2xl line-clamp-2">
+              {project?.descrizione}
+            </p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-8 lg:gap-12">
-        
-        {/* LATO SINISTRO (Bacheca e Link) */}
-        <div className="col-span-12 lg:col-span-8 space-y-12">
+      {/* Content */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 -mt-6">
+        <div className="grid lg:grid-cols-3 gap-6">
           
-          <div className="bg-white rounded-[4rem] border-4 border-red-800 p-10 shadow-2xl relative overflow-hidden">
-            <div className="relative z-10">
-              <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-black text-red-900 uppercase italic flex items-center gap-4">
-                  <span className="bg-red-100 p-3 rounded-2xl">🔗</span> Link di Progetto
-                </h2>
-                {isAdmin && (
-                  <button onClick={() => setIsLinkModalOpen(true)} className="text-[10px] font-black text-white bg-red-800 uppercase tracking-widest px-6 py-3 rounded-xl hover:bg-red-900 transition-all shadow-lg">
-                    ✏️ Modifica Link
-                  </button>
-                )}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {project?.github_url ? (
-                  <a href={project.github_url} target="_blank" rel="noopener noreferrer" className="flex flex-col bg-gray-50 border-4 border-gray-200 hover:border-red-800 p-8 rounded-[2.5rem] transition-all">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Development</span>
-                    <span className="text-2xl font-black text-gray-800">GitHub ↗</span>
-                  </a>
-                ) : (
-                  <div className="flex flex-col bg-gray-50 border-4 border-dashed border-gray-200 p-8 rounded-[2.5rem] opacity-50">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Development</span>
-                    <span className="text-lg font-black text-gray-400">Nessun link GitHub impostato</span>
-                  </div>
-                )}
-                
-                {project?.drive_url ? (
-                  <a href={project.drive_url} target="_blank" rel="noopener noreferrer" className="flex flex-col bg-gray-50 border-4 border-gray-200 hover:border-red-800 p-8 rounded-[2.5rem] transition-all">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Assets</span>
-                    <span className="text-2xl font-black text-gray-800">Google Drive ↗</span>
-                  </a>
-                ) : (
-                  <div className="flex flex-col bg-gray-50 border-4 border-dashed border-gray-200 p-8 rounded-[2.5rem] opacity-50">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Assets</span>
-                    <span className="text-lg font-black text-gray-400">Nessun link Drive impostato</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-red-900 rounded-[4rem] p-12 text-white shadow-2xl relative overflow-hidden">
-            <h2 className="text-3xl font-black uppercase italic mb-8">📣 Bacheca Team</h2>
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-[3rem]">
-              <p className="text-xl font-medium italic">Spazio riservato agli annunci del team (Sviluppo in arrivo...)</p>
-            </div>
-          </div>
-        </div>
-
-        {/* LATO DESTRO: TEAM DIRECTORY */}
-        <div className="col-span-12 lg:col-span-4">
-          <div className="bg-white rounded-[4rem] border-4 border-gray-100 p-10 shadow-2xl sticky top-8 relative z-20">
-            <h3 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.5em] mb-10 text-center">Team Members</h3>
+          {/* Main content */}
+          <div className="lg:col-span-2 space-y-6">
             
-            <div className="space-y-6">
-              {/* LEADER */}
-              {leader && (
-                <div className="relative p-6 bg-red-50 border-4 border-red-100 rounded-[3rem] group/leader">
-                  <div className="absolute -top-3 left-8 bg-red-800 text-white px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest">OWNER</div>
-                  <div className="flex items-center gap-5">
-                    <img src={leader.avatar_url || '/default-avatar.png'} className="w-16 h-16 rounded-[1.5rem] object-cover border-4 border-white shadow-lg" />
-                    <div className="overflow-hidden">
-                      <p className="text-xl font-black text-gray-900 leading-none mb-1 truncate">{leader.nome}</p>
-                      <p className="text-[10px] font-bold text-red-800 uppercase">Creatore</p>
+            {/* Link di progetto */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span>🔗</span> Link di Progetto
+              </h2>
+              <div className="grid sm:grid-cols-2 gap-4">
+                {project?.github_url ? (
+                  <a 
+                    href={project.github_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-4 bg-gray-900 hover:bg-gray-800 text-white rounded-xl transition-colors"
+                  >
+                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                    <div>
+                      <p className="font-semibold">GitHub</p>
+                      <p className="text-xs text-gray-400">Repository</p>
                     </div>
+                  </a>
+                ) : (
+                  <div className="flex items-center gap-3 p-4 bg-gray-50 text-gray-400 rounded-xl border-2 border-dashed border-gray-200">
+                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                    <span className="text-sm font-medium">Nessun link GitHub</span>
                   </div>
+                )}
 
-                  {/* HOVER CARD LEADER */}
-                  <div className="absolute right-[105%] top-1/2 -translate-y-1/2 w-64 bg-gray-900 text-white p-6 rounded-[2rem] opacity-0 invisible group-hover/leader:opacity-100 group-hover/leader:visible transition-all duration-300 z-50 shadow-2xl scale-95 group-hover/leader:scale-100 hidden xl:block border-4 border-gray-800">
-                    <div className="flex items-center gap-4 mb-4">
-                      <img src={leader.avatar_url || '/default-avatar.png'} className="w-16 h-16 rounded-2xl object-cover border-2 border-gray-700" />
-                      <div>
-                        <p className="font-black text-lg leading-tight">{leader.nome}</p>
-                        <p className="text-[9px] font-bold text-red-400 uppercase tracking-widest mt-1">Project Creator</p>
-                      </div>
+                {project?.drive_url ? (
+                  <a 
+                    href={project.drive_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors"
+                  >
+                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.081 0 3.753-.02 3.742-.047-.005-.02-1.708-3.001-3.775-6.62l-3.76-6.574h-3.758zm-6.267 10.942c-.023.005-1.727 3.001-3.794 6.621l-3.76 6.574 3.76-.005c2.082-.005 3.754-.025 3.743-.047-.005-.02 1.708-3.001 3.775-6.62l3.76-6.574-3.76.005c-2.082.005-3.754.025-3.724.046z"/>
+                    </svg>
+                    <div>
+                      <p className="font-semibold">Google Drive</p>
+                      <p className="text-xs text-blue-200">Documenti</p>
                     </div>
-                    <div className="bg-white/10 p-3 rounded-xl mb-3">
-                      <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Email</p>
-                      <p className="text-xs font-mono text-gray-200 truncate">{leader.email}</p>
-                    </div>
-                    {currentUser?.id !== leader.id && (
-                      <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${leader.email}`} target="_blank" rel="noopener noreferrer" className="block w-full text-center bg-red-800 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-colors">
-                        ✉️ Invia Email
-                      </a>
-                    )}
-                    <div className="absolute top-1/2 -right-3 -translate-y-1/2 w-0 h-0 border-y-[12px] border-y-transparent border-l-[12px] border-l-gray-900"></div>
+                  </a>
+                ) : (
+                  <div className="flex items-center gap-3 p-4 bg-gray-50 text-gray-400 rounded-xl border-2 border-dashed border-gray-200">
+                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.081 0 3.753-.02 3.742-.047-.005-.02-1.708-3.001-3.775-6.62l-3.76-6.574h-3.758zm-6.267 10.942c-.023.005-1.727 3.001-3.794 6.621l-3.76 6.574 3.76-.005c2.082-.005 3.754-.025 3.743-.047-.005-.02 1.708-3.001 3.775-6.62l3.76-6.574-3.76.005c-2.082.005-3.754.025-3.724.046z"/>
+                    </svg>
+                    <span className="text-sm font-medium">Nessun link Drive</span>
                   </div>
-                </div>
-              )}
-
-              <div className="flex items-center gap-4 px-4">
-                <div className="h-px bg-gray-100 flex-1"></div>
-                <span className="text-[9px] font-black text-gray-300 uppercase">Membri</span>
-                <div className="h-px bg-gray-100 flex-1"></div>
+                )}
               </div>
+            </div>
 
-              {/* LISTA STUDENTI CON HOVER CARD */}
-              <div className="space-y-4">
-                {teamMembers.length > 0 ? teamMembers.map((membro, idx) => (
-                  <div key={idx} className="relative flex items-center gap-4 p-4 hover:bg-gray-50 rounded-[2rem] transition-all border-2 border-transparent hover:border-gray-100 group">
-                    <img src={membro.avatar_url || '/default-avatar.png'} className="w-12 h-12 rounded-xl object-cover" />
-                    <div className="overflow-hidden flex-1">
-                      <p className="font-black text-gray-800 truncate leading-none mb-1">{membro.nome} {membro.cognome}</p>
-                      <p className={`text-[9px] font-bold uppercase tracking-widest mb-2 ${membro.ruolo_team === 'admin' ? 'text-red-800' : 'text-gray-400'}`}>
-                        {membro.ruolo_team === 'admin' ? 'Amministratore' : 'Membro Team'}
-                      </p>
-                      {currentUser?.id !== membro.id && (
-                        <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${membro.email}`} target="_blank" rel="noopener noreferrer" className="inline-block bg-gray-800 text-white px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest hover:bg-black">✉️ Contatta</a>
-                      )}
+            {/* Chat Team */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <span>💬</span> Chat Team
+                </h2>
+                <span className="text-xs text-gray-400">{messages.length} messaggi</span>
+              </div>
+              
+              {/* Messages */}
+              <div className="h-80 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                {messages.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-center">
+                    <div>
+                      <span className="text-4xl block mb-2">💬</span>
+                      <p className="text-gray-500 text-sm">Nessun messaggio ancora</p>
+                      <p className="text-gray-400 text-xs">Inizia la conversazione!</p>
                     </div>
-
-                    {/* HOVER CARD: CV E GESTIONE RUOLI */}
-                    <div className="absolute right-[105%] top-1/2 -translate-y-1/2 w-80 bg-gray-900 text-white p-6 rounded-[2rem] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 shadow-2xl scale-95 group-hover:scale-100 hidden xl:block border-4 border-gray-800">
-                      
-                      {/* Intestazione */}
-                      <div className="flex items-center gap-4 mb-4">
-                        <img src={membro.avatar_url || '/default-avatar.png'} className="w-16 h-16 rounded-2xl object-cover border-2 border-gray-700" />
-                        <div>
-                          <p className="font-black text-lg leading-tight">{membro.nome} {membro.cognome}</p>
-                          <p className="text-[9px] text-gray-400 uppercase tracking-widest mt-1">
-                            {membro.nome_corso}
+                  </div>
+                ) : (
+                  messages.map((msg) => {
+                    const isMe = msg.studente?.id === currentUser?.id
+                    return (
+                      <div key={msg.id} className={`flex gap-3 ${isMe ? 'flex-row-reverse' : ''}`}>
+                        <img 
+                          src={msg.studente?.avatar_url || '/default-avatar.png'} 
+                          alt=""
+                          className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                        />
+                        <div className={`max-w-[70%] ${isMe ? 'text-right' : ''}`}>
+                          <p className="text-xs text-gray-500 mb-1">
+                            {msg.studente?.nome} {msg.studente?.cognome}
+                          </p>
+                          <div className={`px-4 py-2 rounded-2xl ${
+                            isMe 
+                              ? 'bg-blue-600 text-white rounded-br-md' 
+                              : 'bg-white border border-gray-200 text-gray-900 rounded-bl-md'
+                          }`}>
+                            <p className="text-sm">{msg.testo}</p>
+                          </div>
+                          <p className="text-[10px] text-gray-400 mt-1">
+                            {new Date(msg.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
                           </p>
                         </div>
                       </div>
-
-                      {/* Dettagli CV (Visibili ad Admin e Owner) */}
-                      {isAdmin && (
-                        <div className="bg-white/5 p-4 rounded-2xl mb-4 border border-white/10">
-                          <p className="text-[9px] font-black text-red-400 uppercase tracking-widest mb-2">Dettagli Profilo</p>
-                          <p className="text-xs text-gray-300 italic line-clamp-3 mb-3">"{membro.bio || 'Nessuna biografia inserita.'}"</p>
-                          <div className="flex items-start gap-2 pt-2 border-t border-white/10">
-                            <span className="text-lg">🎓</span>
-                            <div>
-                              <p className="text-[10px] font-black text-white leading-tight uppercase">{membro.nome_corso}</p>
-                              <p className="text-[8px] text-gray-500 font-bold uppercase mt-1">Iniziato nel {membro.anno_inizio_corso || 'N.D.'}</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* AZIONI OWNER */}
-                      {isOwner && currentUser?.id !== membro.id && (
-                        <div className="flex flex-col gap-2 pt-2 border-t border-gray-800">
-                          {membro.ruolo_team !== 'admin' ? (
-                            <button onClick={() => handleRoleChange(membro.partecipazione_id, 'admin')} className="w-full bg-green-500/20 text-green-400 hover:bg-green-500 hover:text-white transition-colors py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-green-500/30">
-                              ⬆️ Promuovi ad Admin
-                            </button>
-                          ) : (
-                            <button onClick={() => handleRoleChange(membro.partecipazione_id, 'membro')} className="w-full bg-orange-500/20 text-orange-400 hover:bg-orange-500 hover:text-white transition-colors py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-orange-500/30">
-                              ⬇️ Revoca Admin
-                            </button>
-                          )}
-                          <button onClick={() => handleKickMember(membro.partecipazione_id)} className="w-full bg-red-900/50 text-red-400 hover:bg-red-600 hover:text-white transition-colors py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-900">
-                            ❌ Rimuovi dal Team
-                          </button>
-                        </div>
-                      )}
-
-                      <div className="absolute top-1/2 -right-3 -translate-y-1/2 w-0 h-0 border-y-[12px] border-y-transparent border-l-[12px] border-l-gray-900"></div>
-                    </div>
-                  </div>
-                )) : (
-                  <p className="text-center py-10 text-gray-300 font-bold italic text-sm">Nessun altro membro per ora.</p>
+                    )
+                  })
                 )}
+                <div ref={messagesEndRef} />
               </div>
 
-              {/* --- BOTTONE ABBANDONA TEAM (Non visibile all'Owner) --- */}
-              {!isOwner && (
-                <div className="mt-8 pt-6 border-t-2 border-gray-100">
-                  <button 
-                    onClick={handleLeaveTeam} 
-                    className="w-full bg-white text-gray-400 hover:bg-red-900 hover:text-white hover:border-red-900 transition-all py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 border-gray-200 shadow-sm"
+              {/* Input */}
+              <div className="p-4 border-t border-gray-100">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                    placeholder="Scrivi un messaggio..."
+                    className="flex-1 px-4 py-2.5 bg-gray-100 rounded-xl border-0 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                  />
+                  <button
+                    onClick={sendMessage}
+                    disabled={!newMessage.trim() || sendingMessage}
+                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    🚪 Abbandona il Team
+                    {sendingMessage ? '...' : 'Invia'}
                   </button>
                 </div>
-              )}
 
+                {/* Admin: Notifica tutti */}
+                {isAdmin && (
+                  <button
+                    onClick={() => {
+                      const teamEmails = allMembers
+                        .filter(m => m.email && m.id !== currentUser?.id)
+                        .map(m => m.email)
+                        .join(',')
+                      
+                      if (teamEmails) {
+                        const subject = encodeURIComponent(`[${project?.titolo}] Aggiornamento dal team`)
+                        window.location.href = `mailto:?bcc=${teamEmails}&subject=${subject}`
+                      }
+                    }}
+                    className="mt-3 w-full py-2 text-xs font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    Invia email a tutto il team
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Sidebar - Team Members */}
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm sticky top-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <span>👥</span> Team
+                </span>
+                <span className="text-xs text-gray-400 font-normal">{allMembers.length} membri</span>
+              </h2>
+
+              <div className="space-y-2">
+                {allMembers.map((member) => (
+                  <div
+                    key={member.id}
+                    className="relative"
+                    onMouseEnter={() => setHoveredMember(member.id)}
+                    onMouseLeave={() => setHoveredMember(null)}
+                  >
+                    <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer">
+                      <div className="relative">
+                        <img 
+                          src={member.avatar_url || '/default-avatar.png'} 
+                          alt=""
+                          className="w-10 h-10 rounded-xl object-cover"
+                        />
+                        {member.ruolo_team === 'owner' && (
+                          <span className="absolute -top-1 -right-1 text-xs">👑</span>
+                        )}
+                        {member.ruolo_team === 'admin' && (
+                          <span className="absolute -top-1 -right-1 text-xs">🛡️</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 truncate text-sm">
+                          {member.nome} {member.cognome}
+                        </p>
+                        <p className={`text-xs ${
+                          member.ruolo_team === 'owner' ? 'text-amber-600' :
+                          member.ruolo_team === 'admin' ? 'text-blue-600' :
+                          'text-gray-400'
+                        }`}>
+                          {member.ruolo_team === 'owner' ? 'Owner' :
+                           member.ruolo_team === 'admin' ? 'Admin' : 'Membro'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Hover Card */}
+                    {hoveredMember === member.id && (
+                      <div className="absolute left-full top-0 ml-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 p-4 z-50 animate-in fade-in slide-in-from-left-2 duration-200">
+                        <div className="flex items-center gap-3 mb-3">
+                          <img 
+                            src={member.avatar_url || '/default-avatar.png'} 
+                            alt=""
+                            className="w-12 h-12 rounded-xl object-cover"
+                          />
+                          <div>
+                            <p className="font-semibold text-gray-900">{member.nome} {member.cognome}</p>
+                            <p className="text-xs text-gray-500">{member.nome_corso || 'Non specificato'}</p>
+                          </div>
+                        </div>
+
+                        {member.bio && (
+                          <p className="text-xs text-gray-600 mb-3 line-clamp-3 italic">"{member.bio}"</p>
+                        )}
+
+                        {member.anno_inizio_corso && (
+                          <p className="text-xs text-gray-400 mb-3">
+                            🎓 {new Date().getFullYear() - member.anno_inizio_corso + 1}° Anno
+                          </p>
+                        )}
+
+                        {member.email && member.id !== currentUser?.id && (
+                          <button
+                            onClick={() => copyEmail(member.email)}
+                            className="w-full flex items-center justify-center gap-2 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium transition-colors"
+                          >
+                            {copiedEmail === member.email ? (
+                              <>
+                                <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                Copiata!
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                </svg>
+                                Copia email
+                              </>
+                            )}
+                          </button>
+                        )}
+
+                        {/* Arrow */}
+                        <div className="absolute left-0 top-4 -translate-x-full">
+                          <div className="w-0 h-0 border-y-8 border-y-transparent border-r-8 border-r-white" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Leave team */}
+              {!isOwner && (
+                <button
+                  onClick={handleLeaveTeam}
+                  className="w-full mt-6 py-2.5 text-sm font-medium text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors border border-transparent hover:border-red-200"
+                >
+                  🚪 Abbandona team
+                </button>
+              )}
             </div>
           </div>
         </div>
-
       </div>
     </div>
   )
