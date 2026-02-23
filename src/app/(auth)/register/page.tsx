@@ -91,12 +91,6 @@ export default function RegisterPage() {
         <p className="text-center text-gray-500 font-bold text-sm uppercase tracking-widest mb-10">
           Il primo passo per iniziare
         </p>
-        
-        {error && (
-          <p className="mb-6 p-4 bg-red-50 text-red-800 rounded-2xl text-sm font-bold border-2 border-red-200">
-            {error}
-          </p>
-        )}
 
         <form onSubmit={handleRegister} className="space-y-6">
           
@@ -123,6 +117,13 @@ export default function RegisterPage() {
                className="w-full p-4 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:border-red-800 outline-none transition-all font-medium text-gray-900 placeholder-gray-400" 
              />
           </div>
+
+          {/* 🟢 L'errore è stato spostato qui, subito sopra il pulsante */}
+          {error && (
+            <p className="p-4 bg-red-50 text-red-800 rounded-2xl text-sm font-bold border-2 border-red-200">
+              {error}
+            </p>
+          )}
 
           <button 
             type="submit" 

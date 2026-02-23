@@ -9,6 +9,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
   if (!id || id === 'undefined') return notFound()
 
+  // 1. Fetch Dati Progetto
   const { data: bando, error }: any = await supabase
     .from('bando')
     .select(`
@@ -21,6 +22,16 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
   if (error || !bando) return notFound()
 
+  // 2. Fetch Altri Progetti del Leader (escludendo quello attuale)
+  const { data: leaderProjects }: any = await supabase
+    .from('bando')
+    .select('id, titolo, stato')
+    .eq('creatore_studente_id', bando.creatore_studente_id)
+    .neq('id', id)
+    .order('data_creazione', { ascending: false })
+    .limit(3)
+
+  // 3. Autenticazione e Stato Utente
   const { data: userData } = await supabase.auth.getUser()
   const user = userData?.user
   if (!user) redirect('/login')
@@ -97,13 +108,16 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         {/* DESTRA: SIDEBAR CON SFONDO ROSSO */}
         <div className="space-y-6">
           
-          {/* Box Leader - SFONDO ROSSO */}
+          {/* Box Leader - SFONDO ROSSO CON HOVER CARD */}
           <div className="bg-red-800 p-8 rounded-[2.5rem] shadow-xl border-4 border-red-700">
             <h3 className="text-[10px] font-black text-white/50 uppercase mb-6 tracking-widest text-center">
               Project Leader
             </h3>
-            <div className="flex flex-col items-center text-center">
-              <div className="w-24 h-24 rounded-full overflow-hidden bg-white/10 border-4 border-white/20 mb-4 shadow-inner">
+            
+            {/* AREA INTERATTIVA: Aggiunto 'group relative cursor-pointer' */}
+            <div className="flex flex-col items-center text-center group relative cursor-pointer">
+              
+              <div className="w-24 h-24 rounded-full overflow-hidden bg-white/10 border-4 border-white/20 mb-4 shadow-inner transition-transform duration-300 group-hover:scale-110">
                 {bando.studente?.avatar_url ? (
                   <img src={bando.studente.avatar_url} className="w-full h-full object-cover" />
                 ) : (
@@ -112,12 +126,66 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                   </div>
                 )}
               </div>
-              <p className="font-black text-2xl text-white uppercase leading-none tracking-tighter">
+              <p className="font-black text-2xl text-white uppercase leading-none tracking-tighter group-hover:text-red-200 transition-colors">
                 {bando.studente?.nome} {bando.studente?.cognome}
               </p>
-              <p className="text-[10px] text-red-200 font-black mt-2 uppercase tracking-widest">
+              <p className="text-[10px] text-red-300 font-black mt-2 uppercase tracking-widest">
                 Fondatore
               </p>
+
+              {/* 🟢 HOVER CARD: Visibile solo al passaggio del mouse */}
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-4 w-72 bg-white rounded-3xl shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] border-4 border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 p-6 pointer-events-none group-hover:pointer-events-auto">
+                
+                {/* Info Profilo Base */}
+                <div className="text-center mb-5">
+                  <h4 className="font-black text-gray-900 uppercase tracking-tighter text-lg leading-none mb-2">
+                    {bando.studente?.nome} {bando.studente?.cognome}
+                  </h4>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-relaxed line-clamp-2">
+                    {bando.studente?.bio || 'Nessuna bio inserita dal creatore.'}
+                  </p>
+                </div>
+
+                {/* Lista Altri Progetti */}
+                <div className="space-y-3 text-left">
+                  <h5 className="text-[10px] font-black text-red-800 uppercase tracking-widest border-b-2 border-red-50 pb-2">
+                    Altri Suoi Progetti ({leaderProjects?.length || 0})
+                  </h5>
+                  
+                  {leaderProjects && leaderProjects.length > 0 ? (
+                    leaderProjects.map((lp: any) => (
+                      <Link 
+                        key={lp.id} 
+                        href={`/dashboard/projects/${lp.id}`} 
+                        className="block group/link bg-gray-50 p-3 rounded-xl border border-transparent hover:border-red-100 hover:bg-red-50 transition-colors"
+                      >
+                        <p className="text-xs font-black text-gray-700 uppercase leading-tight group-hover/link:text-red-700 transition-colors line-clamp-1">
+                          {lp.titolo}
+                        </p>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase mt-1">
+                          Stato: {lp.stato}
+                        </p>
+                      </Link>
+                    ))
+                  ) : (
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest text-center py-2">
+                      Nessun altro progetto
+                    </p>
+                  )}
+                </div>
+                
+                {/* Bottone Profilo Completo */}
+                <div className="mt-5 pt-4 border-t-2 border-gray-50">
+                  <Link 
+                    href={`/dashboard/user/${bando.creatore_studente_id}`} 
+                    className="block w-full py-3 bg-red-50 text-red-800 rounded-xl text-center text-[10px] font-black uppercase tracking-widest hover:bg-red-800 hover:text-white transition-colors"
+                  >
+                    Vedi Profilo Completo
+                  </Link>
+                </div>
+              </div>
+              {/* FINE HOVER CARD */}
+
             </div>
           </div>
 
@@ -143,7 +211,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             </div>
           </div>
 
-          {/* Box Dettagli - SFONDO ROSSO (stesso stile degli altri) */}
+          {/* Box Dettagli - SFONDO ROSSO */}
           <div className="bg-red-800 p-8 rounded-[2.5rem] shadow-xl border-4 border-red-700">
             <h3 className="text-[10px] font-black text-white/50 uppercase mb-6 tracking-widest">
               Dettagli
