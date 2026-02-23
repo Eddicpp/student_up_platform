@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation' // ✅ IMPORT AGGIUNTO QUI IN CIMA
 
-export default function HomePage() {
+function DashboardContent() {
   const supabase = createClient()
   
   // ✅ LETTURA DELL'URL PER IL BANNER DI SUCCESSO
@@ -534,5 +534,20 @@ export default function HomePage() {
         </div>
       )}
     </div>
+  )
+}
+
+// Questo è il nuovo "Guscio" che protegge la tua pagina dagli errori di Vercel
+export default function HomePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-xl font-black text-red-800 uppercase animate-pulse">
+          Caricamento Protocollo...
+        </div>
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   )
 }

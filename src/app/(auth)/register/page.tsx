@@ -5,9 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 export default function RegisterPage() {
-  // Stati Base (Solo identità e credenziali)
-  const [nome, setNome] = useState('')
-  const [cognome, setCognome] = useState('')
+  // Stati Base: Solo Email e Password
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   
@@ -22,11 +20,11 @@ export default function RegisterPage() {
     setLoading(true)
     setError(null)
 
-    // Pulizia email
+    // 1. Pulizia Email
     const emailPulita = email.trim().toLowerCase()
     const isInstitutional = emailPulita.endsWith('@studenti.unipd.it')
     
-    // Controllo Whitelist
+    // 2. Controllo Whitelist per Tester
     let isWhitelisted = false
     if (!isInstitutional) {
       const { data } = await (supabase as any)
@@ -44,13 +42,12 @@ export default function RegisterPage() {
       return
     }
 
-    // Registrazione su Supabase
+    // 3. Registrazione veloce su Supabase Auth (solo credenziali)
     const { data: authData, error: signUpError } = await supabase.auth.signUp({
       email: emailPulita,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
-        data: { nome, cognome } 
       },
     })
 
@@ -63,16 +60,22 @@ export default function RegisterPage() {
     const userId = authData.user?.id
 
     if (userId) {
-      // Creazione del profilo base (I dati universitari li chiediamo nell'onboarding)
+      // 4. Creazione del "guscio" vuoto nel database (riempiremo il resto nell'onboarding)
       await supabase.from('studente').insert([
-        { id: userId, nome, cognome, email: emailPulita }
+        { 
+          id: userId, 
+          email: emailPulita,
+          nome: '',     // Temporaneamente vuoto
+          cognome: ''   // Temporaneamente vuoto
+        }
       ] as any)
     }
 
+    // 5. Messaggio di successo
     if (isInstitutional) {
-      alert("Controlla la tua email @studenti.unipd.it per confermare l'account!")
+      alert("Account creato! Clicca sul link che ti abbiamo inviato via email.")
     } else {
-      alert("Controlla la tua email per confermare l'account, tester!")
+      alert("Account creato! Controlla la tua email per confermare l'accesso, tester.")
     }
     
     router.push('/')
@@ -81,42 +84,52 @@ export default function RegisterPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50 p-4 py-12">
-      <div className="w-full max-w-2xl bg-white p-8 md:p-12 rounded-[3rem] shadow-xl border-4 border-gray-100">
+      <div className="w-full max-w-md bg-white p-8 md:p-12 rounded-[3rem] shadow-xl border-4 border-gray-100">
         <h1 className="text-4xl font-black text-red-900 mb-2 text-center uppercase italic tracking-tighter">
-          Unisciti a StudentUP
+          StudentUP
         </h1>
         <p className="text-center text-gray-500 font-bold text-sm uppercase tracking-widest mb-10">
-          Crea il tuo profilo accademico
+          Il primo passo per iniziare
         </p>
         
-        {error && <p className="mb-6 p-4 bg-red-50 text-red-800 rounded-2xl text-sm font-bold border-2 border-red-200">{error}</p>}
+        {error && (
+          <p className="mb-6 p-4 bg-red-50 text-red-800 rounded-2xl text-sm font-bold border-2 border-red-200">
+            {error}
+          </p>
+        )}
 
         <form onSubmit={handleRegister} className="space-y-6">
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-2">Nome *</label>
-              {/* ✅ Aggiunto text-gray-900 per rendere il testo visibile */}
-              <input type="text" placeholder="Mario" value={nome} onChange={(e) => setNome(e.target.value)} required className="w-full p-4 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:border-red-800 outline-none transition-all font-medium text-gray-900 placeholder-gray-400" />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-2">Cognome *</label>
-              <input type="text" placeholder="Rossi" value={cognome} onChange={(e) => setCognome(e.target.value)} required className="w-full p-4 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:border-red-800 outline-none transition-all font-medium text-gray-900 placeholder-gray-400" />
-            </div>
-          </div>
-
           <div className="flex flex-col gap-2">
              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-2">Email Istituzionale *</label>
-             <input type="email" placeholder="mario.rossi@studenti.unipd.it" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full p-4 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:border-red-800 outline-none transition-all font-medium text-gray-900 placeholder-gray-400" />
+             <input 
+               type="email" 
+               placeholder="mario.rossi@studenti.unipd.it" 
+               value={email} 
+               onChange={(e) => setEmail(e.target.value)} 
+               required 
+               className="w-full p-4 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:border-red-800 outline-none transition-all font-medium text-gray-900 placeholder-gray-400" 
+             />
           </div>
 
           <div className="flex flex-col gap-2">
-             <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-2">Password *</label>
-             <input type="password" placeholder="Scegli una password sicura" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full p-4 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:border-red-800 outline-none transition-all font-medium text-gray-900 placeholder-gray-400" />
+             <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-2">Scegli una Password *</label>
+             <input 
+               type="password" 
+               placeholder="Minimo 6 caratteri" 
+               value={password} 
+               onChange={(e) => setPassword(e.target.value)} 
+               required 
+               className="w-full p-4 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:border-red-800 outline-none transition-all font-medium text-gray-900 placeholder-gray-400" 
+             />
           </div>
 
-          <button type="submit" disabled={loading} className="w-full bg-red-800 text-white p-5 rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-red-900 hover:-translate-y-1 shadow-xl transition-all disabled:opacity-50 disabled:hover:translate-y-0 mt-4">
-            {loading ? 'Creazione profilo in corso...' : 'Registrati ora'}
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="w-full bg-red-800 text-white p-5 rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-red-900 hover:-translate-y-1 shadow-xl transition-all disabled:opacity-50 disabled:hover:translate-y-0 mt-4"
+          >
+            {loading ? 'Creazione in corso...' : 'Continua'}
           </button>
         </form>
       </div>
