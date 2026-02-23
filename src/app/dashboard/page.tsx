@@ -3,9 +3,14 @@
 import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation' // ✅ IMPORT AGGIUNTO QUI IN CIMA
 
 export default function HomePage() {
   const supabase = createClient()
+  
+  // ✅ LETTURA DELL'URL PER IL BANNER DI SUCCESSO
+  const searchParams = useSearchParams()
+  const isVerified = searchParams.get('verified') === 'true'
   
   // Stati dati
   const [user, setUser] = useState<any>(null)
@@ -144,6 +149,13 @@ export default function HomePage() {
   return (
     <div className="pb-20 max-w-7xl mx-auto px-4 lg:px-8">
       
+      {/* 🟢 BANNER DI SUCCESSO BRUTALISTA AGGIUNTO QUI */}
+      {isVerified && (
+        <div className="bg-green-400 border-4 border-black p-4 mt-6 mb-2 font-black uppercase shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+          ✅ Email verificata con successo! Benvenuto a bordo.
+        </div>
+      )}
+
       {/* HERO SECTION */}
       <div className="relative mb-8 pt-4">
         <div className="absolute -top-20 -left-20 w-72 h-72 bg-red-200 rounded-full blur-3xl opacity-20 pointer-events-none" />
