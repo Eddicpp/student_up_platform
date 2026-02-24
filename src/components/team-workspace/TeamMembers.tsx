@@ -50,7 +50,6 @@ export default function TeamMembers({
       if (presenceData) {
         const online = new Set<string>()
         presenceData.forEach((p: any) => {
-          // Online se is_online o last_seen < 5 minuti
           const lastSeen = new Date(p.last_seen)
           const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000)
           if (p.is_online || lastSeen > fiveMinutesAgo) {
@@ -113,9 +112,8 @@ export default function TeamMembers({
     }
 
     updatePresence()
-    const presenceInterval = setInterval(updatePresence, 30000) // ogni 30 sec
+    const presenceInterval = setInterval(updatePresence, 30000)
 
-    // Cleanup: set offline quando si esce
     const handleBeforeUnload = () => {
       navigator.sendBeacon('/api/presence-offline', JSON.stringify({ userId: currentUserId }))
     }
@@ -134,27 +132,25 @@ export default function TeamMembers({
     setTimeout(() => setCopiedEmail(null), 2000)
   }
 
-  // Stile cartoon base
-  const cardStyle = "bg-white rounded-2xl border-2 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+  // ✅ Modificato: Aggiunto margine a sinistra (ml-2 lg:ml-6) e padding ridotto a p-4
+  const cardStyle = "bg-white rounded-2xl border-2 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ml-2 lg:ml-6"
 
   return (
-    <div className={`${cardStyle} p-5 sticky top-6`}>
+    <div className={`${cardStyle} p-4 sticky top-6 max-w-sm`}>
       <h2 className="text-lg font-black text-gray-900 mb-4 flex items-center justify-between">
         <span className="flex items-center gap-2">
           <span>👥</span> Team
         </span>
         <span className="text-xs text-gray-500 font-bold bg-gray-100 px-2 py-1 rounded-lg border border-gray-300">
-          {members.length} membri
+          {members.length}
         </span>
       </h2>
 
-      {/* Online count */}
       <div className="flex items-center gap-2 mb-4 text-xs text-gray-500">
         <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
         <span className="font-medium">{onlineUsers.size} online</span>
       </div>
 
-      {/* ✅ Aggiunto pr-3 per staccare il contenuto dalla barra di scorrimento */}
       <div className="space-y-2 max-h-[400px] overflow-y-auto pr-3">
         {members.map((member) => {
           const color = getMemberColor(member.id)
@@ -168,7 +164,7 @@ export default function TeamMembers({
               onMouseEnter={() => setHoveredMember(member.id)}
               onMouseLeave={() => setHoveredMember(null)}
             >
-              <div className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer hover:-translate-x-1 ${
+              <div className={`flex items-center gap-2.5 p-2.5 rounded-xl border-2 transition-all cursor-pointer hover:-translate-x-1 ${
                 hoveredMember === member.id 
                   ? `${color.light} ${color.border}` 
                   : 'border-gray-200 hover:border-gray-400'
@@ -177,30 +173,27 @@ export default function TeamMembers({
                   <img 
                     src={member.avatar_url || '/default-avatar.png'} 
                     alt=""
-                    className={`w-10 h-10 rounded-xl object-cover border-2 ${color.border}`}
+                    className={`w-9 h-9 rounded-xl object-cover border-2 ${color.border}`}
                   />
-                  {/* Online indicator */}
-                  <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ${
+                  <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
                     isOnline ? 'bg-green-500' : 'bg-gray-300'
                   }`}></span>
-                  {/* Role badge */}
                   {member.ruolo_team === 'owner' && (
-                    <span className="absolute -top-1 -right-1 text-xs">👑</span>
+                    <span className="absolute -top-1.5 -right-1.5 text-[10px]">👑</span>
                   )}
                   {member.ruolo_team === 'admin' && (
-                    <span className="absolute -top-1 -right-1 text-xs">🛡️</span>
+                    <span className="absolute -top-1.5 -right-1.5 text-[10px]">🛡️</span>
                   )}
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-bold text-gray-900 truncate text-sm">
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-bold text-gray-900 truncate text-xs">
                       {member.nome} {member.cognome}
                     </p>
-                    {/* Color indicator */}
-                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${color.bg}`}></span>
+                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${color.bg}`}></span>
                   </div>
-                  <p className={`text-xs font-medium ${
+                  <p className={`text-[10px] font-medium ${
                     member.ruolo_team === 'owner' ? 'text-amber-600' :
                     member.ruolo_team === 'admin' ? 'text-blue-600' :
                     'text-gray-400'
@@ -210,41 +203,36 @@ export default function TeamMembers({
                   </p>
                 </div>
 
-                {/* Mini badges */}
                 {badges.length > 0 && (
                   <div className="flex -space-x-1">
-                    {badges.slice(0, 3).map((badge, i) => (
-                      <span key={i} className="text-xs" title={(BADGE_TYPES as any)[badge]?.label}>
+                    {badges.slice(0, 2).map((badge, i) => (
+                      <span key={i} className="text-[10px]" title={(BADGE_TYPES as any)[badge]?.label}>
                         {(BADGE_TYPES as any)[badge]?.icon || '🏅'}
                       </span>
                     ))}
-                    {badges.length > 3 && (
-                      <span className="text-[10px] text-gray-400 ml-1">+{badges.length - 3}</span>
-                    )}
                   </div>
                 )}
               </div>
 
-              {/* ✅ Hover Card: Ora si apre verso SINISTRA (right-full mr-3) con ombra corretta */}
+              {/* ✅ Hover Card Rimpicciolita (w-64) */}
               {hoveredMember === member.id && (
-                <div className={`absolute right-full top-0 mr-3 w-72 bg-white rounded-2xl border-2 border-gray-900 shadow-[-4px_4px_0px_0px_rgba(0,0,0,1)] p-4 z-50`}>
+                <div className={`absolute right-full top-0 mr-3 w-64 bg-white rounded-2xl border-2 border-gray-900 shadow-[-4px_4px_0px_0px_rgba(0,0,0,1)] p-3 z-50`}>
                   
-                  {/* Header con colore */}
-                  <div className={`-mx-4 -mt-4 mb-4 p-4 rounded-t-2xl ${color.light} border-b-2 ${color.border}`}>
-                    <div className="flex items-center gap-3">
+                  <div className={`-mx-3 -mt-3 mb-3 p-3 rounded-t-2xl ${color.light} border-b-2 ${color.border}`}>
+                    <div className="flex items-center gap-2.5">
                       <img 
                         src={member.avatar_url || '/default-avatar.png'} 
                         alt=""
-                        className={`w-14 h-14 rounded-xl object-cover border-2 ${color.border}`}
+                        className={`w-12 h-12 rounded-xl object-cover border-2 ${color.border}`}
                       />
                       <div>
-                        <p className="font-black text-gray-900">{member.nome} {member.cognome}</p>
-                        <p className={`text-xs font-bold ${color.text}`}>
-                          {member.nome_corso || 'Corso non specificato'}
+                        <p className="font-black text-gray-900 text-sm leading-tight">{member.nome} {member.cognome}</p>
+                        <p className={`text-[10px] font-bold ${color.text} leading-tight mt-0.5`}>
+                          {member.nome_corso || 'Corso ignoto'}
                         </p>
                         <div className="flex items-center gap-1 mt-1">
-                          <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></span>
-                          <span className="text-[10px] font-bold text-gray-600">
+                          <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                          <span className="text-[9px] font-bold text-gray-600">
                             {isOnline ? 'Online' : 'Offline'}
                           </span>
                         </div>
@@ -253,59 +241,42 @@ export default function TeamMembers({
                   </div>
 
                   {member.bio && (
-                    <p className="text-xs text-gray-700 mb-3 line-clamp-3 font-medium bg-gray-50 p-2 rounded-lg border border-gray-200">
+                    <p className="text-[10px] text-gray-700 mb-2 line-clamp-2 font-medium bg-gray-50 p-1.5 rounded-lg border border-gray-200">
                       "{member.bio}"
                     </p>
                   )}
 
-                  {member.anno_inizio_corso && (
-                    <p className="text-xs text-gray-600 font-bold mb-3">
-                      🎓 {new Date().getFullYear() - member.anno_inizio_corso + 1}° Anno
-                    </p>
-                  )}
-
-                  {/* Bottoni Azione */}
-                  <div className="flex flex-col gap-2 mt-4 pt-4 border-t-2 border-gray-100">
-                    
-                    {/* Bottone Copia Email (Largo) */}
+                  <div className="flex flex-col gap-2 mt-2 pt-2 border-t-2 border-gray-100">
                     {member.email && (
                       <button
                         onClick={() => copyEmail(member.email)}
-                        className="w-full flex items-center justify-center gap-2 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-800 rounded-xl text-xs font-bold transition-colors border-2 border-gray-300 hover:border-gray-500"
+                        className="w-full flex items-center justify-center gap-2 py-2 bg-gray-50 hover:bg-gray-100 text-gray-800 rounded-xl text-[10px] font-bold transition-colors border-2 border-gray-300 hover:border-gray-500"
                       >
-                        {copiedEmail === member.email ? (
-                          <>✅ Email Copiata!</>
-                        ) : (
-                          <>📋 Copia indirizzo email</>
-                        )}
+                        {copiedEmail === member.email ? '✅ Email Copiata!' : '📋 Copia email'}
                       </button>
                     )}
 
                     <div className="flex gap-2">
-                      {/* ✅ NUOVO: Bottone Chat Privata (Metà larghezza) */}
                       {member.id !== currentUserId && (
                         <Link
                           href={`/dashboard/messages?userId=${member.id}`}
-                          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-[11px] uppercase font-black tracking-wider transition-colors border-2 border-blue-200 hover:border-blue-400"
+                          className="flex-1 flex items-center justify-center gap-1 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-[10px] uppercase font-black tracking-wider transition-colors border-2 border-blue-200"
                         >
                           💬 Chat
                         </Link>
                       )}
                       
-                      {/* Bottone Profilo (Metà larghezza) */}
                       <Link
                         href={`/dashboard/user/${member.id}`}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-[11px] uppercase font-black tracking-wider transition-colors border-2 border-gray-900"
+                        className="flex-1 flex items-center justify-center gap-1 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-[10px] uppercase font-black tracking-wider transition-colors border-2 border-gray-900"
                       >
                         👤 Profilo
                       </Link>
                     </div>
-
                   </div>
 
-                  {/* ✅ Freccetta direzionale: spostata a destra per puntare verso il membro del team */}
-                  <div className="absolute right-0 top-6 translate-x-full">
-                    <div className="w-0 h-0 border-y-8 border-y-transparent border-l-8 border-l-gray-900" />
+                  <div className="absolute right-0 top-5 translate-x-full">
+                    <div className="w-0 h-0 border-y-6 border-y-transparent border-l-6 border-l-gray-900" />
                   </div>
                 </div>
               )}
@@ -314,11 +285,10 @@ export default function TeamMembers({
         })}
       </div>
 
-      {/* Leave team */}
       {!isOwner && (
         <button
           onClick={onLeaveTeam}
-          className="w-full mt-6 py-3 text-sm font-bold text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors border-2 border-dashed border-gray-300 hover:border-red-400"
+          className="w-full mt-4 py-2.5 text-xs font-bold text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors border-2 border-dashed border-gray-300 hover:border-red-400"
         >
           🚪 Abbandona team
         </button>
