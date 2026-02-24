@@ -346,7 +346,7 @@ export default function TeamChat({
           .insert({
             messaggio_id: messageId,
             bando_id: bandoId,
-            studente_id: currentUserId // Aggiornato a studente_id invece di pinned_by
+            pinned_by: currentUserId 
           })
         if (error) throw error
       }
