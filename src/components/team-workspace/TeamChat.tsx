@@ -64,7 +64,6 @@ export default function TeamChat({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  // Fetch messages con reazioni
   const fetchMessages = useCallback(async () => {
     if (!bandoId) return
 
@@ -79,7 +78,6 @@ export default function TeamChat({
       .limit(100)
 
     if (messagesData) {
-      // Fetch reazioni per ogni messaggio
       const messagesWithReactions = await Promise.all(
         messagesData.map(async (msg: any) => {
           const { data: reactions } = await (supabase as any)
@@ -87,7 +85,6 @@ export default function TeamChat({
             .select('emoji, studente_id')
             .eq('messaggio_id', msg.id)
 
-          // Raggruppa reazioni
           const reactionMap: Record<string, { count: number; users: string[] }> = {}
           reactions?.forEach((r: any) => {
             if (!reactionMap[r.emoji]) {
@@ -111,7 +108,6 @@ export default function TeamChat({
       setTimeout(scrollToBottom, 100)
     }
 
-    // Fetch pinned messages
     const { data: pinnedData } = await (supabase as any)
       .from('messaggio_team_pin')
       .select(`
@@ -131,7 +127,6 @@ export default function TeamChat({
     fetchMessages()
   }, [fetchMessages])
 
-  // Realtime messages
   useEffect(() => {
     if (!bandoId || !currentUserId) return
 
@@ -181,7 +176,6 @@ export default function TeamChat({
     }
   }, [bandoId, currentUserId, fetchMessages])
 
-  // Typing indicator
   useEffect(() => {
     if (!bandoId || !currentUserId) return
 
@@ -209,7 +203,6 @@ export default function TeamChat({
     }
   }, [bandoId, currentUserId])
 
-  // Update typing status
   const updateTyping = useCallback(async () => {
     if (!bandoId || !currentUserId) return
     
@@ -222,7 +215,6 @@ export default function TeamChat({
       }, { onConflict: 'bando_id,studente_id' })
   }, [bandoId, currentUserId, supabase])
 
-  // Clear typing when done
   const clearTyping = useCallback(async () => {
     if (!bandoId || !currentUserId) return
     
@@ -233,13 +225,11 @@ export default function TeamChat({
       .eq('studente_id', currentUserId)
   }, [bandoId, currentUserId, supabase])
 
-  // Handle input change with typing and mentions
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value
     setNewMessage(value)
     updateTyping()
 
-    // Check for @ mentions
     const lastAtIndex = value.lastIndexOf('@')
     if (lastAtIndex !== -1) {
       const afterAt = value.slice(lastAtIndex + 1)
@@ -254,7 +244,6 @@ export default function TeamChat({
     }
   }
 
-  // Insert mention
   const insertMention = (member: TeamMember) => {
     const lastAtIndex = newMessage.lastIndexOf('@')
     const newText = newMessage.slice(0, lastAtIndex) + `@${member.nome} `
@@ -263,14 +252,12 @@ export default function TeamChat({
     inputRef.current?.focus()
   }
 
-  // Send message
   const sendMessage = async () => {
     if (!newMessage.trim() || sendingMessage || !currentUserId || !bandoId) return
 
     setSendingMessage(true)
     clearTyping()
 
-    // Extract mentions
     const mentionRegex = /@(\w+)/g
     const mentionedNames = [...newMessage.matchAll(mentionRegex)].map(m => m[1].toLowerCase())
     const mentionedIds = members
@@ -296,7 +283,6 @@ export default function TeamChat({
       setNewMessage('')
       setTimeout(scrollToBottom, 100)
 
-      // Update stats
       await (supabase as any)
         .from('user_team_stats')
         .upsert({
@@ -313,52 +299,64 @@ export default function TeamChat({
     setSendingMessage(false)
   }
 
-  // Toggle reaction
+  // ✅ FIX 1: Try/Catch su Reazioni e corretta gestione
   const toggleReaction = async (messageId: string, emoji: string) => {
-    const message = messages.find(m => m.id === messageId)
-    const existingReaction = message?.reazioni?.find(r => r.emoji === emoji && r.users.includes(currentUserId))
+    try {
+      const message = messages.find(m => m.id === messageId)
+      const existingReaction = message?.reazioni?.find(r => r.emoji === emoji && r.users.includes(currentUserId))
 
-    if (existingReaction) {
-      await (supabase as any)
-        .from('messaggio_team_reazione')
-        .delete()
-        .eq('messaggio_id', messageId)
-        .eq('studente_id', currentUserId)
-        .eq('emoji', emoji)
-    } else {
-      await (supabase as any)
-        .from('messaggio_team_reazione')
-        .insert({
-          messaggio_id: messageId,
-          studente_id: currentUserId,
-          emoji
-        })
+      if (existingReaction) {
+        const { error } = await (supabase as any)
+          .from('messaggio_team_reazione')
+          .delete()
+          .eq('messaggio_id', messageId)
+          .eq('studente_id', currentUserId)
+          .eq('emoji', emoji)
+        if (error) throw error
+      } else {
+        const { error } = await (supabase as any)
+          .from('messaggio_team_reazione')
+          .insert({
+            messaggio_id: messageId,
+            studente_id: currentUserId,
+            emoji
+          })
+        if (error) throw error
+      }
+
+      setShowEmojiPicker(null)
+      fetchMessages()
+    } catch (err: any) {
+      alert("Errore durante l'aggiunta della reazione: " + err.message)
     }
-
-    setShowEmojiPicker(null)
-    fetchMessages()
   }
 
-  // Pin/Unpin message
+  // ✅ FIX 2: Try/Catch sul Pin e studente_id corretto
   const togglePin = async (messageId: string, isPinned: boolean) => {
-    if (isPinned) {
-      await (supabase as any)
-        .from('messaggio_team_pin')
-        .delete()
-        .eq('messaggio_id', messageId)
-    } else {
-      await (supabase as any)
-        .from('messaggio_team_pin')
-        .insert({
-          messaggio_id: messageId,
-          bando_id: bandoId,
-          pinned_by: currentUserId
-        })
+    try {
+      if (isPinned) {
+        const { error } = await (supabase as any)
+          .from('messaggio_team_pin')
+          .delete()
+          .eq('messaggio_id', messageId)
+        if (error) throw error
+      } else {
+        const { error } = await (supabase as any)
+          .from('messaggio_team_pin')
+          .insert({
+            messaggio_id: messageId,
+            bando_id: bandoId,
+            studente_id: currentUserId // Aggiornato a studente_id invece di pinned_by
+          })
+        if (error) throw error
+      }
+      fetchMessages()
+    } catch (err: any) {
+      alert("Errore durante il pin: " + err.message)
     }
-    fetchMessages()
   }
 
-  // Upload file
+  // ✅ FIX 3: Gestione chiara degli errori per i File (Ricordati del Bucket!)
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -379,10 +377,9 @@ export default function TeamChat({
         .from('team-files')
         .getPublicUrl(`${bandoId}/${fileName}`)
 
-      // Send message with file
       const fileType = file.type.startsWith('image/') ? 'image' : 'document'
 
-      await (supabase as any)
+      const { error: msgError } = await (supabase as any)
         .from('messaggio_team')
         .insert({
           bando_id: bandoId,
@@ -392,18 +389,19 @@ export default function TeamChat({
           file_nome: file.name,
           file_tipo: fileType
         })
+      
+      if (msgError) throw msgError
 
       fetchMessages()
-    } catch (err) {
+    } catch (err: any) {
       console.error('Upload error:', err)
-      alert('Errore durante il caricamento del file')
+      alert('Errore caricamento. Hai creato il bucket "team-files" pubblico su Supabase? Dettaglio: ' + err.message)
     }
 
     setUploadingFile(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  // Open Gmail for email
   const handleEmailTeam = () => {
     const teamEmails = members
       .filter(m => m.id !== currentUserId)
@@ -417,7 +415,6 @@ export default function TeamChat({
     }
   }
 
-  // Render message text with mentions highlighted
   const renderMessageText = (text: string, menzioni?: string[]) => {
     if (!menzioni || menzioni.length === 0) return text
 
@@ -439,7 +436,6 @@ export default function TeamChat({
     })
   }
 
-  // Get typing users names
   const getTypingNames = () => {
     const names = typingUsers
       .map(id => members.find(m => m.id === id))
@@ -452,18 +448,15 @@ export default function TeamChat({
     return `${names.length} persone stanno scrivendo...`
   }
 
-  // Filter members for mentions
   const filteredMembers = members.filter(m => 
     m.id !== currentUserId && 
     (m.nome.toLowerCase().includes(mentionSearch) || m.cognome.toLowerCase().includes(mentionSearch))
   )
 
-  // Stile cartoon
   const cardStyle = "bg-white rounded-2xl border-2 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
 
   return (
     <div className={`${cardStyle} overflow-hidden flex flex-col h-[600px]`}>
-      {/* Header */}
       <div className="p-4 border-b-2 border-gray-900 flex items-center justify-between bg-gray-50">
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
@@ -475,7 +468,6 @@ export default function TeamChat({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Pinned messages toggle */}
           {pinnedMessages.length > 0 && (
             <button
               onClick={() => setShowPinned(!showPinned)}
@@ -491,7 +483,6 @@ export default function TeamChat({
         </div>
       </div>
 
-      {/* Pinned messages panel */}
       {showPinned && pinnedMessages.length > 0 && (
         <div className="p-3 bg-amber-50 border-b-2 border-amber-300 max-h-32 overflow-y-auto">
           <p className="text-xs font-bold text-amber-600 mb-2">📌 Messaggi Fissati</p>
@@ -508,7 +499,6 @@ export default function TeamChat({
         </div>
       )}
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-100">
         {messages.length === 0 ? (
           <div className="h-full flex items-center justify-center text-center">
@@ -532,7 +522,6 @@ export default function TeamChat({
                   className={`w-9 h-9 rounded-xl object-cover flex-shrink-0 border-2 ${color.border}`}
                 />
                 <div className={`max-w-[70%] ${isMe ? 'text-right' : ''}`}>
-                  {/* Name and time */}
                   <div className={`flex items-center gap-2 mb-1 ${isMe ? 'justify-end' : ''}`}>
                     <span className={`w-2 h-2 rounded-full ${color.bg}`}></span>
                     <p className="text-xs font-bold text-gray-600">
@@ -544,16 +533,13 @@ export default function TeamChat({
                     {isPinned && <span className="text-xs">📌</span>}
                   </div>
 
-                  {/* Message bubble */}
+                  {/* ✅ FIX 5: Sfondo assegnato a tutti i messaggi, non solo "isMe" */}
                   <div 
-                    className={`px-4 py-2.5 rounded-2xl border-2 text-left relative ${
-                      isMe 
-                        ? `${color.bg} text-white ${color.border} rounded-br-md` 
-                        : 'bg-white text-gray-900 border-gray-300 rounded-bl-md'
+                    className={`px-4 py-2.5 rounded-[1.5rem] border-2 text-left relative text-white ${color.bg} ${color.border} ${
+                      isMe ? 'rounded-br-sm' : 'rounded-bl-sm'
                     }`}
-                    style={isMe ? { backgroundColor: color.bgHex } : undefined}
+                    style={color.bgHex ? { backgroundColor: color.bgHex, borderColor: color.bgHex } : undefined}
                   >
-                    {/* File preview */}
                     {msg.file_url && (
                       <div className="mb-2">
                         {msg.file_tipo === 'image' ? (
@@ -568,7 +554,7 @@ export default function TeamChat({
                             href={msg.file_url} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isMe ? 'bg-white/20' : 'bg-gray-100'}`}
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-black/20 hover:bg-black/30 transition-colors"
                           >
                             <span>📄</span>
                             <span className="text-sm underline">{msg.file_nome}</span>
@@ -581,7 +567,6 @@ export default function TeamChat({
                       {renderMessageText(msg.testo, msg.menzioni)}
                     </p>
 
-                    {/* Reactions */}
                     {msg.reazioni && msg.reazioni.length > 0 && (
                       <div className={`flex flex-wrap gap-1 mt-2 ${isMe ? 'justify-end' : ''}`}>
                         {msg.reazioni.map((r, i) => (
@@ -590,8 +575,8 @@ export default function TeamChat({
                             onClick={() => toggleReaction(msg.id, r.emoji)}
                             className={`px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 transition-all ${
                               r.users.includes(currentUserId)
-                                ? 'bg-blue-500 text-white border-2 border-blue-600'
-                                : 'bg-white/80 text-gray-700 border border-gray-300 hover:bg-gray-100'
+                                ? 'bg-black/30 text-white border-2 border-black/50'
+                                : 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
                             }`}
                           >
                             <span>{r.emoji}</span>
@@ -602,8 +587,8 @@ export default function TeamChat({
                     )}
                   </div>
 
-                  {/* Action buttons (show on hover) */}
-                  <div className={`flex gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity ${isMe ? 'justify-end' : ''}`}>
+                  {/* ✅ FIX 1 e 2: Picker ancorato e logiche corrette */}
+                  <div className={`flex gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity relative ${isMe ? 'justify-end' : ''}`}>
                     <button
                       onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)}
                       className="p-1 text-xs hover:bg-gray-200 rounded-lg"
@@ -620,22 +605,21 @@ export default function TeamChat({
                         📌
                       </button>
                     )}
-                  </div>
 
-                  {/* Emoji picker */}
-                  {showEmojiPicker === msg.id && (
-                    <div className={`absolute mt-1 bg-white rounded-xl border-2 border-gray-900 shadow-lg p-2 flex gap-1 z-50`}>
-                      {REACTION_EMOJIS.map(emoji => (
-                        <button
-                          key={emoji}
-                          onClick={() => toggleReaction(msg.id, emoji)}
-                          className="p-1.5 hover:bg-gray-100 rounded-lg text-lg transition-transform hover:scale-125"
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                    {showEmojiPicker === msg.id && (
+                      <div className={`absolute bottom-full mb-1 ${isMe ? 'right-0' : 'left-0'} bg-white rounded-xl border-2 border-gray-900 shadow-lg p-2 flex gap-1 z-50`}>
+                        {REACTION_EMOJIS.map(emoji => (
+                          <button
+                            key={emoji}
+                            onClick={() => toggleReaction(msg.id, emoji)}
+                            className="p-1.5 hover:bg-gray-100 rounded-lg text-lg transition-transform hover:scale-125"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )
@@ -644,7 +628,6 @@ export default function TeamChat({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Typing indicator */}
       {typingUsers.length > 0 && (
         <div className="px-4 py-2 bg-gray-50 border-t border-gray-200">
           <div className="flex items-center gap-2 text-xs text-gray-500">
@@ -658,9 +641,7 @@ export default function TeamChat({
         </div>
       )}
 
-      {/* Input area */}
       <div className="p-4 border-t-2 border-gray-900 bg-white relative">
-        {/* Mentions dropdown */}
         {showMentions && filteredMembers.length > 0 && (
           <div className="absolute bottom-full left-4 right-4 mb-2 bg-white rounded-xl border-2 border-gray-900 shadow-lg max-h-40 overflow-y-auto">
             {filteredMembers.map(member => {
@@ -686,7 +667,6 @@ export default function TeamChat({
         )}
 
         <div className="flex gap-2">
-          {/* File upload */}
           <input
             ref={fileInputRef}
             type="file"
@@ -703,8 +683,8 @@ export default function TeamChat({
             {uploadingFile ? '⏳' : '📎'}
           </button>
 
-          {/* Text input */}
           <div className="flex-1 relative">
+            {/* ✅ FIX 4: Aggiunto text-gray-900 per il testo dell'input */}
             <textarea
               ref={inputRef}
               value={newMessage}
@@ -717,12 +697,11 @@ export default function TeamChat({
               }}
               onBlur={clearTyping}
               placeholder="Scrivi un messaggio... (@nome per menzionare)"
-              className="w-full px-4 py-3 bg-gray-100 rounded-xl border-2 border-gray-300 focus:border-gray-900 outline-none text-sm resize-none font-medium"
+              className="w-full px-4 py-3 bg-gray-100 text-gray-900 rounded-xl border-2 border-gray-300 focus:border-gray-900 outline-none text-sm resize-none font-medium"
               rows={1}
             />
           </div>
 
-          {/* Send button */}
           <button
             onClick={sendMessage}
             disabled={!newMessage.trim() || sendingMessage}
@@ -732,7 +711,6 @@ export default function TeamChat({
           </button>
         </div>
 
-        {/* Admin email button */}
         {isAdmin && (
           <button
             onClick={handleEmailTeam}
