@@ -1,9 +1,18 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { getMemberColor } from '@/lib/member-colors'
+
+// Import components
+import TeamChat from '@/components/team-workspace/TeamChat'
+import TeamMembers from '@/components/team-workspace/TeamMembers'
+import TeamTodoList from '@/components/team-workspace/TeamTodoList'
+import TeamPolls from '@/components/team-workspace/TeamPolls'
+import TeamNotes from '@/components/team-workspace/TeamNotes'
+import TeamCalendar from '@/components/team-workspace/TeamCalendar'
 
 interface TeamMember {
   id: string
@@ -12,22 +21,10 @@ interface TeamMember {
   avatar_url: string | null
   email: string
   bio: string | null
-  ruolo_team: 'admin' | 'membro'
-  nome_corso: string
-  anno_inizio_corso: number | null
-  partecipazione_id: string
-}
-
-interface Message {
-  id: string
-  testo: string
-  created_at: string
-  studente: {
-    id: string
-    nome: string
-    cognome: string
-    avatar_url: string | null
-  }
+  ruolo_team: 'admin' | 'membro' | 'owner'
+  nome_corso?: string
+  anno_inizio_corso?: number | null
+  partecipazione_id?: string
 }
 
 export default function TeamWorkspacePage() {
@@ -35,32 +32,24 @@ export default function TeamWorkspacePage() {
   const bandoId = params?.id as string
   const supabase = createClient()
   const router = useRouter()
-  const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Stati dati
+  // States
   const [project, setProject] = useState<any>(null)
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
-  const [leader, setLeader] = useState<any>(null)
+  const [leader, setLeader] = useState<TeamMember | null>(null)
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [isOwner, setIsOwner] = useState(false)
-  
-  // Colore dominante
   const [dominantColor, setDominantColor] = useState('239, 68, 68')
-  
-  // Chat
-  const [messages, setMessages] = useState<Message[]>([])
-  const [newMessage, setNewMessage] = useState('')
-  const [sendingMessage, setSendingMessage] = useState(false)
-  
-  // UI
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [hoveredMember, setHoveredMember] = useState<string | null>(null)
-  const [copiedEmail, setCopiedEmail] = useState<string | null>(null)
+  
+  // Active tab for tools
+  const [activeTab, setActiveTab] = useState<'chat' | 'todo' | 'polls' | 'notes' | 'calendar'>('chat')
 
+  // Extract dominant color from image
   const extractColor = (imageUrl: string) => {
-    if (!imageUrl) return;
+    if (!imageUrl) return
     
     const img = new Image()
     img.crossOrigin = 'Anonymous'
@@ -95,28 +84,17 @@ export default function TeamWorkspacePage() {
         }
 
         if (count > 0) {
-          r = Math.round(r / count)
-          g = Math.round(g / count)
-          b = Math.round(b / count)
-          setDominantColor(`${r}, ${g}, ${b}`)
+          setDominantColor(`${Math.round(r/count)}, ${Math.round(g/count)}, ${Math.round(b/count)}`)
         }
       } catch (e) {
-        console.error("Errore estrazione colore:", e)
-        setDominantColor('239, 68, 68')
+        console.error("Color extraction error:", e)
       }
     }
     
-    img.onerror = () => {
-      console.warn("Impossibile caricare l'immagine.")
-      setDominantColor('239, 68, 68')
-    }
+    img.onerror = () => setDominantColor('239, 68, 68')
   }
 
-  // Scroll manuale della chat
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
+  // Fetch team data
   const fetchTeamData = async () => {
     if (!bandoId) return
     setLoading(true)
@@ -129,6 +107,7 @@ export default function TeamWorkspacePage() {
       }
       setCurrentUser(user)
 
+      // Fetch project
       const { data: bandoData, error: bandoError } = await supabase
         .from('bando')
         .select(`
@@ -142,6 +121,7 @@ export default function TeamWorkspacePage() {
 
       const checkIsOwner = bandoData.creatore_studente_id === user.id
       
+      // Check if user is member
       if (!checkIsOwner) {
         const { data: myParticipation } = await supabase
           .from('partecipazione')
@@ -163,6 +143,7 @@ export default function TeamWorkspacePage() {
         extractColor(bandoData.foto_url)
       }
 
+      // Set leader
       const cStudente = bandoData?.creatore_studente
       if (cStudente) {
         setLeader({
@@ -172,10 +153,11 @@ export default function TeamWorkspacePage() {
           avatar_url: cStudente.avatar_url,
           email: cStudente.email,
           bio: cStudente.bio,
-          ruolo: 'Owner'
+          ruolo_team: 'owner'
         })
       }
 
+      // Fetch team members
       const { data: membersData } = await supabase
         .from('partecipazione')
         .select(`
@@ -192,7 +174,7 @@ export default function TeamWorkspacePage() {
         .eq('bando_id', bandoId)
         .eq('stato', 'accepted')
 
-      const formattedMembers = membersData?.map((m: any) => {
+      const formattedMembers: TeamMember[] = membersData?.map((m: any) => {
         const corsoInfo = m.studente?.studente_corso?.[0]
         return {
           partecipazione_id: m.id,
@@ -210,12 +192,11 @@ export default function TeamWorkspacePage() {
 
       setTeamMembers(formattedMembers)
 
+      // Check if admin
       const userMemberData = formattedMembers.find(m => m.id === user?.id)
       if (checkIsOwner || userMemberData?.ruolo_team === 'admin') {
         setIsAdmin(true)
       }
-
-      await fetchMessages()
 
     } catch (err: any) {
       setError(err.message)
@@ -224,70 +205,9 @@ export default function TeamWorkspacePage() {
     }
   }
 
-  const fetchMessages = async () => {
-    if (!bandoId) return;
-    
-    // (supabase as any) disattiva l'errore di TypeScript per le nuove tabelle
-    const { data } = await (supabase as any)
-      .from('messaggio_team')
-      .select(`
-        id,
-        testo,
-        created_at,
-        studente:studente_id (id, nome, cognome, avatar_url)
-      `)
-      .eq('bando_id', bandoId)
-      .order('created_at', { ascending: true })
-      .limit(50)
-
-    if (data) {
-      setMessages(data)
-      setTimeout(scrollToBottom, 100)
-    }
-  }
-
-  const sendMessage = async () => {
-    if (!newMessage.trim() || sendingMessage || !currentUser?.id || !bandoId) {
-      console.warn("Invio annullato: dati mancanti", { 
-        testo: !!newMessage.trim(), 
-        utente: !!currentUser?.id, 
-        bando: !!bandoId 
-      });
-      return;
-    }
-    
-    setSendingMessage(true);
-
-    // Eseguiamo l'invio
-    const { data, error } = await (supabase as any)
-      .from('messaggio_team')
-      .insert({
-        bando_id: bandoId,
-        studente_id: currentUser.id, // Questo deve corrispondere ad auth.uid()
-        testo: newMessage.trim()
-      })
-      .select(); // Chiediamo a supabase di restituirci quello che ha scritto
-
-    if (error) {
-      console.error("ERRORE INVIO MESSAGGIO:", error.message);
-      alert("Errore: " + error.message);
-    } else {
-      console.log("Messaggio inviato correttamente:", data);
-      setNewMessage('');
-      await fetchMessages();
-    }
-
-    setSendingMessage(false);
-  };
-
-  const copyEmail = (email: string) => {
-    navigator.clipboard.writeText(email)
-    setCopiedEmail(email)
-    setTimeout(() => setCopiedEmail(null), 2000)
-  }
-
+  // Leave team
   const handleLeaveTeam = async () => {
-    if (!currentUser?.id || !bandoId) return;
+    if (!currentUser?.id || !bandoId) return
     if (!window.confirm("Sei sicuro di voler abbandonare il team? Non potrai più rientrare.")) return
 
     const { data: myPart } = await supabase
@@ -310,62 +230,25 @@ export default function TeamWorkspacePage() {
 
   useEffect(() => {
     if (bandoId) {
-       fetchTeamData()
+      fetchTeamData()
     }
   }, [bandoId])
 
-  // Realtime messages migliorato e forzato con (as any)
-  useEffect(() => {
-    if (!bandoId || !currentUser) return
+  // All members including leader
+  const allMembers: TeamMember[] = leader ? [leader, ...teamMembers] : teamMembers
 
-    const channel = supabase
-      .channel(`team-${bandoId}`)
-      .on('postgres_changes' as any, {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messaggio_team',
-        filter: `bando_id=eq.${bandoId}`
-      }, async (payload: any) => {
-        
-        const newMsgRaw = payload.new;
-        
-        // Evitiamo di sdoppiare il messaggio se siamo stati noi ad inviarlo
-        if (newMsgRaw.studente_id === currentUser.id) return;
-
-        // Recuperiamo i dati dello studente che ha inviato il messaggio
-        const { data: studenteData } = await supabase
-          .from('studente')
-          .select('id, nome, cognome, avatar_url')
-          .eq('id', newMsgRaw.studente_id)
-          .single()
-
-        if (studenteData) {
-          const newMsgFormatted: Message = {
-            id: newMsgRaw.id,
-            testo: newMsgRaw.testo,
-            created_at: newMsgRaw.created_at,
-            studente: studenteData
-          }
-          setMessages(prev => [...prev, newMsgFormatted])
-          setTimeout(scrollToBottom, 100)
-        } else {
-          fetchMessages()
-        }
-      })
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [bandoId, currentUser])
-
+  // Cartoon styles
+  const cardStyle = "bg-white rounded-2xl border-2 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
 
   if (loading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-gray-300 border-t-red-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500 font-medium">Caricamento workspace...</p>
+      <div 
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: `rgba(${dominantColor}, 0.1)` }}
+      >
+        <div className={`${cardStyle} p-8 text-center`}>
+          <div className="w-12 h-12 border-4 border-gray-300 border-t-gray-900 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-900 font-bold">Caricamento workspace...</p>
         </div>
       </div>
     )
@@ -373,12 +256,13 @@ export default function TeamWorkspacePage() {
 
   if (error) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 font-medium">{error}</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className={`${cardStyle} p-8 text-center`}>
+          <span className="text-4xl block mb-3">❌</span>
+          <p className="text-red-600 font-bold">{error}</p>
           <button 
             onClick={() => router.push('/dashboard/my_teams')}
-            className="mt-4 px-4 py-2 bg-gray-100 rounded-lg text-sm font-medium hover:bg-gray-200"
+            className="mt-4 px-4 py-2 bg-gray-900 text-white rounded-xl font-bold hover:bg-gray-800"
           >
             Torna ai Miei Team
           </button>
@@ -387,15 +271,13 @@ export default function TeamWorkspacePage() {
     )
   }
 
-  const allMembers = leader ? [{ ...leader, ruolo_team: 'owner' as const }, ...teamMembers] : teamMembers
-
   return (
     <div 
       className="min-h-screen pb-20 transition-colors duration-700"
-      style={{ backgroundColor: `rgba(${dominantColor}, 0.05)` }}
+      style={{ backgroundColor: `rgba(${dominantColor}, 0.15)` }}
     >
       {/* Banner Header */}
-      <div className="relative h-64 sm:h-80 overflow-hidden">
+      <div className="relative h-56 sm:h-72 overflow-hidden border-b-4 border-gray-900">
         {project?.foto_url ? (
           <img 
             src={project.foto_url} 
@@ -409,14 +291,14 @@ export default function TeamWorkspacePage() {
           />
         )}
         
-        {/* Overlay gradient */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
         
         {/* Back button */}
         <div className="absolute top-4 left-4 sm:top-6 sm:left-6">
           <button 
             onClick={() => router.push('/dashboard/my_teams')}
-            className="flex items-center gap-2 bg-white/10 backdrop-blur-md text-white px-4 py-2 rounded-xl font-medium text-sm hover:bg-white/20 transition-colors"
+            className="flex items-center gap-2 bg-white text-gray-900 px-4 py-2 rounded-xl font-bold text-sm border-2 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -425,12 +307,12 @@ export default function TeamWorkspacePage() {
           </button>
         </div>
 
-        {/* Admin badge + settings */}
+        {/* Admin settings button */}
         {isAdmin && (
-          <div className="absolute top-4 right-4 sm:top-6 sm:right-6 flex gap-2">
+          <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
             <Link
               href={`/dashboard/projects/${bandoId}/manage`}
-              className="flex items-center gap-2 bg-white text-gray-900 px-4 py-2 rounded-xl font-medium text-sm hover:bg-gray-100 transition-colors shadow-lg"
+              className="flex items-center gap-2 bg-white text-gray-900 px-4 py-2 rounded-xl font-bold text-sm border-2 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -443,23 +325,23 @@ export default function TeamWorkspacePage() {
 
         {/* Project info */}
         <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
-          <div className="max-w-5xl mx-auto">
+          <div className="max-w-6xl mx-auto">
             <div className="flex items-center gap-2 mb-3">
-              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+              <span className={`px-3 py-1.5 rounded-xl text-xs font-black border-2 ${
                 project?.stato === 'chiuso' 
-                  ? 'bg-gray-500 text-white' 
-                  : 'bg-green-500 text-white'
+                  ? 'bg-gray-700 text-white border-gray-500' 
+                  : 'bg-green-500 text-white border-green-600'
               }`}>
                 {project?.stato === 'chiuso' ? '🔒 Chiuso' : '🟢 Aperto'}
               </span>
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/20 backdrop-blur-sm text-white">
+              <span className="px-3 py-1.5 rounded-xl text-xs font-black bg-white/20 backdrop-blur-sm text-white border-2 border-white/30">
                 Workspace
               </span>
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-2">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-2 drop-shadow-lg">
               {project?.titolo}
             </h1>
-            <p className="text-white/80 text-sm sm:text-base max-w-2xl line-clamp-2">
+            <p className="text-white/90 text-sm sm:text-base max-w-2xl line-clamp-2 font-medium">
               {project?.descrizione}
             </p>
           </div>
@@ -467,15 +349,15 @@ export default function TeamWorkspacePage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 -mt-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-8">
         <div className="grid lg:grid-cols-3 gap-6">
           
-          {/* Main content */}
+          {/* Main content - 2/3 */}
           <div className="lg:col-span-2 space-y-6">
             
-            {/* Link di progetto */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            {/* Project Links - Moved away from banner */}
+            <div className={cardStyle + " p-5"}>
+              <h2 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2">
                 <span>🔗</span> Link di Progetto
               </h2>
               <div className="grid sm:grid-cols-2 gap-4">
@@ -484,22 +366,22 @@ export default function TeamWorkspacePage() {
                     href={project.github_url} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-4 bg-gray-900 hover:bg-gray-800 text-white rounded-xl transition-colors"
+                    className="flex items-center gap-3 p-4 bg-gray-900 hover:bg-gray-800 text-white rounded-xl transition-all border-2 border-gray-700 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px]"
                   >
                     <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
                     </svg>
                     <div>
-                      <p className="font-semibold">GitHub</p>
+                      <p className="font-black">GitHub</p>
                       <p className="text-xs text-gray-400">Repository</p>
                     </div>
                   </a>
                 ) : (
-                  <div className="flex items-center gap-3 p-4 bg-gray-50 text-gray-400 rounded-xl border-2 border-dashed border-gray-200">
+                  <div className="flex items-center gap-3 p-4 bg-gray-100 text-gray-400 rounded-xl border-2 border-dashed border-gray-300">
                     <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
                     </svg>
-                    <span className="text-sm font-medium">Nessun link GitHub</span>
+                    <span className="font-bold">Nessun link GitHub</span>
                   </div>
                 )}
 
@@ -508,242 +390,107 @@ export default function TeamWorkspacePage() {
                     href={project.drive_url} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors"
+                    className="flex items-center gap-3 p-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all border-2 border-blue-700 shadow-[3px_3px_0px_0px_rgba(30,64,175,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px]"
                   >
-                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.081 0 3.753-.02 3.742-.047-.005-.02-1.708-3.001-3.775-6.62l-3.76-6.574h-3.758zm-6.267 10.942c-.023.005-1.727 3.001-3.794 6.621l-3.76 6.574 3.76-.005c2.082-.005 3.754-.025 3.743-.047-.005-.02 1.708-3.001 3.775-6.62l3.76-6.574-3.76.005c-2.082.005-3.754.025-3.724.046z"/>
+                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M4.433 22l-1.45-2.512L11.11 5.75h2.78l8.127 13.738L20.567 22H4.433zm11.593-4.5L12 9.262 7.974 17.5h8.052zM12 2L2.273 19.5l1.45 2.512L12 7.512l8.277 14.5 1.45-2.512L12 2z"/>
                     </svg>
                     <div>
-                      <p className="font-semibold">Google Drive</p>
+                      <p className="font-black">Google Drive</p>
                       <p className="text-xs text-blue-200">Documenti</p>
                     </div>
                   </a>
                 ) : (
-                  <div className="flex items-center gap-3 p-4 bg-gray-50 text-gray-400 rounded-xl border-2 border-dashed border-gray-200">
-                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.081 0 3.753-.02 3.742-.047-.005-.02-1.708-3.001-3.775-6.62l-3.76-6.574h-3.758zm-6.267 10.942c-.023.005-1.727 3.001-3.794 6.621l-3.76 6.574 3.76-.005c2.082-.005 3.754-.025 3.743-.047-.005-.02 1.708-3.001 3.775-6.62l3.76-6.574-3.76.005c-2.082.005-3.754.025-3.724.046z"/>
+                  <div className="flex items-center gap-3 p-4 bg-gray-100 text-gray-400 rounded-xl border-2 border-dashed border-gray-300">
+                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M4.433 22l-1.45-2.512L11.11 5.75h2.78l8.127 13.738L20.567 22H4.433zm11.593-4.5L12 9.262 7.974 17.5h8.052zM12 2L2.273 19.5l1.45 2.512L12 7.512l8.277 14.5 1.45-2.512L12 2z"/>
                     </svg>
-                    <span className="text-sm font-medium">Nessun link Drive</span>
+                    <span className="font-bold">Nessun link Drive</span>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Chat Team */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-[500px]">
-              <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <span>💬</span> Chat Team
-                </h2>
-                <span className="text-xs text-gray-400">{messages.length} messaggi</span>
-              </div>
-              
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-                {messages.length === 0 ? (
-                  <div className="h-full flex items-center justify-center text-center">
-                    <div>
-                      <span className="text-4xl block mb-2">💬</span>
-                      <p className="text-gray-500 text-sm">Nessun messaggio ancora</p>
-                      <p className="text-gray-400 text-xs">Inizia la conversazione!</p>
-                    </div>
-                  </div>
-                ) : (
-                  messages.map((msg) => {
-                    const isMe = msg.studente?.id === currentUser?.id
-                    return (
-                      <div key={msg.id} className={`flex gap-3 ${isMe ? 'flex-row-reverse' : ''}`}>
-                        <img 
-                          src={msg.studente?.avatar_url || '/default-avatar.png'} 
-                          alt=""
-                          className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-                        />
-                        <div className={`max-w-[70%] ${isMe ? 'text-right' : ''}`}>
-                          <p className="text-xs text-gray-500 mb-1">
-                            {msg.studente?.nome} {msg.studente?.cognome}
-                          </p>
-                          <div className={`px-4 py-2 rounded-2xl ${
-                            isMe 
-                              ? 'bg-blue-600 text-white rounded-br-md text-left' 
-                              : 'bg-white border border-gray-200 text-gray-900 rounded-bl-md text-left'
-                          }`}>
-                            <p className="text-sm break-words">{msg.testo}</p>
-                          </div>
-                          <p className="text-[10px] text-gray-400 mt-1">
-                            {new Date(msg.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                        </div>
-                      </div>
-                    )
-                  })
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Input */}
-              <div className="p-4 border-t border-gray-100 bg-white">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                    placeholder="Scrivi un messaggio..."
-                    className="flex-1 px-4 py-2.5 bg-gray-100 rounded-xl border-0 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                  />
-                  <button
-                    onClick={sendMessage}
-                    disabled={!newMessage.trim() || sendingMessage || !currentUser?.id}
-                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {sendingMessage ? '...' : 'Invia'}
-                  </button>
-                </div>
-
-                {/* Admin: Notifica tutti */}
-                {isAdmin && (
-                  <button
-                    onClick={() => {
-                      const teamEmails = allMembers
-                        .filter(m => m.email && m.id !== currentUser?.id)
-                        .map(m => m.email)
-                        .join(',')
-                      
-                      if (teamEmails) {
-                        const subject = encodeURIComponent(`[${project?.titolo}] Aggiornamento dal team`)
-                        window.location.href = `mailto:?bcc=${teamEmails}&subject=${subject}`
-                      }
-                    }}
-                    className="mt-3 w-full py-2 text-xs font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center gap-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    Invia email a tutto il team
-                  </button>
-                )}
-              </div>
+            {/* Tools Tabs */}
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {[
+                { id: 'chat' as const, label: 'Chat', icon: '💬' },
+                { id: 'todo' as const, label: 'To-Do', icon: '✅' },
+                { id: 'polls' as const, label: 'Sondaggi', icon: '📊' },
+                { id: 'notes' as const, label: 'Note', icon: '📝' },
+                { id: 'calendar' as const, label: 'Calendario', icon: '📅' },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all border-2 ${
+                    activeTab === tab.id
+                      ? 'bg-gray-900 text-white border-gray-700 shadow-none'
+                      : 'bg-white text-gray-600 border-gray-300 hover:border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                  }`}
+                >
+                  <span>{tab.icon}</span>
+                  {tab.label}
+                </button>
+              ))}
             </div>
+
+            {/* Active Tool */}
+            {activeTab === 'chat' && (
+              <TeamChat 
+                bandoId={bandoId}
+                currentUserId={currentUser?.id}
+                members={allMembers}
+                projectTitle={project?.titolo || ''}
+                isAdmin={isAdmin}
+              />
+            )}
+
+            {activeTab === 'todo' && (
+              <TeamTodoList 
+                bandoId={bandoId}
+                currentUserId={currentUser?.id}
+                members={allMembers}
+              />
+            )}
+
+            {activeTab === 'polls' && (
+              <TeamPolls 
+                bandoId={bandoId}
+                currentUserId={currentUser?.id}
+                members={allMembers}
+              />
+            )}
+
+            {activeTab === 'notes' && (
+              <TeamNotes 
+                bandoId={bandoId}
+                currentUserId={currentUser?.id}
+                members={allMembers}
+              />
+            )}
+
+            {activeTab === 'calendar' && (
+              <TeamCalendar 
+                bandoId={bandoId}
+                currentUserId={currentUser?.id}
+                members={allMembers}
+              />
+            )}
           </div>
 
           {/* Sidebar - Team Members */}
           <div className="space-y-6">
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm sticky top-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <span>👥</span> Team
-                </span>
-                <span className="text-xs text-gray-400 font-normal">{allMembers.length} membri</span>
-              </h2>
-
-              <div className="space-y-2">
-                {allMembers.map((member) => (
-                  <div
-                    key={member.id}
-                    className="relative"
-                    onMouseEnter={() => setHoveredMember(member.id)}
-                    onMouseLeave={() => setHoveredMember(null)}
-                  >
-                    <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer">
-                      <div className="relative">
-                        <img 
-                          src={member.avatar_url || '/default-avatar.png'} 
-                          alt=""
-                          className="w-10 h-10 rounded-xl object-cover"
-                        />
-                        {member.ruolo_team === 'owner' && (
-                          <span className="absolute -top-1 -right-1 text-xs">👑</span>
-                        )}
-                        {member.ruolo_team === 'admin' && (
-                          <span className="absolute -top-1 -right-1 text-xs">🛡️</span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 truncate text-sm">
-                          {member.nome} {member.cognome}
-                        </p>
-                        <p className={`text-xs ${
-                          member.ruolo_team === 'owner' ? 'text-amber-600' :
-                          member.ruolo_team === 'admin' ? 'text-blue-600' :
-                          'text-gray-400'
-                        }`}>
-                          {member.ruolo_team === 'owner' ? 'Owner' :
-                           member.ruolo_team === 'admin' ? 'Admin' : 'Membro'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Hover Card */}
-                    {hoveredMember === member.id && (
-                      <div className="absolute left-full top-0 ml-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 p-4 z-50 animate-in fade-in slide-in-from-left-2 duration-200">
-                        <div className="flex items-center gap-3 mb-3">
-                          <img 
-                            src={member.avatar_url || '/default-avatar.png'} 
-                            alt=""
-                            className="w-12 h-12 rounded-xl object-cover"
-                          />
-                          <div>
-                            <p className="font-semibold text-gray-900">{member.nome} {member.cognome}</p>
-                            <p className="text-xs text-gray-500">{member.nome_corso || 'Non specificato'}</p>
-                          </div>
-                        </div>
-
-                        {member.bio && (
-                          <p className="text-xs text-gray-600 mb-3 line-clamp-3 italic">"{member.bio}"</p>
-                        )}
-
-                        {member.anno_inizio_corso && (
-                          <p className="text-xs text-gray-400 mb-3">
-                            🎓 {new Date().getFullYear() - member.anno_inizio_corso + 1}° Anno
-                          </p>
-                        )}
-
-                        {member.email && member.id !== currentUser?.id && (
-                          <button
-                            onClick={() => copyEmail(member.email)}
-                            className="w-full flex items-center justify-center gap-2 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium transition-colors"
-                          >
-                            {copiedEmail === member.email ? (
-                              <>
-                                <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                                Copiata!
-                              </>
-                            ) : (
-                              <>
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                                </svg>
-                                Copia email
-                              </>
-                            )}
-                          </button>
-                        )}
-
-                        {/* Arrow */}
-                        <div className="absolute left-0 top-4 -translate-x-full">
-                          <div className="w-0 h-0 border-y-8 border-y-transparent border-r-8 border-r-white" />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Leave team */}
-              {!isOwner && (
-                <button
-                  onClick={handleLeaveTeam}
-                  className="w-full mt-6 py-2.5 text-sm font-medium text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors border border-transparent hover:border-red-200"
-                >
-                  🚪 Abbandona team
-                </button>
-              )}
-            </div>
+            <TeamMembers 
+              members={allMembers}
+              currentUserId={currentUser?.id}
+              bandoId={bandoId}
+              isOwner={isOwner}
+              onLeaveTeam={handleLeaveTeam}
+            />
           </div>
         </div>
       </div>
     </div>
   )
-} 
+}
