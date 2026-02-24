@@ -11,7 +11,7 @@ const cspHeader = `
   base-uri 'self';
   form-action 'self';
   frame-ancestors 'none';
-  connect-src 'self' https: http: *.supabase.co;
+  connect-src 'self' https: http: wss: ws: *.supabase.co; 
   upgrade-insecure-requests;
 `.replace(/\n/g, '').replace(/\s{2,}/g, ' ').trim();
 

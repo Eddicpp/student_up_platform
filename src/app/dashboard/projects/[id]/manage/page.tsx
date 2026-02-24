@@ -43,54 +43,60 @@ export default function ManageApplicationPage() {
   const [savingEdit, setSavingEdit] = useState(false)
   const [editSuccess, setEditSuccess] = useState(false)
 
-  // Estrai colore dominante
+  // Estrai colore dominante (CON PROTEZIONE CORS)
   const extractColor = (imageUrl: string) => {
+    if (!imageUrl) return;
     const img = new Image()
     img.crossOrigin = 'Anonymous'
     img.src = imageUrl
 
     img.onload = () => {
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
+      try {
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
 
-      const size = 50
-      canvas.width = size
-      canvas.height = size
-      ctx.drawImage(img, 0, 0, size, size)
+        const size = 50
+        canvas.width = size
+        canvas.height = size
+        ctx.drawImage(img, 0, 0, size, size)
 
-      const imageData = ctx.getImageData(0, 0, size, size).data
-      let r = 0, g = 0, b = 0, count = 0
+        const imageData = ctx.getImageData(0, 0, size, size).data
+        let r = 0, g = 0, b = 0, count = 0
 
-      for (let i = 0; i < imageData.length; i += 4) {
-        const red = imageData[i]
-        const green = imageData[i + 1]
-        const blue = imageData[i + 2]
-        const brightness = (red + green + blue) / 3
+        for (let i = 0; i < imageData.length; i += 4) {
+          const red = imageData[i]
+          const green = imageData[i + 1]
+          const blue = imageData[i + 2]
+          const brightness = (red + green + blue) / 3
 
-        if (brightness > 30 && brightness < 220) {
-          r += red
-          g += green
-          b += blue
-          count++
+          if (brightness > 30 && brightness < 220) {
+            r += red
+            g += green
+            b += blue
+            count++
+          }
         }
-      }
 
-      if (count > 0) {
-        r = Math.round(r / count)
-        g = Math.round(g / count)
-        b = Math.round(b / count)
-        setDominantColor(`${r}, ${g}, ${b}`)
+        if (count > 0) {
+          r = Math.round(r / count)
+          g = Math.round(g / count)
+          b = Math.round(b / count)
+          setDominantColor(`${r}, ${g}, ${b}`)
+        }
+      } catch (e) {
+        console.warn("Errore estrazione colore:", e)
+        setDominantColor('239, 68, 68')
       }
     }
   }
 
-  // Statistiche
+  // Statistiche (PROTETTE DA DATI NULLI)
   const stats = {
-    total: applications.length,
-    pending: applications.filter(a => a.stato === 'pending').length,
-    accepted: applications.filter(a => a.stato === 'accepted').length,
-    rejected: applications.filter(a => a.stato === 'rejected').length,
+    total: applications?.length || 0,
+    pending: applications?.filter(a => a && a.stato === 'pending').length || 0,
+    accepted: applications?.filter(a => a && a.stato === 'accepted').length || 0,
+    rejected: applications?.filter(a => a && a.stato === 'rejected').length || 0,
   }
 
   // Fetch dati
@@ -141,8 +147,8 @@ export default function ManageApplicationPage() {
 
       if (appsData) setApplications(appsData)
 
-      // Team members (accepted)
-      const members = appsData?.filter(a => a.stato === 'accepted') || []
+      // Team members (accepted) - PROTETTO
+      const members = appsData?.filter(a => a && a.stato === 'accepted') || []
       setTeamMembers(members)
 
       setLoading(false)
@@ -363,7 +369,8 @@ export default function ManageApplicationPage() {
     )
   }
 
-  const filteredApps = applications.filter(a => a.stato === filter)
+  // PROTETTO: Evita errori se un oggetto in 'applications' è nullo
+  const filteredApps = applications?.filter(a => a && a.stato === filter) || []
 
   return (
     <div 

@@ -26,7 +26,7 @@ export default function ProjectDetailPage() {
   // Chat modal
   const [showChat, setShowChat] = useState(false)
 
-  // Estrai colore dominante (CORRETTO PER EVITARE CRASH)
+  // Estrai colore dominante (CON PROTEZIONE CORS)
   const extractColor = (imageUrl: string) => {
     if (!imageUrl) return
     const img = new Image()
@@ -109,7 +109,7 @@ export default function ProjectDetailPage() {
         extractColor(bandoData.foto_url)
       }
 
-      // Altri progetti del leader
+      // Altri progetti del leader (PROTETTO CONTRO ID NULLO)
       if (bandoData.creatore_studente_id) {
         const { data: otherProjects } = await supabase
           .from('bando')
@@ -130,7 +130,6 @@ export default function ProjectDetailPage() {
         .eq('studente_id', user.id)
         .maybeSingle()
 
-      // Assicuriamoci di salvare null se non trova niente
       setPartecipazione(partData || null)
       setLoading(false)
     }
@@ -338,12 +337,12 @@ export default function ProjectDetailPage() {
               </div>
             )}
 
-            {/* Apply Section - CORRETTO */}
+            {/* Apply Section - PROTETTO */}
             <ApplySection 
               bandoId={id}
               isAdmin={isAdmin}
               haGiaPartecipato={partecipazione !== null}
-              statoCandidatura={partecipazione?.stato}
+              statoCandidatura={partecipazione?.stato || 'pending'}
               dominantColor={dominantColor}
             />
           </div>
