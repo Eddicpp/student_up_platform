@@ -31,62 +31,66 @@ export default function ManageApplicationPage() {
   // Form impostazioni
   const [linksForm, setLinksForm] = useState({ github: '', drive: '' })
   const [savingLinks, setSavingLinks] = useState(false)
+  
+  // Form modifica progetto
+  const [editForm, setEditForm] = useState({
+    titolo: '',
+    descrizione: '',
+    foto_url: ''
+  })
+  const [newCoverFile, setNewCoverFile] = useState<File | null>(null)
+  const [coverPreview, setCoverPreview] = useState<string | null>(null)
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [editSuccess, setEditSuccess] = useState(false)
 
-  // Estrai colore dominante (ORA PROTETTO DA CORS ERROR)
+  // Estrai colore dominante
   const extractColor = (imageUrl: string) => {
-    if (!imageUrl) return;
     const img = new Image()
     img.crossOrigin = 'Anonymous'
     img.src = imageUrl
 
     img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas')
-        const ctx = canvas.getContext('2d')
-        if (!ctx) return
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
 
-        const size = 50
-        canvas.width = size
-        canvas.height = size
-        ctx.drawImage(img, 0, 0, size, size)
+      const size = 50
+      canvas.width = size
+      canvas.height = size
+      ctx.drawImage(img, 0, 0, size, size)
 
-        const imageData = ctx.getImageData(0, 0, size, size).data
-        let r = 0, g = 0, b = 0, count = 0
+      const imageData = ctx.getImageData(0, 0, size, size).data
+      let r = 0, g = 0, b = 0, count = 0
 
-        for (let i = 0; i < imageData.length; i += 4) {
-          const red = imageData[i]
-          const green = imageData[i + 1]
-          const blue = imageData[i + 2]
-          const brightness = (red + green + blue) / 3
+      for (let i = 0; i < imageData.length; i += 4) {
+        const red = imageData[i]
+        const green = imageData[i + 1]
+        const blue = imageData[i + 2]
+        const brightness = (red + green + blue) / 3
 
-          if (brightness > 30 && brightness < 220) {
-            r += red
-            g += green
-            b += blue
-            count++
-          }
+        if (brightness > 30 && brightness < 220) {
+          r += red
+          g += green
+          b += blue
+          count++
         }
+      }
 
-        if (count > 0) {
-          r = Math.round(r / count)
-          g = Math.round(g / count)
-          b = Math.round(b / count)
-          setDominantColor(`${r}, ${g}, ${b}`)
-        }
-      } catch (e) {
-        console.warn("Errore estrazione colore:", e);
-        setDominantColor('239, 68, 68');
+      if (count > 0) {
+        r = Math.round(r / count)
+        g = Math.round(g / count)
+        b = Math.round(b / count)
+        setDominantColor(`${r}, ${g}, ${b}`)
       }
     }
-    img.onerror = () => setDominantColor('239, 68, 68');
   }
 
-  // Statistiche (ORA PROTETTE DAI DATI NULL)
+  // Statistiche
   const stats = {
     total: applications.length,
-    pending: applications.filter(a => a?.stato === 'pending').length,
-    accepted: applications.filter(a => a?.stato === 'accepted').length,
-    rejected: applications.filter(a => a?.stato === 'rejected').length,
+    pending: applications.filter(a => a.stato === 'pending').length,
+    accepted: applications.filter(a => a.stato === 'accepted').length,
+    rejected: applications.filter(a => a.stato === 'rejected').length,
   }
 
   // Fetch dati
@@ -108,7 +112,13 @@ export default function ManageApplicationPage() {
           github: projectAny.github_url || '',
           drive: projectAny.drive_url || ''
         })
+        setEditForm({
+          titolo: projectData.titolo || '',
+          descrizione: projectData.descrizione || '',
+          foto_url: projectData.foto_url || ''
+        })
         if (projectData.foto_url) {
+          setCoverPreview(projectData.foto_url)
           extractColor(projectData.foto_url)
         }
       }
@@ -131,8 +141,8 @@ export default function ManageApplicationPage() {
 
       if (appsData) setApplications(appsData)
 
-      // Team members (accepted) - PROTETTO
-      const members = appsData?.filter(a => a?.stato === 'accepted') || []
+      // Team members (accepted)
+      const members = appsData?.filter(a => a.stato === 'accepted') || []
       setTeamMembers(members)
 
       setLoading(false)
@@ -254,6 +264,74 @@ export default function ManageApplicationPage() {
     }
   }
 
+  // Upload immagine
+  const uploadImage = async (file: File) => {
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('project-media')
+      .upload(fileName, file)
+
+    if (uploadError) throw uploadError
+    const { data } = supabase.storage.from('project-media').getPublicUrl(fileName)
+    return data.publicUrl
+  }
+
+  // Gestione cambio immagine
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setNewCoverFile(file)
+      const previewUrl = URL.createObjectURL(file)
+      setCoverPreview(previewUrl)
+    }
+  }
+
+  // Salva modifiche progetto
+  const handleSaveEdit = async () => {
+    setSavingEdit(true)
+    setEditSuccess(false)
+
+    try {
+      let finalFotoUrl = editForm.foto_url
+
+      // Upload nuova immagine se presente
+      if (newCoverFile) {
+        finalFotoUrl = await uploadImage(newCoverFile)
+      }
+
+      const { error } = await supabase
+        .from('bando')
+        .update({
+          titolo: editForm.titolo,
+          descrizione: editForm.descrizione,
+          foto_url: finalFotoUrl
+        })
+        .eq('id', bandoId)
+
+      if (!error) {
+        setProject((prev: any) => ({
+          ...prev,
+          titolo: editForm.titolo,
+          descrizione: editForm.descrizione,
+          foto_url: finalFotoUrl
+        }))
+        setEditForm(prev => ({ ...prev, foto_url: finalFotoUrl }))
+        setNewCoverFile(null)
+        if (finalFotoUrl) {
+          extractColor(finalFotoUrl)
+        }
+        setEditSuccess(true)
+        setTimeout(() => setEditSuccess(false), 3000)
+      }
+    } catch (err) {
+      console.error('Errore salvataggio:', err)
+    }
+
+    setSavingEdit(false)
+  }
+
   const handleBroadcast = () => {
     const teamEmails = teamMembers
       .filter(m => m.studente?.email)
@@ -285,8 +363,7 @@ export default function ManageApplicationPage() {
     )
   }
 
-  // PROTETTO: Se 'a' è null o undefined, a?.stato restituisce undefined (non crasha)
-  const filteredApps = applications.filter(a => a?.stato === filter)
+  const filteredApps = applications.filter(a => a.stato === filter)
 
   return (
     <div 
@@ -299,7 +376,7 @@ export default function ManageApplicationPage() {
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-4">
               <button 
-                onClick={() => router.push(`/dashboard/my_teams`)}
+                onClick={() => router.push(`/dashboard/my_teams/${bandoId}`)}
                 className="p-2 hover:bg-gray-100 rounded-xl text-gray-500 hover:text-gray-900 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -613,6 +690,105 @@ export default function ManageApplicationPage() {
         {/* Tab: Impostazioni */}
         {activeTab === 'impostazioni' && (
           <div className="space-y-6 max-w-2xl">
+            
+            {/* Modifica Progetto */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">✏️ Modifica Progetto</h3>
+              
+              {editSuccess && (
+                <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-xl text-sm font-medium flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Modifiche salvate con successo!
+                </div>
+              )}
+              
+              <div className="space-y-4">
+                {/* Immagine di copertina */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Immagine di Copertina</label>
+                  <div className="relative">
+                    <div 
+                      className="relative border-2 border-dashed border-gray-200 rounded-xl overflow-hidden hover:border-gray-300 transition-colors group cursor-pointer"
+                      style={{ aspectRatio: '16/9' }}
+                    >
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                        onChange={handleCoverChange}
+                      />
+                      {coverPreview ? (
+                        <>
+                          <img src={coverPreview} alt="Preview" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <span className="text-white font-medium text-sm bg-white/20 backdrop-blur-sm px-4 py-2 rounded-xl">
+                              Cambia immagine
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 group-hover:bg-gray-100 transition-colors">
+                          <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <p className="text-sm text-gray-500">Clicca per caricare</p>
+                        </div>
+                      )}
+                    </div>
+                    {newCoverFile && (
+                      <p className="text-xs text-blue-600 mt-2 font-medium">
+                        📷 Nuova immagine selezionata: {newCoverFile.name}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Titolo */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Titolo Progetto</label>
+                  <input
+                    type="text"
+                    value={editForm.titolo}
+                    onChange={(e) => setEditForm({ ...editForm, titolo: e.target.value })}
+                    className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none font-medium"
+                  />
+                </div>
+
+                {/* Descrizione */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Descrizione</label>
+                  <textarea
+                    rows={5}
+                    value={editForm.descrizione}
+                    onChange={(e) => setEditForm({ ...editForm, descrizione: e.target.value })}
+                    className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none resize-none"
+                  />
+                </div>
+
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={savingEdit}
+                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {savingEdit ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Salvataggio...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Salva Modifiche
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
             {/* Link */}
             <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Link di Progetto</h3>
