@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/app/context/UserContext'
-import SuperAvatar from '@/components/SuperAvatar'
 import ChatWidget from '@/components/ChatWidget'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -167,15 +166,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       )
     },
     {
-      href: '/dashboard/my_teams',
-      label: 'I Miei Team',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-        </svg>
-      )
-    },
-    {
       href: '/dashboard/create-project',
       label: 'Crea Progetto',
       icon: (
@@ -249,14 +239,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Link>
           </div>
 
-          {/* Right: Actions */}
-          <div className="flex items-center gap-3 pr-2 lg:pr-4">
+          {/* Right: Actions - allineamento pulito */}
+          <div className="flex items-center gap-2">
             
             {/* Notifications */}
             <div className="relative" ref={notificationRef}>
               <button 
                 onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                className={`relative p-2.5 rounded-xl transition-all border-2 ${
+                className={`relative w-10 h-10 rounded-xl flex items-center justify-center transition-all border-2 ${
                   isNotificationsOpen 
                     ? 'bg-gray-900 text-white border-gray-700' 
                     : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900 border-transparent hover:border-gray-300'
@@ -342,21 +332,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               )}
             </div>
 
-            {/* Avatar */}
-            <Link href="/dashboard/profile" className="hover:opacity-90 transition-opacity">
+            {/* Avatar - Solo foto profilo */}
+            <Link 
+              href="/dashboard/profile" 
+              className="w-10 h-10 rounded-xl overflow-hidden border-2 border-gray-900 hover:border-gray-700 transition-all hover:scale-105 flex-shrink-0"
+            >
               {user ? (
-                <SuperAvatar 
-                  src={user.avatar_url} 
-                  nome={user.nome} 
-                  cognome={user.cognome} 
-                  isStaff={user.is_system_admin}
-                  corso={user.corso_studi}
-                  anno={user.anno_corso}
-                  size="sm"
-                  variant="inline"
+                <img 
+                  src={user.avatar_url || '/default-avatar.png'} 
+                  alt="Profilo"
+                  className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-xl bg-gray-200 animate-pulse border-2 border-gray-300" />
+                <div className="w-full h-full bg-gray-200 animate-pulse" />
               )}
             </Link>
           </div>
@@ -400,20 +388,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           {/* User Card */}
-          <div className="px-4 py-3 border-b-2 border-gray-200">
+          <div className="px-4 py-3">
             {user ? (
               <Link 
                 href="/dashboard/profile" 
                 onClick={() => setIsMenuOpen(false)}
                 className="flex items-center gap-3 p-3 rounded-xl border-2 border-gray-200 hover:border-gray-900 bg-white transition-all"
               >
-                <SuperAvatar 
-                  src={user.avatar_url} 
-                  nome={user.nome} 
-                  cognome={user.cognome} 
-                  isStaff={user.is_system_admin}
-                  size="sm"
-                  variant="inline"
+                <img 
+                  src={user.avatar_url || '/default-avatar.png'} 
+                  alt=""
+                  className="w-10 h-10 rounded-xl object-cover border-2 border-gray-900"
                 />
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-gray-900 text-sm truncate">
@@ -434,6 +419,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
             )}
           </div>
+
+          <div className="h-0.5 bg-gray-200 mx-4" />
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto p-3 space-y-1">

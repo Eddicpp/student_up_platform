@@ -361,7 +361,7 @@ export default function ChatWidget() {
                     }
                   }}
                   placeholder="Scrivi..."
-                  className="flex-1 px-3 py-2 bg-gray-100 rounded-xl border-2 border-gray-300 focus:border-gray-900 outline-none text-sm font-medium"
+                  className="flex-1 px-3 py-2 bg-white rounded-xl border-2 border-gray-300 focus:border-gray-900 outline-none text-sm font-medium text-gray-900 placeholder:text-gray-400"
                 />
                 <button
                   onClick={sendMessage}
