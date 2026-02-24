@@ -247,26 +247,38 @@ export default function TeamWorkspacePage() {
   }
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || sendingMessage || !currentUser?.id || !bandoId) return
+    if (!newMessage.trim() || sendingMessage || !currentUser?.id || !bandoId) {
+      console.warn("Invio annullato: dati mancanti", { 
+        testo: !!newMessage.trim(), 
+        utente: !!currentUser?.id, 
+        bando: !!bandoId 
+      });
+      return;
+    }
     
-    setSendingMessage(true)
+    setSendingMessage(true);
 
-    // (supabase as any) bypassa l'errore di TypeScript
-    const { error } = await (supabase as any)
+    // Eseguiamo l'invio
+    const { data, error } = await (supabase as any)
       .from('messaggio_team')
       .insert({
         bando_id: bandoId,
-        studente_id: currentUser.id,
+        studente_id: currentUser.id, // Questo deve corrispondere ad auth.uid()
         testo: newMessage.trim()
       })
+      .select(); // Chiediamo a supabase di restituirci quello che ha scritto
 
-    if (!error) {
-      setNewMessage('')
-      await fetchMessages()
+    if (error) {
+      console.error("ERRORE INVIO MESSAGGIO:", error.message);
+      alert("Errore: " + error.message);
+    } else {
+      console.log("Messaggio inviato correttamente:", data);
+      setNewMessage('');
+      await fetchMessages();
     }
 
-    setSendingMessage(false)
-  }
+    setSendingMessage(false);
+  };
 
   const copyEmail = (email: string) => {
     navigator.clipboard.writeText(email)
