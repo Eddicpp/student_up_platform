@@ -7,7 +7,7 @@ interface ApplySectionProps {
   bandoId: string
   isAdmin: boolean
   haGiaPartecipato: boolean
-  statoCandidatura?: string
+  statoCandidatura?: string // Può essere undefined
   dominantColor?: string
 }
 
@@ -65,7 +65,7 @@ export default function ApplySection({
     setLoading(false)
   }
 
-  // Mappa stati
+  // Mappa stati - AGGIUNTO FALLBACK DEFAULT
   const statoConfig: Record<string, { label: string; icon: string; color: string; bg: string }> = {
     'pending': { 
       label: 'In Attesa di Revisione', 
@@ -84,13 +84,22 @@ export default function ApplySection({
       icon: '❌', 
       color: 'text-gray-600',
       bg: 'bg-gray-50 border-gray-200'
+    },
+    // Fallback in caso di stato non definito o nullo
+    'default': {
+      label: 'Stato Sconosciuto',
+      icon: '❓',
+      color: 'text-gray-500',
+      bg: 'bg-gray-100 border-gray-200'
     }
   }
 
-  // Banner stato (se ha già partecipato)
+  // Banner stato (se ha già partecipato o ha appena inviato)
   if (haGiaPartecipato || inviato) {
+    // 1. CORREZIONE QUI: Assicuriamo che stato abbia sempre un valore valido
     const stato = inviato ? 'pending' : (statoCandidatura || 'pending')
-    const config = statoConfig[stato]
+    // Usiamo il fallback se lo stato non esiste nella mappa
+    const config = statoConfig[stato] || statoConfig['default']
 
     return (
       <div className={`rounded-2xl border p-6 ${config.bg} animate-in fade-in slide-in-from-bottom-4 duration-500`}>
@@ -132,7 +141,7 @@ export default function ApplySection({
     )
   }
 
-  // Form candidatura
+  // Form candidatura (Invariato, ometto per brevità, mantieni il tuo codice originale da "return (" in poi)
   return (
     <div 
       className="rounded-2xl p-6 shadow-sm border overflow-hidden"
@@ -141,6 +150,7 @@ export default function ApplySection({
         borderColor: `rgba(${dominantColor}, 0.2)`
       }}
     >
+      {/* ... [Tutto il resto del tuo form HTML] ... */}
       <div className="mb-6">
         <h3 className="text-xl font-bold text-gray-900 mb-1">Candidati al Progetto</h3>
         <p className="text-sm text-gray-500">Fai sapere al leader perché sei la persona giusta</p>

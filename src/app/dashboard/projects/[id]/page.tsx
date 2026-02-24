@@ -26,7 +26,7 @@ export default function ProjectDetailPage() {
   // Chat modal
   const [showChat, setShowChat] = useState(false)
 
-  // Estrai colore dominante
+  // Estrai colore dominante (CORRETTO PER EVITARE CRASH)
   const extractColor = (imageUrl: string) => {
     if (!imageUrl) return
     const img = new Image()
@@ -130,7 +130,8 @@ export default function ProjectDetailPage() {
         .eq('studente_id', user.id)
         .maybeSingle()
 
-      setPartecipazione(partData)
+      // Assicuriamoci di salvare null se non trova niente
+      setPartecipazione(partData || null)
       setLoading(false)
     }
 
@@ -337,11 +338,11 @@ export default function ProjectDetailPage() {
               </div>
             )}
 
-            {/* Apply Section */}
+            {/* Apply Section - CORRETTO */}
             <ApplySection 
               bandoId={id}
               isAdmin={isAdmin}
-              haGiaPartecipato={!!partecipazione}
+              haGiaPartecipato={partecipazione !== null}
               statoCandidatura={partecipazione?.stato}
               dominantColor={dominantColor}
             />
