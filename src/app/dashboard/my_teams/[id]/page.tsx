@@ -59,7 +59,6 @@ export default function TeamWorkspacePage() {
   const [hoveredMember, setHoveredMember] = useState<string | null>(null)
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null)
 
-  // 1. MODIFICA: Try-Catch aggiunto per proteggere l'esecuzione del Canvas (CORS error prevention)
   const extractColor = (imageUrl: string) => {
     if (!imageUrl) return;
     
@@ -102,18 +101,22 @@ export default function TeamWorkspacePage() {
           setDominantColor(`${r}, ${g}, ${b}`)
         }
       } catch (e) {
-        console.error("Errore estrazione colore (possibile problema CORS):", e)
-        setDominantColor('239, 68, 68') // Fallback a rosso standard
+        console.error("Errore estrazione colore:", e)
+        setDominantColor('239, 68, 68')
       }
     }
     
     img.onerror = () => {
-      console.warn("Impossibile caricare l'immagine per l'estrazione del colore.")
+      console.warn("Impossibile caricare l'immagine.")
       setDominantColor('239, 68, 68')
     }
   }
 
-  // Fetch dati
+  // Scroll manuale della chat
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
   const fetchTeamData = async () => {
     if (!bandoId) return
     setLoading(true)
@@ -126,7 +129,6 @@ export default function TeamWorkspacePage() {
       }
       setCurrentUser(user)
 
-      // Dati bando
       const { data: bandoData, error: bandoError } = await supabase
         .from('bando')
         .select(`
@@ -138,7 +140,6 @@ export default function TeamWorkspacePage() {
 
       if (bandoError) throw bandoError
 
-      // Controllo accesso
       const checkIsOwner = bandoData.creatore_studente_id === user.id
       
       if (!checkIsOwner) {
@@ -150,7 +151,7 @@ export default function TeamWorkspacePage() {
           .single()
 
         if (!myParticipation || myParticipation.stato !== 'accepted') {
-          router.replace('/dashboard/my_teams') // Corretto: indirizziamo a my_teams
+          router.replace('/dashboard/my_teams') 
           return
         }
       }
@@ -158,12 +159,10 @@ export default function TeamWorkspacePage() {
       setProject(bandoData)
       setIsOwner(checkIsOwner)
 
-      // Estrai colore dal banner
       if (bandoData.foto_url) {
         extractColor(bandoData.foto_url)
       }
 
-      // Leader
       const cStudente = bandoData?.creatore_studente
       if (cStudente) {
         setLeader({
@@ -177,7 +176,6 @@ export default function TeamWorkspacePage() {
         })
       }
 
-      // Membri team
       const { data: membersData } = await supabase
         .from('partecipazione')
         .select(`
@@ -212,13 +210,11 @@ export default function TeamWorkspacePage() {
 
       setTeamMembers(formattedMembers)
 
-      // Permessi
       const userMemberData = formattedMembers.find(m => m.id === user?.id)
       if (checkIsOwner || userMemberData?.ruolo_team === 'admin') {
         setIsAdmin(true)
       }
 
-      // Messaggi chat
       await fetchMessages()
 
     } catch (err: any) {
@@ -230,8 +226,10 @@ export default function TeamWorkspacePage() {
 
   const fetchMessages = async () => {
     if (!bandoId) return;
-    const { data } = await (supabase
-      .from('messaggio_team' as any)
+    
+    // (supabase as any) disattiva l'errore di TypeScript per le nuove tabelle
+    const { data } = await (supabase as any)
+      .from('messaggio_team')
       .select(`
         id,
         testo,
@@ -240,32 +238,31 @@ export default function TeamWorkspacePage() {
       `)
       .eq('bando_id', bandoId)
       .order('created_at', { ascending: true })
-      .limit(50) as any)
+      .limit(50)
 
-    if (data) setMessages(data)
+    if (data) {
+      setMessages(data)
+      setTimeout(scrollToBottom, 100)
+    }
   }
 
   const sendMessage = async () => {
-    // 2. MODIFICA: Controllo di sicurezza fondamentale. Evita crash se currentUser non è ancora pronto.
     if (!newMessage.trim() || sendingMessage || !currentUser?.id || !bandoId) return
     
     setSendingMessage(true)
 
-    const { error } = await (supabase
-      .from('messaggio_team' as any)
+    // (supabase as any) bypassa l'errore di TypeScript
+    const { error } = await (supabase as any)
+      .from('messaggio_team')
       .insert({
         bando_id: bandoId,
         studente_id: currentUser.id,
         testo: newMessage.trim()
-      }) as any)
+      })
 
     if (!error) {
       setNewMessage('')
       await fetchMessages()
-      // Scroll to bottom
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-      }, 100)
     }
 
     setSendingMessage(false)
@@ -295,7 +292,7 @@ export default function TeamWorkspacePage() {
         .update({ stato: 'abandoned' } as any)
         .eq('id', myPart.id)
 
-      router.push('/dashboard/my_teams') // Corretto: indirizziamo alla dashboard dei team
+      router.push('/dashboard/my_teams')
     }
   }
 
@@ -305,35 +302,50 @@ export default function TeamWorkspacePage() {
     }
   }, [bandoId])
 
-  // Realtime messages
+  // Realtime messages migliorato e forzato con (as any)
   useEffect(() => {
-    if (!bandoId) return
+    if (!bandoId || !currentUser) return
 
     const channel = supabase
       .channel(`team-${bandoId}`)
-      .on('postgres_changes', {
+      .on('postgres_changes' as any, {
         event: 'INSERT',
         schema: 'public',
         table: 'messaggio_team',
         filter: `bando_id=eq.${bandoId}`
-      }, (payload) => {
-        // 3. MODIFICA: Invece di fare fetch di tutto, potremmo appendere il payload
-        // Ma per ora manteniamo il fetch garantendo che bandoId sia valido
-        fetchMessages()
+      }, async (payload: any) => {
+        
+        const newMsgRaw = payload.new;
+        
+        // Evitiamo di sdoppiare il messaggio se siamo stati noi ad inviarlo
+        if (newMsgRaw.studente_id === currentUser.id) return;
+
+        // Recuperiamo i dati dello studente che ha inviato il messaggio
+        const { data: studenteData } = await supabase
+          .from('studente')
+          .select('id, nome, cognome, avatar_url')
+          .eq('id', newMsgRaw.studente_id)
+          .single()
+
+        if (studenteData) {
+          const newMsgFormatted: Message = {
+            id: newMsgRaw.id,
+            testo: newMsgRaw.testo,
+            created_at: newMsgRaw.created_at,
+            studente: studenteData
+          }
+          setMessages(prev => [...prev, newMsgFormatted])
+          setTimeout(scrollToBottom, 100)
+        } else {
+          fetchMessages()
+        }
       })
       .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [bandoId]) // rimosso fetchMessages dalle dipendenze se l'hai mai messo, per evitare loop
-
-  // Rileva lo scroll iniziale della chat
-  useEffect(() => {
-    if (messages.length > 0) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }
-  }, [messages])
+  }, [bandoId, currentUser])
 
 
   if (loading) {
@@ -391,7 +403,6 @@ export default function TeamWorkspacePage() {
         {/* Back button */}
         <div className="absolute top-4 left-4 sm:top-6 sm:left-6">
           <button 
-            // 4. MODIFICA: Aggiornato percorso di ritorno
             onClick={() => router.push('/dashboard/my_teams')}
             className="flex items-center gap-2 bg-white/10 backdrop-blur-md text-white px-4 py-2 rounded-xl font-medium text-sm hover:bg-white/20 transition-colors"
           >
@@ -507,7 +518,7 @@ export default function TeamWorkspacePage() {
             </div>
 
             {/* Chat Team */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-[500px]">
               <div className="p-4 border-b border-gray-100 flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                   <span>💬</span> Chat Team
@@ -516,7 +527,7 @@ export default function TeamWorkspacePage() {
               </div>
               
               {/* Messages */}
-              <div className="h-80 overflow-y-auto p-4 space-y-4 bg-gray-50">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
                 {messages.length === 0 ? (
                   <div className="h-full flex items-center justify-center text-center">
                     <div>
@@ -541,10 +552,10 @@ export default function TeamWorkspacePage() {
                           </p>
                           <div className={`px-4 py-2 rounded-2xl ${
                             isMe 
-                              ? 'bg-blue-600 text-white rounded-br-md' 
-                              : 'bg-white border border-gray-200 text-gray-900 rounded-bl-md'
+                              ? 'bg-blue-600 text-white rounded-br-md text-left' 
+                              : 'bg-white border border-gray-200 text-gray-900 rounded-bl-md text-left'
                           }`}>
-                            <p className="text-sm">{msg.testo}</p>
+                            <p className="text-sm break-words">{msg.testo}</p>
                           </div>
                           <p className="text-[10px] text-gray-400 mt-1">
                             {new Date(msg.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
@@ -558,7 +569,7 @@ export default function TeamWorkspacePage() {
               </div>
 
               {/* Input */}
-              <div className="p-4 border-t border-gray-100">
+              <div className="p-4 border-t border-gray-100 bg-white">
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -723,4 +734,4 @@ export default function TeamWorkspacePage() {
       </div>
     </div>
   )
-}
+} 
