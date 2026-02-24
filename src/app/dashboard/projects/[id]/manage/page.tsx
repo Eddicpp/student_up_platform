@@ -1,161 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-
-// Componente Image Cropper
-function ImageCropper({ 
-  imageSrc, 
-  onCropComplete, 
-  onCancel 
-}: { 
-  imageSrc: string
-  onCropComplete: (croppedImage: Blob) => void
-  onCancel: () => void
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [position, setPosition] = useState({ x: 0, y: 0 })
-  const [scale, setScale] = useState(1)
-  const [isDragging, setIsDragging] = useState(false)
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-  const [imageLoaded, setImageLoaded] = useState(false)
-  const imageRef = useRef<HTMLImageElement | null>(null)
-
-  const CROP_WIDTH = 640
-  const CROP_HEIGHT = 360 // 16:9
-
-  useEffect(() => {
-    const img = new Image()
-    img.crossOrigin = 'Anonymous'
-    img.onload = () => {
-      imageRef.current = img
-      // Centra l'immagine
-      const initialScale = Math.max(CROP_WIDTH / img.width, CROP_HEIGHT / img.height)
-      setScale(initialScale)
-      setPosition({
-        x: (CROP_WIDTH - img.width * initialScale) / 2,
-        y: (CROP_HEIGHT - img.height * initialScale) / 2
-      })
-      setImageLoaded(true)
-    }
-    img.src = imageSrc
-  }, [imageSrc])
-
-  useEffect(() => {
-    if (!imageLoaded || !imageRef.current || !canvasRef.current) return
-    
-    const canvas = canvasRef.current
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    ctx.clearRect(0, 0, CROP_WIDTH, CROP_HEIGHT)
-    ctx.fillStyle = '#f3f4f6'
-    ctx.fillRect(0, 0, CROP_WIDTH, CROP_HEIGHT)
-    
-    const img = imageRef.current
-    ctx.drawImage(
-      img,
-      position.x,
-      position.y,
-      img.width * scale,
-      img.height * scale
-    )
-  }, [position, scale, imageLoaded])
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true)
-    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y })
-  }
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return
-    setPosition({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y
-    })
-  }
-
-  const handleMouseUp = () => setIsDragging(false)
-
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault()
-    const delta = e.deltaY > 0 ? 0.95 : 1.05
-    setScale(prev => Math.max(0.1, Math.min(5, prev * delta)))
-  }
-
-  const handleCrop = () => {
-    if (!canvasRef.current) return
-    canvasRef.current.toBlob((blob) => {
-      if (blob) onCropComplete(blob)
-    }, 'image/jpeg', 0.9)
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl p-6 max-w-3xl w-full shadow-2xl border-2 border-gray-900">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">✂️ Ritaglia Immagine</h3>
-        <p className="text-sm text-gray-500 mb-4">Trascina per spostare, scroll per zoom</p>
-        
-        <div 
-          className="relative mx-auto bg-gray-100 rounded-2xl overflow-hidden border-2 border-gray-900 cursor-move"
-          style={{ width: CROP_WIDTH, height: CROP_HEIGHT, maxWidth: '100%' }}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onWheel={handleWheel}
-        >
-          <canvas
-            ref={canvasRef}
-            width={CROP_WIDTH}
-            height={CROP_HEIGHT}
-            className="w-full h-full"
-          />
-          {/* Grid overlay */}
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="w-full h-full grid grid-cols-3 grid-rows-3">
-              {[...Array(9)].map((_, i) => (
-                <div key={i} className="border border-white/30" />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Zoom slider */}
-        <div className="flex items-center gap-4 mt-4">
-          <span className="text-sm text-gray-500">Zoom</span>
-          <input
-            type="range"
-            min="0.1"
-            max="3"
-            step="0.01"
-            value={scale}
-            onChange={(e) => setScale(parseFloat(e.target.value))}
-            className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-          />
-          <span className="text-sm font-mono text-gray-600 w-16">{(scale * 100).toFixed(0)}%</span>
-        </div>
-
-        <div className="flex gap-3 mt-6">
-          <button
-            onClick={onCancel}
-            className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium border-2 border-gray-300 transition-colors"
-          >
-            Annulla
-          </button>
-          <button
-            onClick={handleCrop}
-            className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold border-2 border-blue-800 transition-colors"
-          >
-            ✓ Applica Ritaglio
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 export default function ManageApplicationPage() {
   const params = useParams()
@@ -195,14 +43,13 @@ export default function ManageApplicationPage() {
     descrizione: '',
     foto_url: ''
   })
+  
+  // Gestione Immagine
   const [newCoverFile, setNewCoverFile] = useState<File | null>(null)
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
+  const [coverPositionY, setCoverPositionY] = useState(50) // Posizione Y per l'inquadratura (0-100)
   const [savingEdit, setSavingEdit] = useState(false)
   const [editSuccess, setEditSuccess] = useState(false)
-  
-  // Image Cropper
-  const [showCropper, setShowCropper] = useState(false)
-  const [tempImageUrl, setTempImageUrl] = useState<string | null>(null)
 
   // Estrai colore dominante
   const extractColor = (imageUrl: string) => {
@@ -301,6 +148,7 @@ export default function ManageApplicationPage() {
       if (!bandoId) return
       setLoading(true)
       
+      // Progetto
       const { data: projectData } = await supabase
         .from('bando')
         .select('*')
@@ -325,6 +173,7 @@ export default function ManageApplicationPage() {
         }
       }
 
+      // Candidature
       const { data: appsData } = await supabase
         .from('partecipazione')
         .select(`
@@ -342,9 +191,11 @@ export default function ManageApplicationPage() {
 
       if (appsData) setApplications(appsData)
 
+      // Team members
       const members = appsData?.filter(a => a?.stato === 'accepted') || []
       setTeamMembers(members)
 
+      // Fetch statistiche
       await fetchViewStats()
 
       setLoading(false)
@@ -461,7 +312,7 @@ export default function ManageApplicationPage() {
     }
   }
 
-  // Upload immagine
+  // Upload immagine a Supabase
   const uploadImage = async (file: File | Blob) => {
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`
 
@@ -474,30 +325,66 @@ export default function ManageApplicationPage() {
     return data.publicUrl
   }
 
-  // Gestione selezione immagine (apre cropper)
+  // Gestione selezione immagine
   const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      const url = URL.createObjectURL(file)
-      setTempImageUrl(url)
-      setShowCropper(true)
+      setNewCoverFile(file)
+      const previewUrl = URL.createObjectURL(file)
+      setCoverPreview(previewUrl)
+      setCoverPositionY(50) // Resetta la posizione al centro
     }
   }
 
-  // Callback quando il crop è completato
-  const handleCropComplete = async (croppedBlob: Blob) => {
-    setShowCropper(false)
-    setTempImageUrl(null)
-    
-    // Crea file dal blob
-    const file = new File([croppedBlob], 'cover.jpg', { type: 'image/jpeg' })
-    setNewCoverFile(file)
-    
-    // Mostra preview
-    const previewUrl = URL.createObjectURL(croppedBlob)
-    setCoverPreview(previewUrl)
+  // Funzione per generare l'immagine ritagliata tramite HTML5 Canvas
+  const generateCroppedFile = (imageUrl: string, positionY: number): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.crossOrigin = 'Anonymous' // Permette il CORS
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        const targetRatio = 16 / 9
+        const imgRatio = img.width / img.height
+
+        // Impostiamo una risoluzione standard per i banner
+        canvas.width = 1200
+        canvas.height = Math.round(1200 / targetRatio)
+
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return reject(new Error("Canvas context missing"))
+
+        let drawWidth = canvas.width
+        let drawHeight = canvas.height
+        let offsetX = 0
+        let offsetY = 0
+
+        if (imgRatio > targetRatio) {
+          drawHeight = canvas.height
+          drawWidth = img.width * (canvas.height / img.height)
+          offsetX = (canvas.width - drawWidth) / 2
+        } else {
+          drawWidth = canvas.width
+          drawHeight = img.height * (canvas.width / img.width)
+          // Applica lo scostamento Y scelto dall'utente per allinearlo come object-position
+          offsetY = (canvas.height - drawHeight) * (positionY / 100)
+        }
+
+        ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight)
+
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(new File([blob], "cover-cropped.jpg", { type: "image/jpeg" }))
+          } else {
+            reject(new Error("Blob creation failed"))
+          }
+        }, 'image/jpeg', 0.9)
+      }
+      img.onerror = () => reject(new Error("Image load failed"))
+      img.src = imageUrl
+    })
   }
 
+  // Salva le modifiche al progetto (incluso il crop)
   const handleSaveEdit = async () => {
     setSavingEdit(true)
     setEditSuccess(false)
@@ -505,8 +392,10 @@ export default function ManageApplicationPage() {
     try {
       let finalFotoUrl = editForm.foto_url
 
-      if (newCoverFile) {
-        finalFotoUrl = await uploadImage(newCoverFile)
+      // Se c'è una nuova immagine OPPURE l'utente ha mosso lo slider per un'immagine esistente
+      if ((newCoverFile || coverPositionY !== 50) && coverPreview) {
+        const croppedFile = await generateCroppedFile(coverPreview, coverPositionY)
+        finalFotoUrl = await uploadImage(croppedFile)
       }
 
       const { error } = await supabase
@@ -527,7 +416,13 @@ export default function ManageApplicationPage() {
         }))
         setEditForm(prev => ({ ...prev, foto_url: finalFotoUrl }))
         setNewCoverFile(null)
-        if (finalFotoUrl) extractColor(finalFotoUrl)
+        setCoverPositionY(50) // Resetta dopo il salvataggio
+        
+        if (finalFotoUrl) {
+          setCoverPreview(finalFotoUrl)
+          extractColor(finalFotoUrl)
+        }
+        
         setEditSuccess(true)
         setTimeout(() => setEditSuccess(false), 3000)
       }
@@ -538,20 +433,20 @@ export default function ManageApplicationPage() {
     setSavingEdit(false)
   }
 
-  // Broadcast email con Gmail
+  // Email a tutti
   const handleBroadcast = () => {
     const teamEmails = teamMembers
       .filter(m => m.studente?.email)
       .map(m => m.studente.email)
     
     if (teamEmails.length > 0) {
-      const to = teamEmails.join(',')
+      const bcc = teamEmails.join(',')
       const subject = encodeURIComponent(`[${project?.titolo}] Aggiornamento dal team`)
       const body = encodeURIComponent(`Ciao team!\n\n`)
       
-      // Apri Gmail compose
+      // Apre Gmail in una nuova scheda precompilando i campi
       window.open(
-        `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}&body=${body}`,
+        `https://mail.google.com/mail/?view=cm&fs=1&bcc=${bcc}&su=${subject}&body=${body}`,
         '_blank'
       )
     }
@@ -578,17 +473,20 @@ export default function ManageApplicationPage() {
 
   const filteredApps = applications?.filter(a => a?.stato === filter) || []
 
-  // Stile cartoon per le card
+  // Stili grafici
   const cardStyle = "bg-white rounded-2xl border-2 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
   const cardStyleLight = "bg-white rounded-2xl border-2 border-gray-800 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.8)]"
 
   return (
     <div 
       className="min-h-screen pb-20 transition-colors duration-500"
-      style={{ backgroundColor: `rgba(${dominantColor}, 0.15)` }}
+      // SFONDO DINAMICO E VIBRANTE BASATO SUL BANNER
+      style={{ 
+        background: `linear-gradient(180deg, rgba(${dominantColor}, 0.35) 0%, rgba(${dominantColor}, 0.05) 100%)` 
+      }}
     >
       {/* Header */}
-      <div className="bg-white/90 backdrop-blur-sm border-b-2 border-gray-900 sticky top-0 z-40">
+      <div className="bg-white/80 backdrop-blur-md border-b-2 border-gray-900 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -652,7 +550,6 @@ export default function ManageApplicationPage() {
         {/* Tab: Candidature */}
         {activeTab === 'candidature' && (
           <div className="space-y-6">
-            {/* Stats mini */}
             <div className="grid grid-cols-3 gap-4">
               <div className={`${cardStyleLight} p-4`}>
                 <p className="text-2xl font-black text-amber-600">{stats.pending}</p>
@@ -668,7 +565,6 @@ export default function ManageApplicationPage() {
               </div>
             </div>
 
-            {/* Filtri */}
             <div className="flex gap-2 overflow-x-auto pb-2">
               {[
                 { id: 'pending' as const, label: 'In Attesa', count: stats.pending, color: 'amber' },
@@ -696,7 +592,6 @@ export default function ManageApplicationPage() {
               ))}
             </div>
 
-            {/* Lista candidature */}
             <div className="grid lg:grid-cols-3 gap-6">
               <div className="lg:col-span-1 space-y-3 max-h-[600px] overflow-y-auto pr-2">
                 {filteredApps.length === 0 ? (
@@ -1024,6 +919,8 @@ export default function ManageApplicationPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">Immagine di Copertina</label>
+                  
+                  {/* Container Anteprima 16:9 */}
                   <div 
                     className="relative border-2 border-dashed border-gray-400 rounded-xl overflow-hidden hover:border-gray-900 transition-colors group cursor-pointer bg-gray-50"
                     style={{ aspectRatio: '16/9' }}
@@ -1036,10 +933,16 @@ export default function ManageApplicationPage() {
                     />
                     {coverPreview ? (
                       <>
-                        <img src={coverPreview} alt="Preview" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <img 
+                          src={coverPreview} 
+                          alt="Preview" 
+                          className="w-full h-full object-cover transition-all" 
+                          // Applica visivamente il posizionamento in tempo reale
+                          style={{ objectPosition: `center ${coverPositionY}%` }} 
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
                           <span className="text-white font-bold text-sm bg-gray-900 px-4 py-2 rounded-xl border-2 border-white">
-                            ✂️ Cambia e ritaglia
+                            Sostituisci Immagine
                           </span>
                         </div>
                       </>
@@ -1048,14 +951,31 @@ export default function ManageApplicationPage() {
                         <svg className="w-10 h-10 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
-                        <p className="text-sm text-gray-500 font-bold">Clicca per caricare e ritagliare</p>
+                        <p className="text-sm text-gray-500 font-bold">Clicca per caricare il banner</p>
                       </div>
                     )}
                   </div>
-                  {newCoverFile && (
-                    <p className="text-xs text-blue-600 mt-2 font-bold">
-                      ✂️ Immagine ritagliata pronta per il salvataggio
-                    </p>
+
+                  {/* Slider Visibile se c'è un'immagine da poter riposizionare */}
+                  {coverPreview && (
+                    <div className="mt-4 p-4 bg-white/60 border-2 border-gray-300 rounded-xl backdrop-blur-sm animate-in fade-in zoom-in duration-300">
+                      <label className="block text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                        <span>↕️</span> Scorri per regolare l'inquadratura del banner
+                      </label>
+                      <input 
+                        type="range" 
+                        min="0" 
+                        max="100" 
+                        value={coverPositionY} 
+                        onChange={(e) => setCoverPositionY(Number(e.target.value))}
+                        className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-gray-900"
+                      />
+                      <div className="flex justify-between text-xs text-gray-500 font-bold mt-2 px-1">
+                        <span>Alto</span>
+                        <span>Centro</span>
+                        <span>Basso</span>
+                      </div>
+                    </div>
                   )}
                 </div>
 
@@ -1087,7 +1007,7 @@ export default function ManageApplicationPage() {
                   {savingEdit ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Salvataggio...
+                      Salvataggio in corso...
                     </>
                   ) : 'Salva Modifiche'}
                 </button>
@@ -1195,18 +1115,6 @@ export default function ManageApplicationPage() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Image Cropper Modal */}
-      {showCropper && tempImageUrl && (
-        <ImageCropper
-          imageSrc={tempImageUrl}
-          onCropComplete={handleCropComplete}
-          onCancel={() => {
-            setShowCropper(false)
-            setTempImageUrl(null)
-          }}
-        />
       )}
     </div>
   )
