@@ -36,24 +36,5 @@ export async function proxy(request: NextRequest) {
 
   await supabase.auth.getUser()
 
-  // 1. APPLICHIAMO LA SICUREZZA ALLA FINE
-  // In questo modo, qualsiasi cosa abbia fatto Supabase prima, noi incolliamo
-  // l'header 'unsafe-eval' sulla risposta che andrà effettivamente al browser.
-  const cspHeader = `
-    default-src 'self';
-    script-src 'self' 'unsafe-eval' 'unsafe-inline' https: http: *.supabase.co;
-    style-src 'self' 'unsafe-inline';
-    img-src 'self' blob: data: *.supabase.co;
-    font-src 'self' data:;
-    object-src 'none';
-    base-uri 'self';
-    form-action 'self';
-    frame-ancestors 'none';
-    connect-src 'self' https: http: *.supabase.co;
-    upgrade-insecure-requests;
-  `.replace(/\s{2,}/g, ' ').trim();
-
-  response.headers.set('Content-Security-Policy', cspHeader);
-
   return response
 }
