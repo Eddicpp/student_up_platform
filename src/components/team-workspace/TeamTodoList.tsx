@@ -44,11 +44,15 @@ export default function TeamTodoList({ bandoId, currentUserId, members }: TeamTo
   })
 
   const fetchTodos = useCallback(async () => {
-    const { data } = await (supabase as any)
+    const { data, error } = await (supabase as any)
       .from('team_todo')
       .select('*')
       .eq('bando_id', bandoId)
       .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error("Errore fetch todo:", error)
+    }
 
     if (data) setTodos(data)
     setLoading(false)
@@ -78,7 +82,8 @@ export default function TeamTodoList({ bandoId, currentUserId, members }: TeamTo
   const addTodo = async () => {
     if (!newTodo.testo.trim()) return
 
-    await (supabase as any)
+    // ✅ FIX: Aggiunto controllo errori
+    const { error } = await (supabase as any)
       .from('team_todo')
       .insert({
         bando_id: bandoId,
@@ -86,9 +91,16 @@ export default function TeamTodoList({ bandoId, currentUserId, members }: TeamTo
         priorita: newTodo.priorita,
         assegnato_a: newTodo.assegnato_a || null,
         scadenza: newTodo.scadenza || null,
-        creato_da: currentUserId
+        creato_da: currentUserId // ATTENZIONE: Se ricevi errore, cambia "creato_da" in "studente_id"
       })
 
+    if (error) {
+      console.error("Errore dettagliato:", error)
+      alert(`Errore durante il salvataggio: ${error.message}`)
+      return // Ferma la funzione in caso di errore
+    }
+
+    // Se tutto va bene, resetta e chiudi
     setNewTodo({ testo: '', priorita: 'normale', assegnato_a: '', scadenza: '' })
     setShowAddForm(false)
     fetchTodos()
@@ -153,9 +165,9 @@ export default function TeamTodoList({ bandoId, currentUserId, members }: TeamTo
   }
 
   return (
-    <div className={cardStyle + " overflow-hidden"}>
+    <div className={cardStyle + " overflow-hidden flex flex-col h-[600px]"}>
       {/* Header */}
-      <div className="p-4 border-b-2 border-gray-900 bg-gray-50">
+      <div className="p-4 border-b-2 border-gray-900 bg-gray-50 flex-shrink-0">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
             <span>✅</span> To-Do List
@@ -174,22 +186,23 @@ export default function TeamTodoList({ bandoId, currentUserId, members }: TeamTo
 
         {/* Stats */}
         <div className="flex gap-2 text-xs">
-          <span className="px-2 py-1 bg-gray-200 text-gray-700 rounded-lg font-bold">{stats.total} totali</span>
-          <span className="px-2 py-1 bg-green-100 text-green-700 rounded-lg font-bold">{stats.completed} ✓</span>
-          <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-lg font-bold">{stats.pending} pending</span>
+          <span className="px-2 py-1 bg-gray-200 text-gray-900 rounded-lg font-bold">{stats.total} totali</span>
+          <span className="px-2 py-1 bg-green-100 text-green-800 border border-green-300 rounded-lg font-bold">{stats.completed} ✓</span>
+          <span className="px-2 py-1 bg-amber-100 text-amber-800 border border-amber-300 rounded-lg font-bold">{stats.pending} pending</span>
         </div>
       </div>
 
       {/* Add form */}
       {showAddForm && (
-        <div className="p-4 bg-blue-50 border-b-2 border-blue-300">
+        <div className="p-4 bg-blue-50 border-b-2 border-blue-300 flex-shrink-0">
           <div className="space-y-3">
             <input
               type="text"
               value={newTodo.testo}
               onChange={(e) => setNewTodo({ ...newTodo, testo: e.target.value })}
               placeholder="Cosa c'è da fare?"
-              className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-gray-900 outline-none font-medium"
+              // ✅ Testo scurito per la leggibilità
+              className="w-full px-4 py-3 bg-white text-gray-900 placeholder:text-gray-600 rounded-xl border-2 border-gray-900 focus:outline-none focus:translate-x-[2px] focus:translate-y-[2px] focus:shadow-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] font-black transition-all"
               autoFocus
             />
             
@@ -198,7 +211,7 @@ export default function TeamTodoList({ bandoId, currentUserId, members }: TeamTo
               <select
                 value={newTodo.priorita}
                 onChange={(e) => setNewTodo({ ...newTodo, priorita: e.target.value as any })}
-                className="px-3 py-2 rounded-xl border-2 border-gray-300 text-sm font-medium"
+                className="px-3 py-2 bg-white text-gray-900 font-bold rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-sm cursor-pointer"
               >
                 <option value="bassa">⬇️ Bassa</option>
                 <option value="normale">➡️ Normale</option>
@@ -210,7 +223,7 @@ export default function TeamTodoList({ bandoId, currentUserId, members }: TeamTo
               <select
                 value={newTodo.assegnato_a}
                 onChange={(e) => setNewTodo({ ...newTodo, assegnato_a: e.target.value })}
-                className="px-3 py-2 rounded-xl border-2 border-gray-300 text-sm font-medium"
+                className="px-3 py-2 bg-white text-gray-900 font-bold rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-sm cursor-pointer"
               >
                 <option value="">👤 Nessuno</option>
                 {members.map(m => (
@@ -223,14 +236,14 @@ export default function TeamTodoList({ bandoId, currentUserId, members }: TeamTo
                 type="date"
                 value={newTodo.scadenza}
                 onChange={(e) => setNewTodo({ ...newTodo, scadenza: e.target.value })}
-                className="px-3 py-2 rounded-xl border-2 border-gray-300 text-sm font-medium"
+                className="px-3 py-2 bg-white text-gray-900 font-bold rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-sm cursor-pointer"
               />
             </div>
 
             <button
               onClick={addTodo}
               disabled={!newTodo.testo.trim()}
-              className="w-full py-3 bg-gray-900 text-white rounded-xl font-bold disabled:opacity-50 border-2 border-gray-700"
+              className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-black uppercase tracking-widest disabled:opacity-50 border-2 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
             >
               Aggiungi Attività
             </button>
@@ -239,7 +252,7 @@ export default function TeamTodoList({ bandoId, currentUserId, members }: TeamTo
       )}
 
       {/* Filters */}
-      <div className="p-3 border-b border-gray-200 flex gap-2 overflow-x-auto">
+      <div className="p-3 border-b-2 border-gray-900 bg-gray-100 flex gap-2 overflow-x-auto flex-shrink-0">
         {[
           { id: 'all', label: 'Tutti' },
           { id: 'pending', label: 'Da fare' },
@@ -249,10 +262,10 @@ export default function TeamTodoList({ bandoId, currentUserId, members }: TeamTo
           <button
             key={f.id}
             onClick={() => setFilter(f.id as any)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-black whitespace-nowrap transition-all border-2 ${
               filter === f.id
-                ? 'bg-gray-900 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-gray-900 text-white border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                : 'bg-white text-gray-700 border-gray-400 hover:border-gray-900 hover:text-gray-900 shadow-sm'
             }`}
           >
             {f.label}
@@ -261,15 +274,15 @@ export default function TeamTodoList({ bandoId, currentUserId, members }: TeamTo
       </div>
 
       {/* Todo list */}
-      <div className="max-h-80 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto bg-white p-2">
         {sortedTodos.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
+          <div className="p-8 text-center text-gray-500 h-full flex flex-col justify-center">
             <span className="text-4xl block mb-2">📋</span>
-            <p className="font-bold">Nessuna attività</p>
-            <p className="text-sm">Aggiungi la prima!</p>
+            <p className="font-black text-gray-900">Nessuna attività</p>
+            <p className="text-sm font-bold mt-1">Aggiungi la prima!</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="space-y-2">
             {sortedTodos.map(todo => {
               const assignee = members.find(m => m.id === todo.assegnato_a)
               const assigneeColor = assignee ? getMemberColor(assignee.id) : null
@@ -279,8 +292,10 @@ export default function TeamTodoList({ bandoId, currentUserId, members }: TeamTo
               return (
                 <div
                   key={todo.id}
-                  className={`p-3 flex items-start gap-3 hover:bg-gray-50 transition-colors ${
-                    todo.completato ? 'opacity-60' : ''
+                  className={`p-3 rounded-xl border-2 transition-all flex items-start gap-3 ${
+                    todo.completato 
+                      ? 'bg-gray-50 border-gray-300 opacity-75' 
+                      : 'bg-white border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'
                   }`}
                 >
                   {/* Checkbox */}
@@ -288,39 +303,39 @@ export default function TeamTodoList({ bandoId, currentUserId, members }: TeamTo
                     onClick={() => toggleTodo(todo.id, todo.completato)}
                     className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all ${
                       todo.completato
-                        ? 'bg-green-500 border-green-600 text-white'
-                        : 'border-gray-300 hover:border-gray-500'
+                        ? 'bg-green-500 border-green-900 text-white shadow-none'
+                        : 'bg-white border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-100'
                     }`}
                   >
-                    {todo.completato && '✓'}
+                    {todo.completato && <span className="font-black text-xs">✓</span>}
                   </button>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <p className={`font-medium text-sm ${todo.completato ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                    <p className={`font-black text-sm leading-tight ${todo.completato ? 'line-through text-gray-500' : 'text-gray-900'}`}>
                       {todo.testo}
                     </p>
                     
-                    <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
                       {/* Priority badge */}
-                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${priorityStyle.color}`}>
+                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black border-2 border-gray-900 ${priorityStyle.color}`}>
                         {priorityStyle.icon} {todo.priorita}
                       </span>
 
                       {/* Assignee */}
                       {assignee && (
-                        <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center gap-1 ${assigneeColor?.light} ${assigneeColor?.text} border ${assigneeColor?.border}`}>
-                          <img src={assignee.avatar_url || '/default-avatar.png'} className="w-3 h-3 rounded-full" alt="" />
+                        <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black flex items-center gap-1 ${assigneeColor?.light} ${assigneeColor?.text} border-2 ${assigneeColor?.border}`}>
+                          <img src={assignee.avatar_url || '/default-avatar.png'} className="w-3 h-3 rounded-full border border-current" alt="" />
                           {assignee.nome}
                         </span>
                       )}
 
                       {/* Due date */}
                       {todo.scadenza && (
-                        <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${
+                        <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black border-2 border-gray-900 ${
                           isOverdue 
-                            ? 'bg-red-100 text-red-600 border border-red-300' 
-                            : 'bg-gray-100 text-gray-500'
+                            ? 'bg-red-400 text-black' 
+                            : 'bg-gray-100 text-gray-800'
                         }`}>
                           📅 {new Date(todo.scadenza).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
                         </span>
@@ -331,7 +346,8 @@ export default function TeamTodoList({ bandoId, currentUserId, members }: TeamTo
                   {/* Delete */}
                   <button
                     onClick={() => deleteTodo(todo.id)}
-                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border-2 border-transparent hover:border-red-600 flex-shrink-0"
+                    title="Elimina"
                   >
                     🗑️
                   </button>
