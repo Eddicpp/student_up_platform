@@ -297,7 +297,7 @@ export default function TeamWorkspacePage() {
         {/* Back button */}
         <div className="absolute top-4 left-4 sm:top-6 sm:left-6">
           <button 
-            onClick={() => router.push('/dashboard/my_projects')}
+            onClick={() => router.push('/dashboard/my-projects')}
             className="flex items-center gap-2 bg-white text-gray-900 px-4 py-2 rounded-xl font-bold text-sm border-2 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
