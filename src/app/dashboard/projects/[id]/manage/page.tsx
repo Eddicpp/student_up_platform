@@ -45,6 +45,7 @@ export default function ManageApplicationPage() {
   })
   const [newCoverFile, setNewCoverFile] = useState<File | null>(null)
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
+  const [coverPositionY, setCoverPositionY] = useState(50) // Posizione Y per l'inquadratura (0-100)
   const [savingEdit, setSavingEdit] = useState(false)
   const [editSuccess, setEditSuccess] = useState(false)
 
@@ -332,7 +333,54 @@ export default function ManageApplicationPage() {
       setNewCoverFile(file)
       const previewUrl = URL.createObjectURL(file)
       setCoverPreview(previewUrl)
+      setCoverPositionY(50) // Resetta lo slider al centro
     }
+  }
+
+  // Funzione per generare l'immagine croppata con Canvas
+  const generateCroppedFile = (imageUrl: string, positionY: number): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.crossOrigin = 'Anonymous'
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        const targetRatio = 16 / 9
+        const imgRatio = img.width / img.height
+
+        canvas.width = 1200
+        canvas.height = Math.round(1200 / targetRatio)
+
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return reject(new Error("Canvas context missing"))
+
+        let drawWidth = canvas.width
+        let drawHeight = canvas.height
+        let offsetX = 0
+        let offsetY = 0
+
+        if (imgRatio > targetRatio) {
+          drawHeight = canvas.height
+          drawWidth = img.width * (canvas.height / img.height)
+          offsetX = (canvas.width - drawWidth) / 2
+        } else {
+          drawWidth = canvas.width
+          drawHeight = img.height * (canvas.width / img.width)
+          offsetY = (canvas.height - drawHeight) * (positionY / 100)
+        }
+
+        ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight)
+
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(new File([blob], "cover-cropped.jpg", { type: "image/jpeg" }))
+          } else {
+            reject(new Error("Blob creation failed"))
+          }
+        }, 'image/jpeg', 0.9)
+      }
+      img.onerror = () => reject(new Error("Image load failed"))
+      img.src = imageUrl
+    })
   }
 
   const handleSaveEdit = async () => {
@@ -342,7 +390,10 @@ export default function ManageApplicationPage() {
     try {
       let finalFotoUrl = editForm.foto_url
 
-      if (newCoverFile) {
+      if (newCoverFile && coverPreview) {
+        const croppedFile = await generateCroppedFile(coverPreview, coverPositionY)
+        finalFotoUrl = await uploadImage(croppedFile)
+      } else if (newCoverFile) {
         finalFotoUrl = await uploadImage(newCoverFile)
       }
 
@@ -383,7 +434,9 @@ export default function ManageApplicationPage() {
     
     if (teamEmails) {
       const subject = encodeURIComponent(`[${project?.titolo}] Aggiornamento`)
-      window.location.href = `mailto:?bcc=${teamEmails}&subject=${subject}`
+      // Costruisce l'URL di Gmail passando le email in bcc (Ccn)
+      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&bcc=${teamEmails}&su=${subject}`
+      window.open(gmailUrl, '_blank')
     }
   }
 
@@ -476,7 +529,6 @@ export default function ManageApplicationPage() {
         {/* Tab: Candidature */}
         {activeTab === 'candidature' && (
           <div className="space-y-6">
-            {/* Stats mini */}
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
                 <p className="text-2xl font-bold text-amber-600">{stats.pending}</p>
@@ -492,7 +544,6 @@ export default function ManageApplicationPage() {
               </div>
             </div>
 
-            {/* Filtri */}
             <div className="flex gap-2 overflow-x-auto pb-2">
               {[
                 { id: 'pending' as const, label: 'In Attesa', count: stats.pending, color: 'amber' },
@@ -511,18 +562,15 @@ export default function ManageApplicationPage() {
                   }`}
                 >
                   {f.label}
-                  <span className={`px-1.5 py-0.5 rounded-full text-xs ${
-                    filter === f.id ? 'bg-white/20' : 'bg-gray-100'
-                  }`}>
+                  <span className={`px-1.5 py-0.5 rounded-full text-xs ${filter === f.id ? 'bg-white/20' : 'bg-gray-100'}`}>
                     {f.count}
                   </span>
                 </button>
               ))}
             </div>
 
-            {/* Lista candidature */}
             <div className="grid lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-1 space-y-3 max-h-[600px] overflow-y-auto">
+              <div className="lg:col-span-1 space-y-3 max-h-[600px] overflow-y-auto pr-2">
                 {filteredApps.length === 0 ? (
                   <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
                     <span className="text-4xl block mb-2">📭</span>
@@ -534,17 +582,11 @@ export default function ManageApplicationPage() {
                       key={app.id}
                       onClick={() => setSelectedApp(app)}
                       className={`w-full text-left p-4 rounded-2xl border-2 transition-all ${
-                        selectedApp?.id === app.id
-                          ? 'border-gray-900 bg-gray-900 text-white'
-                          : 'border-gray-200 bg-white hover:border-gray-300'
+                        selectedApp?.id === app.id ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 bg-white hover:border-gray-300'
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <img 
-                          src={app.studente?.avatar_url || '/default-avatar.png'} 
-                          alt=""
-                          className="w-10 h-10 rounded-xl object-cover"
-                        />
+                        <img src={app.studente?.avatar_url || '/default-avatar.png'} alt="" className="w-10 h-10 rounded-xl object-cover" />
                         <div className="flex-1 min-w-0">
                           <p className={`font-semibold truncate ${selectedApp?.id === app.id ? 'text-white' : 'text-gray-900'}`}>
                             {app.studente?.nome} {app.studente?.cognome}
@@ -563,22 +605,11 @@ export default function ManageApplicationPage() {
                 {selectedApp ? (
                   <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
                     <div className="flex items-start gap-4 mb-6 pb-6 border-b border-gray-100">
-                      <img 
-                        src={selectedApp.studente?.avatar_url || '/default-avatar.png'} 
-                        alt=""
-                        className="w-16 h-16 rounded-2xl object-cover"
-                      />
+                      <img src={selectedApp.studente?.avatar_url || '/default-avatar.png'} alt="" className="w-16 h-16 rounded-2xl object-cover" />
                       <div className="flex-1">
-                        <h3 className="text-xl font-bold text-gray-900">
-                          {selectedApp.studente?.nome} {selectedApp.studente?.cognome}
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          {selectedApp.studente?.studente_corso?.[0]?.corso?.nome || 'Corso non specificato'}
-                        </p>
-                        <Link 
-                          href={`/dashboard/user/${selectedApp.studente?.id}`}
-                          className="inline-block mt-2 text-xs font-medium text-blue-600 hover:text-blue-700"
-                        >
+                        <h3 className="text-xl font-bold text-gray-900">{selectedApp.studente?.nome} {selectedApp.studente?.cognome}</h3>
+                        <p className="text-sm text-gray-500">{selectedApp.studente?.studente_corso?.[0]?.corso?.nome || 'Corso non specificato'}</p>
+                        <Link href={`/dashboard/user/${selectedApp.studente?.id}`} className="inline-block mt-2 text-xs font-medium text-blue-600 hover:text-blue-700">
                           Vedi profilo completo →
                         </Link>
                       </div>
@@ -594,38 +625,25 @@ export default function ManageApplicationPage() {
                     <div className="mb-6">
                       <p className="text-xs font-medium text-gray-500 mb-2">Messaggio di candidatura</p>
                       <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                        <p className="text-gray-700 whitespace-pre-wrap">
-                          {selectedApp.messaggio || <span className="italic text-gray-400">Nessun messaggio</span>}
-                        </p>
+                        <p className="text-gray-700 whitespace-pre-wrap">{selectedApp.messaggio || <span className="italic text-gray-400">Nessun messaggio</span>}</p>
                       </div>
                     </div>
 
                     {selectedApp.stato === 'pending' ? (
                       <div className="grid grid-cols-2 gap-3">
-                        <button 
-                          onClick={() => { setModalAction('rejected'); setShowModal(true) }}
-                          className="py-3 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl font-medium text-sm transition-colors"
-                        >
+                        <button onClick={() => { setModalAction('rejected'); setShowModal(true) }} className="py-3 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl font-medium text-sm transition-colors">
                           ❌ Rifiuta
                         </button>
-                        <button 
-                          onClick={() => { setModalAction('accepted'); setShowModal(true) }}
-                          className="py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold text-sm transition-colors"
-                        >
+                        <button onClick={() => { setModalAction('accepted'); setShowModal(true) }} className="py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold text-sm transition-colors">
                           ✅ Accetta
                         </button>
                       </div>
                     ) : (
                       <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
-                        <p className={`font-medium text-sm ${
-                          selectedApp.stato === 'accepted' ? 'text-green-600' : 'text-red-600'
-                        }`}>
+                        <p className={`font-medium text-sm ${selectedApp.stato === 'accepted' ? 'text-green-600' : 'text-red-600'}`}>
                           {selectedApp.stato === 'accepted' ? '✅ Nel team' : '❌ Rifiutata'}
                         </p>
-                        <button 
-                          onClick={() => { setModalAction('pending'); setShowModal(true) }}
-                          className="text-xs text-gray-500 hover:text-gray-700 underline"
-                        >
+                        <button onClick={() => { setModalAction('pending'); setShowModal(true) }} className="text-xs text-gray-500 hover:text-gray-700 underline">
                           Riporta in attesa
                         </button>
                       </div>
@@ -664,18 +682,10 @@ export default function ManageApplicationPage() {
               {teamMembers.map(member => (
                 <div key={member.id} className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
                   <div className="flex items-start gap-3 mb-4">
-                    <img 
-                      src={member.studente?.avatar_url || '/default-avatar.png'} 
-                      alt=""
-                      className="w-12 h-12 rounded-xl object-cover"
-                    />
+                    <img src={member.studente?.avatar_url || '/default-avatar.png'} alt="" className="w-12 h-12 rounded-xl object-cover" />
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 truncate">
-                        {member.studente?.nome} {member.studente?.cognome}
-                      </p>
-                      <p className={`text-xs font-medium ${
-                        member.ruolo === 'admin' ? 'text-blue-600' : 'text-gray-400'
-                      }`}>
+                      <p className="font-semibold text-gray-900 truncate">{member.studente?.nome} {member.studente?.cognome}</p>
+                      <p className={`text-xs font-medium ${member.ruolo === 'admin' ? 'text-blue-600' : 'text-gray-400'}`}>
                         {member.ruolo === 'admin' ? '🛡️ Admin' : '👤 Membro'}
                       </p>
                     </div>
@@ -683,30 +693,20 @@ export default function ManageApplicationPage() {
 
                   <div className="flex gap-2">
                     {member.ruolo !== 'admin' ? (
-                      <button
-                        onClick={() => handleRoleChange(member.id, 'admin')}
-                        className="flex-1 py-2 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      >
+                      <button onClick={() => handleRoleChange(member.id, 'admin')} className="flex-1 py-2 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                         Promuovi Admin
                       </button>
                     ) : (
-                      <button
-                        onClick={() => handleRoleChange(member.id, 'membro')}
-                        className="flex-1 py-2 text-xs font-medium text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                      >
+                      <button onClick={() => handleRoleChange(member.id, 'membro')} className="flex-1 py-2 text-xs font-medium text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
                         Rimuovi Admin
                       </button>
                     )}
-                    <button
-                      onClick={() => handleKickMember(member.id)}
-                      className="py-2 px-3 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    >
+                    <button onClick={() => handleKickMember(member.id)} className="py-2 px-3 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                       ❌
                     </button>
                   </div>
                 </div>
               ))}
-
               {teamMembers.length === 0 && (
                 <div className="col-span-full bg-white rounded-2xl border-2 border-dashed border-gray-200 p-8 text-center">
                   <span className="text-4xl block mb-2">👥</span>
@@ -722,7 +722,6 @@ export default function ManageApplicationPage() {
           <div className="space-y-6">
             <h2 className="text-lg font-semibold text-gray-900">📊 Statistiche Progetto</h2>
             
-            {/* Visualizzazioni */}
             <div className="grid sm:grid-cols-3 gap-4">
               <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
                 <div className="flex items-center gap-3 mb-3">
@@ -738,7 +737,6 @@ export default function ManageApplicationPage() {
                   </div>
                 </div>
               </div>
-
               <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
@@ -752,7 +750,6 @@ export default function ManageApplicationPage() {
                   </div>
                 </div>
               </div>
-
               <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
@@ -768,61 +765,37 @@ export default function ManageApplicationPage() {
               </div>
             </div>
 
-            {/* Conversioni */}
             <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
               <h3 className="text-base font-semibold text-gray-900 mb-4">📈 Tassi di Conversione</h3>
               <div className="grid sm:grid-cols-2 gap-6">
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm text-gray-600">Visite → Candidature</span>
-                    <span className="text-sm font-bold text-gray-900">
-                      {viewsCount > 0 ? ((stats.total / viewsCount) * 100).toFixed(1) : 0}%
-                    </span>
+                    <span className="text-sm font-bold text-gray-900">{viewsCount > 0 ? ((stats.total / viewsCount) * 100).toFixed(1) : 0}%</span>
                   </div>
                   <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-blue-500 rounded-full transition-all"
-                      style={{ width: `${viewsCount > 0 ? Math.min((stats.total / viewsCount) * 100, 100) : 0}%` }}
-                    />
+                    <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${viewsCount > 0 ? Math.min((stats.total / viewsCount) * 100, 100) : 0}%` }} />
                   </div>
                 </div>
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm text-gray-600">Candidature → Accettate</span>
-                    <span className="text-sm font-bold text-gray-900">
-                      {stats.total > 0 ? ((stats.accepted / stats.total) * 100).toFixed(1) : 0}%
-                    </span>
+                    <span className="text-sm font-bold text-gray-900">{stats.total > 0 ? ((stats.accepted / stats.total) * 100).toFixed(1) : 0}%</span>
                   </div>
                   <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-green-500 rounded-full transition-all"
-                      style={{ width: `${stats.total > 0 ? (stats.accepted / stats.total) * 100 : 0}%` }}
-                    />
+                    <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${stats.total > 0 ? (stats.accepted / stats.total) * 100 : 0}%` }} />
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Summary */}
             <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl p-6 text-white">
               <h3 className="text-base font-semibold mb-4">📋 Riepilogo</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div>
-                  <p className="text-2xl font-bold">{viewsCount}</p>
-                  <p className="text-xs text-gray-400">Visite</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.total}</p>
-                  <p className="text-xs text-gray-400">Candidature</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.accepted}</p>
-                  <p className="text-xs text-gray-400">Membri</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.pending}</p>
-                  <p className="text-xs text-gray-400">In attesa</p>
-                </div>
+                <div><p className="text-2xl font-bold">{viewsCount}</p><p className="text-xs text-gray-400">Visite</p></div>
+                <div><p className="text-2xl font-bold">{stats.total}</p><p className="text-xs text-gray-400">Candidature</p></div>
+                <div><p className="text-2xl font-bold">{stats.accepted}</p><p className="text-xs text-gray-400">Membri</p></div>
+                <div><p className="text-2xl font-bold">{stats.pending}</p><p className="text-xs text-gray-400">In attesa</p></div>
               </div>
             </div>
           </div>
@@ -832,15 +805,12 @@ export default function ManageApplicationPage() {
         {activeTab === 'impostazioni' && (
           <div className="space-y-6 max-w-2xl">
             
-            {/* Modifica Progetto */}
             <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">✏️ Modifica Progetto</h3>
               
               {editSuccess && (
                 <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-xl text-sm font-medium flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                   Modifiche salvate con successo!
                 </div>
               )}
@@ -860,9 +830,14 @@ export default function ManageApplicationPage() {
                     />
                     {coverPreview ? (
                       <>
-                        <img src={coverPreview} alt="Preview" className="w-full h-full object-cover" />
+                        <img 
+                          src={coverPreview} 
+                          alt="Preview" 
+                          className="w-full h-full object-cover transition-all" 
+                          style={{ objectPosition: newCoverFile ? `center ${coverPositionY}%` : 'center center' }} 
+                        />
                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <span className="text-white font-medium text-sm">Cambia immagine</span>
+                          <span className="text-white font-medium text-sm bg-white/20 backdrop-blur-sm px-4 py-2 rounded-xl">Cambia immagine</span>
                         </div>
                       </>
                     ) : (
@@ -874,105 +849,75 @@ export default function ManageApplicationPage() {
                       </div>
                     )}
                   </div>
+                  
+                  {/* Slider Visibile solo quando carichi una nuova immagine */}
+                  {newCoverFile && coverPreview && (
+                    <div className="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-xl animate-in fade-in zoom-in duration-300">
+                      <label className="block text-sm font-medium text-blue-900 mb-3 flex items-center gap-2">
+                        <span>↕️</span> Regola l'inquadratura verticale
+                      </label>
+                      <input 
+                        type="range" 
+                        min="0" 
+                        max="100" 
+                        value={coverPositionY} 
+                        onChange={(e) => setCoverPositionY(Number(e.target.value))}
+                        className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                      />
+                      <div className="flex justify-between text-xs text-blue-600 font-medium mt-2 px-1">
+                        <span>Alto</span>
+                        <span>Centro</span>
+                        <span>Basso</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Titolo Progetto</label>
-                  <input
-                    type="text"
-                    value={editForm.titolo}
-                    onChange={(e) => setEditForm({ ...editForm, titolo: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none font-medium"
-                  />
+                  <input type="text" value={editForm.titolo} onChange={(e) => setEditForm({ ...editForm, titolo: e.target.value })} className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none font-medium" />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Descrizione</label>
-                  <textarea
-                    rows={5}
-                    value={editForm.descrizione}
-                    onChange={(e) => setEditForm({ ...editForm, descrizione: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none resize-none"
-                  />
+                  <textarea rows={5} value={editForm.descrizione} onChange={(e) => setEditForm({ ...editForm, descrizione: e.target.value })} className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none resize-none" />
                 </div>
-
-                <button
-                  onClick={handleSaveEdit}
-                  disabled={savingEdit}
-                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {savingEdit ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Salvataggio...
-                    </>
-                  ) : 'Salva Modifiche'}
+                <button onClick={handleSaveEdit} disabled={savingEdit} className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                  {savingEdit ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Salvataggio...</> : 'Salva Modifiche'}
                 </button>
               </div>
             </div>
 
-            {/* Link */}
             <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">🔗 Link di Progetto</h3>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">GitHub Repository</label>
-                  <input
-                    type="url"
-                    value={linksForm.github}
-                    onChange={(e) => setLinksForm({ ...linksForm, github: e.target.value })}
-                    placeholder="https://github.com/..."
-                    className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 outline-none"
-                  />
+                  <input type="url" value={linksForm.github} onChange={(e) => setLinksForm({ ...linksForm, github: e.target.value })} placeholder="https://github.com/..." className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 outline-none" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Google Drive</label>
-                  <input
-                    type="url"
-                    value={linksForm.drive}
-                    onChange={(e) => setLinksForm({ ...linksForm, drive: e.target.value })}
-                    placeholder="https://drive.google.com/..."
-                    className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 outline-none"
-                  />
+                  <input type="url" value={linksForm.drive} onChange={(e) => setLinksForm({ ...linksForm, drive: e.target.value })} placeholder="https://drive.google.com/..." className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 outline-none" />
                 </div>
-                <button
-                  onClick={handleSaveLinks}
-                  disabled={savingLinks}
-                  className="w-full py-3 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
-                >
+                <button onClick={handleSaveLinks} disabled={savingLinks} className="w-full py-3 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-medium transition-colors disabled:opacity-50">
                   {savingLinks ? 'Salvataggio...' : 'Salva Link'}
                 </button>
               </div>
             </div>
 
-            {/* Stato */}
             <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">📋 Stato Candidature</h3>
               <p className="text-sm text-gray-500 mb-4">
-                {project.stato === 'aperto' 
-                  ? 'Il progetto è aperto e accetta nuove candidature.'
-                  : 'Il progetto è chiuso, nessuna nuova candidatura possibile.'}
+                {project.stato === 'aperto' ? 'Il progetto è aperto e accetta nuove candidature.' : 'Il progetto è chiuso, nessuna nuova candidatura possibile.'}
               </p>
-              <button
-                onClick={handleToggleStatus}
-                className={`w-full py-3 rounded-xl font-medium transition-colors ${
-                  project.stato === 'aperto'
-                    ? 'bg-amber-100 hover:bg-amber-200 text-amber-700'
-                    : 'bg-green-100 hover:bg-green-200 text-green-700'
-                }`}
-              >
+              <button onClick={handleToggleStatus} className={`w-full py-3 rounded-xl font-medium transition-colors ${project.stato === 'aperto' ? 'bg-amber-100 hover:bg-amber-200 text-amber-700' : 'bg-green-100 hover:bg-green-200 text-green-700'}`}>
                 {project.stato === 'aperto' ? '🔒 Chiudi Candidature' : '🔓 Riapri Candidature'}
               </button>
             </div>
 
-            {/* Danger Zone */}
             <div className="bg-red-50 rounded-2xl border border-red-200 p-6">
               <h3 className="text-lg font-semibold text-red-700 mb-2">⚠️ Zona Pericolosa</h3>
               <p className="text-sm text-red-600 mb-4">Questa azione è irreversibile.</p>
-              <button
-                onClick={handleDeleteProject}
-                className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors"
-              >
+              <button onClick={handleDeleteProject} className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors">
                 🗑️ Elimina Progetto
               </button>
             </div>
@@ -991,22 +936,8 @@ export default function ManageApplicationPage() {
               {modalAction === 'pending' && `Riportare ${selectedApp?.studente?.nome} in attesa?`}
             </p>
             <div className="flex gap-3">
-              <button
-                onClick={() => setShowModal(false)}
-                disabled={actionLoading}
-                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium"
-              >
-                Annulla
-              </button>
-              <button
-                onClick={handleAction}
-                disabled={actionLoading}
-                className={`flex-1 py-3 rounded-xl font-medium text-white ${
-                  modalAction === 'accepted' ? 'bg-green-600 hover:bg-green-700' :
-                  modalAction === 'rejected' ? 'bg-red-600 hover:bg-red-700' :
-                  'bg-amber-500 hover:bg-amber-600'
-                }`}
-              >
+              <button onClick={() => setShowModal(false)} disabled={actionLoading} className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors">Annulla</button>
+              <button onClick={handleAction} disabled={actionLoading} className={`flex-1 py-3 rounded-xl font-medium text-white transition-colors ${modalAction === 'accepted' ? 'bg-green-600 hover:bg-green-700' : modalAction === 'rejected' ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-500 hover:bg-amber-600'}`}>
                 {actionLoading ? '...' : 'Conferma'}
               </button>
             </div>
