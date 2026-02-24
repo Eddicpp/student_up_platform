@@ -19,11 +19,16 @@ export default function ManageApplicationPage() {
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   
+  // Statistiche
+  const [viewsCount, setViewsCount] = useState(0)
+  const [viewsToday, setViewsToday] = useState(0)
+  const [viewsThisWeek, setViewsThisWeek] = useState(0)
+  
   // Colore dominante
   const [dominantColor, setDominantColor] = useState('239, 68, 68')
   
   // Tab e modali
-  const [activeTab, setActiveTab] = useState<'candidature' | 'team' | 'impostazioni'>('candidature')
+  const [activeTab, setActiveTab] = useState<'candidature' | 'team' | 'statistiche' | 'impostazioni'>('candidature')
   const [filter, setFilter] = useState<'pending' | 'accepted' | 'rejected'>('pending')
   const [showModal, setShowModal] = useState(false)
   const [modalAction, setModalAction] = useState<'accepted' | 'rejected' | 'pending' | null>(null)
@@ -43,9 +48,9 @@ export default function ManageApplicationPage() {
   const [savingEdit, setSavingEdit] = useState(false)
   const [editSuccess, setEditSuccess] = useState(false)
 
-  // Estrai colore dominante (CON PROTEZIONE CORS)
+  // Estrai colore dominante
   const extractColor = (imageUrl: string) => {
-    if (!imageUrl) return;
+    if (!imageUrl) return
     const img = new Image()
     img.crossOrigin = 'Anonymous'
     img.src = imageUrl
@@ -86,22 +91,61 @@ export default function ManageApplicationPage() {
         }
       } catch (e) {
         console.warn("Errore estrazione colore:", e)
-        setDominantColor('239, 68, 68')
       }
     }
+    
+    img.onerror = () => setDominantColor('239, 68, 68')
   }
 
-  // Statistiche (PROTETTE DA DATI NULLI)
+  // Statistiche candidature
   const stats = {
     total: applications?.length || 0,
-    pending: applications?.filter(a => a && a.stato === 'pending').length || 0,
-    accepted: applications?.filter(a => a && a.stato === 'accepted').length || 0,
-    rejected: applications?.filter(a => a && a.stato === 'rejected').length || 0,
+    pending: applications?.filter(a => a?.stato === 'pending').length || 0,
+    accepted: applications?.filter(a => a?.stato === 'accepted').length || 0,
+    rejected: applications?.filter(a => a?.stato === 'rejected').length || 0,
+  }
+
+  // Fetch statistiche visualizzazioni
+  const fetchViewStats = async () => {
+    if (!bandoId) return
+
+    // Totale visualizzazioni
+    const { count: totalViews } = await (supabase
+      .from('visualizzazione_bando' as any)
+      .select('*', { count: 'exact', head: true })
+      .eq('bando_id', bandoId) as any)
+
+    setViewsCount(totalViews || 0)
+
+    // Visualizzazioni oggi
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    const { count: todayViews } = await (supabase
+      .from('visualizzazione_bando' as any)
+      .select('*', { count: 'exact', head: true })
+      .eq('bando_id', bandoId)
+      .gte('created_at', today.toISOString()) as any)
+
+    setViewsToday(todayViews || 0)
+
+    // Visualizzazioni questa settimana
+    const weekAgo = new Date()
+    weekAgo.setDate(weekAgo.getDate() - 7)
+    
+    const { count: weekViews } = await (supabase
+      .from('visualizzazione_bando' as any)
+      .select('*', { count: 'exact', head: true })
+      .eq('bando_id', bandoId)
+      .gte('created_at', weekAgo.toISOString()) as any)
+
+    setViewsThisWeek(weekViews || 0)
   }
 
   // Fetch dati
   useEffect(() => {
     const fetchData = async () => {
+      if (!bandoId) return
       setLoading(true)
       
       // Progetto
@@ -147,14 +191,17 @@ export default function ManageApplicationPage() {
 
       if (appsData) setApplications(appsData)
 
-      // Team members (accepted) - PROTETTO
-      const members = appsData?.filter(a => a && a.stato === 'accepted') || []
+      // Team members
+      const members = appsData?.filter(a => a?.stato === 'accepted') || []
       setTeamMembers(members)
+
+      // Fetch statistiche
+      await fetchViewStats()
 
       setLoading(false)
     }
 
-    if (bandoId) fetchData()
+    fetchData()
   }, [bandoId, supabase])
 
   // Azioni candidatura
@@ -173,7 +220,6 @@ export default function ManageApplicationPage() {
       ))
       setSelectedApp({ ...selectedApp, stato: modalAction })
       
-      // Aggiorna team members
       if (modalAction === 'accepted') {
         setTeamMembers(prev => [...prev, { ...selectedApp, stato: 'accepted' }])
       } else {
@@ -221,11 +267,7 @@ export default function ManageApplicationPage() {
   // Impostazioni progetto
   const handleToggleStatus = async () => {
     const nuovoStato = project.stato === 'aperto' ? 'chiuso' : 'aperto'
-    const messaggio = nuovoStato === 'chiuso' 
-      ? "Chiudere le candidature?" 
-      : "Riaprire le candidature?"
-      
-    if (!window.confirm(messaggio)) return
+    if (!window.confirm(nuovoStato === 'chiuso' ? "Chiudere le candidature?" : "Riaprire le candidature?")) return
 
     const { error } = await supabase
       .from('bando')
@@ -284,7 +326,6 @@ export default function ManageApplicationPage() {
     return data.publicUrl
   }
 
-  // Gestione cambio immagine
   const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
@@ -294,7 +335,6 @@ export default function ManageApplicationPage() {
     }
   }
 
-  // Salva modifiche progetto
   const handleSaveEdit = async () => {
     setSavingEdit(true)
     setEditSuccess(false)
@@ -302,7 +342,6 @@ export default function ManageApplicationPage() {
     try {
       let finalFotoUrl = editForm.foto_url
 
-      // Upload nuova immagine se presente
       if (newCoverFile) {
         finalFotoUrl = await uploadImage(newCoverFile)
       }
@@ -325,9 +364,7 @@ export default function ManageApplicationPage() {
         }))
         setEditForm(prev => ({ ...prev, foto_url: finalFotoUrl }))
         setNewCoverFile(null)
-        if (finalFotoUrl) {
-          extractColor(finalFotoUrl)
-        }
+        if (finalFotoUrl) extractColor(finalFotoUrl)
         setEditSuccess(true)
         setTimeout(() => setEditSuccess(false), 3000)
       }
@@ -352,7 +389,7 @@ export default function ManageApplicationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: `rgba(${dominantColor}, 0.08)` }}>
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-gray-300 border-t-red-600 rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-500 font-medium">Caricamento...</p>
@@ -363,24 +400,23 @@ export default function ManageApplicationPage() {
 
   if (!project) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <p className="text-gray-500">Progetto non trovato</p>
       </div>
     )
   }
 
-  // PROTETTO: Evita errori se un oggetto in 'applications' è nullo
-  const filteredApps = applications?.filter(a => a && a.stato === filter) || []
+  const filteredApps = applications?.filter(a => a?.stato === filter) || []
 
   return (
     <div 
-      className="min-h-screen pb-20 transition-colors duration-700"
-      style={{ backgroundColor: `rgba(${dominantColor}, 0.08)` }}
+      className="min-h-screen pb-20 transition-colors duration-500"
+      style={{ backgroundColor: `rgba(${dominantColor}, 0.1)` }}
     >
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
-          <div className="flex items-start justify-between gap-4">
+      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-40">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
+          <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <button 
                 onClick={() => router.push(`/dashboard/my_teams/${bandoId}`)}
@@ -391,33 +427,30 @@ export default function ManageApplicationPage() {
                 </svg>
               </button>
               <div>
-                <p className="text-xs text-gray-500 font-medium mb-1">Gestione Progetto</p>
-                <h1 className="text-xl font-bold text-gray-900">{project.titolo}</h1>
+                <p className="text-xs text-gray-500 font-medium">Gestione Progetto</p>
+                <h1 className="text-lg font-bold text-gray-900">{project.titolo}</h1>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${
-                project.stato === 'chiuso' 
-                  ? 'bg-gray-100 text-gray-600' 
-                  : 'bg-green-100 text-green-700'
-              }`}>
-                {project.stato === 'chiuso' ? '🔒 Chiuso' : '🟢 Aperto'}
-              </span>
-            </div>
+            <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${
+              project.stato === 'chiuso' ? 'bg-gray-100 text-gray-600' : 'bg-green-100 text-green-700'
+            }`}>
+              {project.stato === 'chiuso' ? '🔒 Chiuso' : '🟢 Aperto'}
+            </span>
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 mt-6 bg-gray-100 p-1 rounded-xl w-fit">
+          <div className="flex gap-1 mt-4 bg-gray-100 p-1 rounded-xl w-fit overflow-x-auto">
             {[
               { id: 'candidature' as const, label: 'Candidature', icon: '📨', count: stats.pending },
               { id: 'team' as const, label: 'Team', icon: '👥', count: stats.accepted },
+              { id: 'statistiche' as const, label: 'Statistiche', icon: '📊' },
               { id: 'impostazioni' as const, label: 'Impostazioni', icon: '⚙️' },
             ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap ${
                   activeTab === tab.id
                     ? 'bg-white shadow-sm text-gray-900'
                     : 'text-gray-500 hover:text-gray-700'
@@ -440,29 +473,25 @@ export default function ManageApplicationPage() {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
         
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
-            <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
-            <p className="text-xs text-gray-500 font-medium mt-1">Totale candidature</p>
-          </div>
-          <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200">
-            <p className="text-3xl font-bold text-amber-600">{stats.pending}</p>
-            <p className="text-xs text-amber-700 font-medium mt-1">In attesa</p>
-          </div>
-          <div className="bg-green-50 rounded-2xl p-4 border border-green-200">
-            <p className="text-3xl font-bold text-green-600">{stats.accepted}</p>
-            <p className="text-xs text-green-700 font-medium mt-1">Nel team</p>
-          </div>
-          <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200">
-            <p className="text-3xl font-bold text-gray-600">{stats.rejected}</p>
-            <p className="text-xs text-gray-500 font-medium mt-1">Rifiutate</p>
-          </div>
-        </div>
-
         {/* Tab: Candidature */}
         {activeTab === 'candidature' && (
           <div className="space-y-6">
+            {/* Stats mini */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
+                <p className="text-2xl font-bold text-amber-600">{stats.pending}</p>
+                <p className="text-xs text-gray-500 font-medium">In attesa</p>
+              </div>
+              <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
+                <p className="text-2xl font-bold text-green-600">{stats.accepted}</p>
+                <p className="text-xs text-gray-500 font-medium">Accettate</p>
+              </div>
+              <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
+                <p className="text-2xl font-bold text-gray-600">{stats.rejected}</p>
+                <p className="text-xs text-gray-500 font-medium">Rifiutate</p>
+              </div>
+            </div>
+
             {/* Filtri */}
             <div className="flex gap-2 overflow-x-auto pb-2">
               {[
@@ -493,7 +522,6 @@ export default function ManageApplicationPage() {
 
             {/* Lista candidature */}
             <div className="grid lg:grid-cols-3 gap-6">
-              {/* Lista sinistra */}
               <div className="lg:col-span-1 space-y-3 max-h-[600px] overflow-y-auto">
                 {filteredApps.length === 0 ? (
                   <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
@@ -531,11 +559,9 @@ export default function ManageApplicationPage() {
                 )}
               </div>
 
-              {/* Dettaglio destra */}
               <div className="lg:col-span-2">
                 {selectedApp ? (
                   <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-                    {/* Header */}
                     <div className="flex items-start gap-4 mb-6 pb-6 border-b border-gray-100">
                       <img 
                         src={selectedApp.studente?.avatar_url || '/default-avatar.png'} 
@@ -558,7 +584,6 @@ export default function ManageApplicationPage() {
                       </div>
                     </div>
 
-                    {/* Bio */}
                     {selectedApp.studente?.bio && (
                       <div className="mb-6">
                         <p className="text-xs font-medium text-gray-500 mb-2">Bio</p>
@@ -566,7 +591,6 @@ export default function ManageApplicationPage() {
                       </div>
                     )}
 
-                    {/* Messaggio */}
                     <div className="mb-6">
                       <p className="text-xs font-medium text-gray-500 mb-2">Messaggio di candidatura</p>
                       <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
@@ -576,7 +600,6 @@ export default function ManageApplicationPage() {
                       </div>
                     </div>
 
-                    {/* Azioni */}
                     {selectedApp.stato === 'pending' ? (
                       <div className="grid grid-cols-2 gap-3">
                         <button 
@@ -694,6 +717,117 @@ export default function ManageApplicationPage() {
           </div>
         )}
 
+        {/* Tab: Statistiche */}
+        {activeTab === 'statistiche' && (
+          <div className="space-y-6">
+            <h2 className="text-lg font-semibold text-gray-900">📊 Statistiche Progetto</h2>
+            
+            {/* Visualizzazioni */}
+            <div className="grid sm:grid-cols-3 gap-4">
+              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-3xl font-bold text-gray-900">{viewsCount}</p>
+                    <p className="text-xs text-gray-500">Visualizzazioni totali</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-3xl font-bold text-gray-900">{viewsToday}</p>
+                    <p className="text-xs text-gray-500">Visite oggi</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-3xl font-bold text-gray-900">{viewsThisWeek}</p>
+                    <p className="text-xs text-gray-500">Visite questa settimana</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Conversioni */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+              <h3 className="text-base font-semibold text-gray-900 mb-4">📈 Tassi di Conversione</h3>
+              <div className="grid sm:grid-cols-2 gap-6">
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-gray-600">Visite → Candidature</span>
+                    <span className="text-sm font-bold text-gray-900">
+                      {viewsCount > 0 ? ((stats.total / viewsCount) * 100).toFixed(1) : 0}%
+                    </span>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-blue-500 rounded-full transition-all"
+                      style={{ width: `${viewsCount > 0 ? Math.min((stats.total / viewsCount) * 100, 100) : 0}%` }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-gray-600">Candidature → Accettate</span>
+                    <span className="text-sm font-bold text-gray-900">
+                      {stats.total > 0 ? ((stats.accepted / stats.total) * 100).toFixed(1) : 0}%
+                    </span>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-green-500 rounded-full transition-all"
+                      style={{ width: `${stats.total > 0 ? (stats.accepted / stats.total) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Summary */}
+            <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl p-6 text-white">
+              <h3 className="text-base font-semibold mb-4">📋 Riepilogo</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-2xl font-bold">{viewsCount}</p>
+                  <p className="text-xs text-gray-400">Visite</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.total}</p>
+                  <p className="text-xs text-gray-400">Candidature</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.accepted}</p>
+                  <p className="text-xs text-gray-400">Membri</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.pending}</p>
+                  <p className="text-xs text-gray-400">In attesa</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Tab: Impostazioni */}
         {activeTab === 'impostazioni' && (
           <div className="space-y-6 max-w-2xl">
@@ -712,47 +846,36 @@ export default function ManageApplicationPage() {
               )}
               
               <div className="space-y-4">
-                {/* Immagine di copertina */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Immagine di Copertina</label>
-                  <div className="relative">
-                    <div 
-                      className="relative border-2 border-dashed border-gray-200 rounded-xl overflow-hidden hover:border-gray-300 transition-colors group cursor-pointer"
-                      style={{ aspectRatio: '16/9' }}
-                    >
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
-                        onChange={handleCoverChange}
-                      />
-                      {coverPreview ? (
-                        <>
-                          <img src={coverPreview} alt="Preview" className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <span className="text-white font-medium text-sm bg-white/20 backdrop-blur-sm px-4 py-2 rounded-xl">
-                              Cambia immagine
-                            </span>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 group-hover:bg-gray-100 transition-colors">
-                          <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          <p className="text-sm text-gray-500">Clicca per caricare</p>
+                  <div 
+                    className="relative border-2 border-dashed border-gray-200 rounded-xl overflow-hidden hover:border-gray-300 transition-colors group cursor-pointer"
+                    style={{ aspectRatio: '16/9' }}
+                  >
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                      onChange={handleCoverChange}
+                    />
+                    {coverPreview ? (
+                      <>
+                        <img src={coverPreview} alt="Preview" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="text-white font-medium text-sm">Cambia immagine</span>
                         </div>
-                      )}
-                    </div>
-                    {newCoverFile && (
-                      <p className="text-xs text-blue-600 mt-2 font-medium">
-                        📷 Nuova immagine selezionata: {newCoverFile.name}
-                      </p>
+                      </>
+                    ) : (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50">
+                        <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <p className="text-sm text-gray-500">Clicca per caricare</p>
+                      </div>
                     )}
                   </div>
                 </div>
 
-                {/* Titolo */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Titolo Progetto</label>
                   <input
@@ -763,7 +886,6 @@ export default function ManageApplicationPage() {
                   />
                 </div>
 
-                {/* Descrizione */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Descrizione</label>
                   <textarea
@@ -784,22 +906,14 @@ export default function ManageApplicationPage() {
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       Salvataggio...
                     </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      Salva Modifiche
-                    </>
-                  )}
+                  ) : 'Salva Modifiche'}
                 </button>
               </div>
             </div>
 
             {/* Link */}
             <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Link di Progetto</h3>
-              
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">🔗 Link di Progetto</h3>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">GitHub Repository</label>
@@ -808,7 +922,7 @@ export default function ManageApplicationPage() {
                     value={linksForm.github}
                     onChange={(e) => setLinksForm({ ...linksForm, github: e.target.value })}
                     placeholder="https://github.com/..."
-                    className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
+                    className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 outline-none"
                   />
                 </div>
                 <div>
@@ -818,7 +932,7 @@ export default function ManageApplicationPage() {
                     value={linksForm.drive}
                     onChange={(e) => setLinksForm({ ...linksForm, drive: e.target.value })}
                     placeholder="https://drive.google.com/..."
-                    className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
+                    className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 outline-none"
                   />
                 </div>
                 <button
@@ -831,14 +945,13 @@ export default function ManageApplicationPage() {
               </div>
             </div>
 
-            {/* Stato progetto */}
+            {/* Stato */}
             <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Stato Candidature</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">📋 Stato Candidature</h3>
               <p className="text-sm text-gray-500 mb-4">
                 {project.stato === 'aperto' 
                   ? 'Il progetto è aperto e accetta nuove candidature.'
-                  : 'Il progetto è chiuso, nessuna nuova candidatura possibile.'
-                }
+                  : 'Il progetto è chiuso, nessuna nuova candidatura possibile.'}
               </p>
               <button
                 onClick={handleToggleStatus}
@@ -855,9 +968,7 @@ export default function ManageApplicationPage() {
             {/* Danger Zone */}
             <div className="bg-red-50 rounded-2xl border border-red-200 p-6">
               <h3 className="text-lg font-semibold text-red-700 mb-2">⚠️ Zona Pericolosa</h3>
-              <p className="text-sm text-red-600 mb-4">
-                Queste azioni sono irreversibili.
-              </p>
+              <p className="text-sm text-red-600 mb-4">Questa azione è irreversibile.</p>
               <button
                 onClick={handleDeleteProject}
                 className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors"
@@ -883,14 +994,14 @@ export default function ManageApplicationPage() {
               <button
                 onClick={() => setShowModal(false)}
                 disabled={actionLoading}
-                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
+                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium"
               >
                 Annulla
               </button>
               <button
                 onClick={handleAction}
                 disabled={actionLoading}
-                className={`flex-1 py-3 rounded-xl font-medium text-white transition-colors ${
+                className={`flex-1 py-3 rounded-xl font-medium text-white ${
                   modalAction === 'accepted' ? 'bg-green-600 hover:bg-green-700' :
                   modalAction === 'rejected' ? 'bg-red-600 hover:bg-red-700' :
                   'bg-amber-500 hover:bg-amber-600'

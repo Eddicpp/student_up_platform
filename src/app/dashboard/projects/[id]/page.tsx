@@ -26,7 +26,7 @@ export default function ProjectDetailPage() {
   // Chat modal
   const [showChat, setShowChat] = useState(false)
 
-  // Estrai colore dominante (CON PROTEZIONE CORS)
+  // Estrai colore dominante
   const extractColor = (imageUrl: string) => {
     if (!imageUrl) return
     const img = new Image()
@@ -73,7 +73,6 @@ export default function ProjectDetailPage() {
     }
   }
 
-  // Fetch dati
   useEffect(() => {
     const fetchData = async () => {
       if (!id) return
@@ -109,7 +108,18 @@ export default function ProjectDetailPage() {
         extractColor(bandoData.foto_url)
       }
 
-      // Altri progetti del leader (PROTETTO CONTRO ID NULLO)
+      // Registra visualizzazione (solo se non sei il creatore)
+      if (bandoData.creatore_studente_id && bandoData.creatore_studente_id !== user.id) {
+        await (supabase
+          .from('visualizzazione_bando' as any)
+          .insert({
+            bando_id: id,
+            studente_id: user.id
+          }) as any)
+      }
+
+      // --- CORREZIONE QUI ---
+      // Eseguiamo la query solo se l'ID del creatore esiste effettivamente
       if (bandoData.creatore_studente_id) {
         const { data: otherProjects } = await supabase
           .from('bando')
@@ -121,6 +131,7 @@ export default function ProjectDetailPage() {
 
         if (otherProjects) setLeaderProjects(otherProjects)
       }
+      // ---------------------
 
       // Partecipazione utente
       const { data: partData } = await supabase
@@ -130,7 +141,7 @@ export default function ProjectDetailPage() {
         .eq('studente_id', user.id)
         .maybeSingle()
 
-      setPartecipazione(partData || null)
+      setPartecipazione(partData)
       setLoading(false)
     }
 
@@ -337,12 +348,12 @@ export default function ProjectDetailPage() {
               </div>
             )}
 
-            {/* Apply Section - PROTETTO */}
+            {/* Apply Section */}
             <ApplySection 
               bandoId={id}
               isAdmin={isAdmin}
-              haGiaPartecipato={partecipazione !== null}
-              statoCandidatura={partecipazione?.stato || 'pending'}
+              haGiaPartecipato={!!partecipazione}
+              statoCandidatura={partecipazione?.stato}
               dominantColor={dominantColor}
             />
           </div>
