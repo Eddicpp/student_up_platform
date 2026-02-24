@@ -392,8 +392,8 @@ export default function ManageApplicationPage() {
     try {
       let finalFotoUrl = editForm.foto_url
 
-      // Se c'è una nuova immagine OPPURE l'utente ha mosso lo slider per un'immagine esistente
-      if ((newCoverFile || coverPositionY !== 50) && coverPreview) {
+      // Se c'è una nuova immagine caricata, la ritagliamo in base allo slider prima di salvarla
+      if (newCoverFile && coverPreview) {
         const croppedFile = await generateCroppedFile(coverPreview, coverPositionY)
         finalFotoUrl = await uploadImage(croppedFile)
       }
@@ -415,7 +415,7 @@ export default function ManageApplicationPage() {
           foto_url: finalFotoUrl
         }))
         setEditForm(prev => ({ ...prev, foto_url: finalFotoUrl }))
-        setNewCoverFile(null)
+        setNewCoverFile(null) // Resetta il file nuovo così lo slider scompare
         setCoverPositionY(50) // Resetta dopo il salvataggio
         
         if (finalFotoUrl) {
@@ -480,13 +480,12 @@ export default function ManageApplicationPage() {
   return (
     <div 
       className="min-h-screen pb-20 transition-colors duration-500"
-      // SFONDO DINAMICO E VIBRANTE BASATO SUL BANNER
       style={{ 
         background: `linear-gradient(180deg, rgba(${dominantColor}, 0.35) 0%, rgba(${dominantColor}, 0.05) 100%)` 
       }}
     >
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-md border-b-2 border-gray-900 sticky top-0 z-40">
+      <div className="bg-white/90 backdrop-blur-sm border-b-2 border-gray-900 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -550,6 +549,7 @@ export default function ManageApplicationPage() {
         {/* Tab: Candidature */}
         {activeTab === 'candidature' && (
           <div className="space-y-6">
+            {/* Stats mini */}
             <div className="grid grid-cols-3 gap-4">
               <div className={`${cardStyleLight} p-4`}>
                 <p className="text-2xl font-black text-amber-600">{stats.pending}</p>
@@ -565,6 +565,7 @@ export default function ManageApplicationPage() {
               </div>
             </div>
 
+            {/* Filtri */}
             <div className="flex gap-2 overflow-x-auto pb-2">
               {[
                 { id: 'pending' as const, label: 'In Attesa', count: stats.pending, color: 'amber' },
@@ -592,6 +593,7 @@ export default function ManageApplicationPage() {
               ))}
             </div>
 
+            {/* Lista candidature */}
             <div className="grid lg:grid-cols-3 gap-6">
               <div className="lg:col-span-1 space-y-3 max-h-[600px] overflow-y-auto pr-2">
                 {filteredApps.length === 0 ? (
@@ -937,8 +939,8 @@ export default function ManageApplicationPage() {
                           src={coverPreview} 
                           alt="Preview" 
                           className="w-full h-full object-cover transition-all" 
-                          // Applica visivamente il posizionamento in tempo reale
-                          style={{ objectPosition: `center ${coverPositionY}%` }} 
+                          // Applica visivamente il posizionamento in tempo reale SOLO SE c'è un file nuovo
+                          style={{ objectPosition: newCoverFile ? `center ${coverPositionY}%` : 'center center' }} 
                         />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
                           <span className="text-white font-bold text-sm bg-gray-900 px-4 py-2 rounded-xl border-2 border-white">
@@ -956,8 +958,8 @@ export default function ManageApplicationPage() {
                     )}
                   </div>
 
-                  {/* Slider Visibile se c'è un'immagine da poter riposizionare */}
-                  {coverPreview && (
+                  {/* Slider Visibile SOLO quando carichi una NUOVA immagine */}
+                  {newCoverFile && coverPreview && (
                     <div className="mt-4 p-4 bg-white/60 border-2 border-gray-300 rounded-xl backdrop-blur-sm animate-in fade-in zoom-in duration-300">
                       <label className="block text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
                         <span>↕️</span> Scorri per regolare l'inquadratura del banner
