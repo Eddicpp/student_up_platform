@@ -1,9 +1,161 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+
+// Componente Image Cropper
+function ImageCropper({ 
+  imageSrc, 
+  onCropComplete, 
+  onCancel 
+}: { 
+  imageSrc: string
+  onCropComplete: (croppedImage: Blob) => void
+  onCancel: () => void
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [position, setPosition] = useState({ x: 0, y: 0 })
+  const [scale, setScale] = useState(1)
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+  const [imageLoaded, setImageLoaded] = useState(false)
+  const imageRef = useRef<HTMLImageElement | null>(null)
+
+  const CROP_WIDTH = 640
+  const CROP_HEIGHT = 360 // 16:9
+
+  useEffect(() => {
+    const img = new Image()
+    img.crossOrigin = 'Anonymous'
+    img.onload = () => {
+      imageRef.current = img
+      // Centra l'immagine
+      const initialScale = Math.max(CROP_WIDTH / img.width, CROP_HEIGHT / img.height)
+      setScale(initialScale)
+      setPosition({
+        x: (CROP_WIDTH - img.width * initialScale) / 2,
+        y: (CROP_HEIGHT - img.height * initialScale) / 2
+      })
+      setImageLoaded(true)
+    }
+    img.src = imageSrc
+  }, [imageSrc])
+
+  useEffect(() => {
+    if (!imageLoaded || !imageRef.current || !canvasRef.current) return
+    
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    ctx.clearRect(0, 0, CROP_WIDTH, CROP_HEIGHT)
+    ctx.fillStyle = '#f3f4f6'
+    ctx.fillRect(0, 0, CROP_WIDTH, CROP_HEIGHT)
+    
+    const img = imageRef.current
+    ctx.drawImage(
+      img,
+      position.x,
+      position.y,
+      img.width * scale,
+      img.height * scale
+    )
+  }, [position, scale, imageLoaded])
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true)
+    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y })
+  }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return
+    setPosition({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y
+    })
+  }
+
+  const handleMouseUp = () => setIsDragging(false)
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault()
+    const delta = e.deltaY > 0 ? 0.95 : 1.05
+    setScale(prev => Math.max(0.1, Math.min(5, prev * delta)))
+  }
+
+  const handleCrop = () => {
+    if (!canvasRef.current) return
+    canvasRef.current.toBlob((blob) => {
+      if (blob) onCropComplete(blob)
+    }, 'image/jpeg', 0.9)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div className="bg-white rounded-3xl p-6 max-w-3xl w-full shadow-2xl border-2 border-gray-900">
+        <h3 className="text-xl font-bold text-gray-900 mb-4">✂️ Ritaglia Immagine</h3>
+        <p className="text-sm text-gray-500 mb-4">Trascina per spostare, scroll per zoom</p>
+        
+        <div 
+          className="relative mx-auto bg-gray-100 rounded-2xl overflow-hidden border-2 border-gray-900 cursor-move"
+          style={{ width: CROP_WIDTH, height: CROP_HEIGHT, maxWidth: '100%' }}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onWheel={handleWheel}
+        >
+          <canvas
+            ref={canvasRef}
+            width={CROP_WIDTH}
+            height={CROP_HEIGHT}
+            className="w-full h-full"
+          />
+          {/* Grid overlay */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="w-full h-full grid grid-cols-3 grid-rows-3">
+              {[...Array(9)].map((_, i) => (
+                <div key={i} className="border border-white/30" />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Zoom slider */}
+        <div className="flex items-center gap-4 mt-4">
+          <span className="text-sm text-gray-500">Zoom</span>
+          <input
+            type="range"
+            min="0.1"
+            max="3"
+            step="0.01"
+            value={scale}
+            onChange={(e) => setScale(parseFloat(e.target.value))}
+            className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+          />
+          <span className="text-sm font-mono text-gray-600 w-16">{(scale * 100).toFixed(0)}%</span>
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={onCancel}
+            className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium border-2 border-gray-300 transition-colors"
+          >
+            Annulla
+          </button>
+          <button
+            onClick={handleCrop}
+            className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold border-2 border-blue-800 transition-colors"
+          >
+            ✓ Applica Ritaglio
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function ManageApplicationPage() {
   const params = useParams()
@@ -45,9 +197,12 @@ export default function ManageApplicationPage() {
   })
   const [newCoverFile, setNewCoverFile] = useState<File | null>(null)
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
-  const [coverPositionY, setCoverPositionY] = useState(50) // Posizione Y per l'inquadratura (0-100)
   const [savingEdit, setSavingEdit] = useState(false)
   const [editSuccess, setEditSuccess] = useState(false)
+  
+  // Image Cropper
+  const [showCropper, setShowCropper] = useState(false)
+  const [tempImageUrl, setTempImageUrl] = useState<string | null>(null)
 
   // Estrai colore dominante
   const extractColor = (imageUrl: string) => {
@@ -110,7 +265,6 @@ export default function ManageApplicationPage() {
   const fetchViewStats = async () => {
     if (!bandoId) return
 
-    // Totale visualizzazioni
     const { count: totalViews } = await (supabase
       .from('visualizzazione_bando' as any)
       .select('*', { count: 'exact', head: true })
@@ -118,7 +272,6 @@ export default function ManageApplicationPage() {
 
     setViewsCount(totalViews || 0)
 
-    // Visualizzazioni oggi
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     
@@ -130,7 +283,6 @@ export default function ManageApplicationPage() {
 
     setViewsToday(todayViews || 0)
 
-    // Visualizzazioni questa settimana
     const weekAgo = new Date()
     weekAgo.setDate(weekAgo.getDate() - 7)
     
@@ -149,7 +301,6 @@ export default function ManageApplicationPage() {
       if (!bandoId) return
       setLoading(true)
       
-      // Progetto
       const { data: projectData } = await supabase
         .from('bando')
         .select('*')
@@ -174,7 +325,6 @@ export default function ManageApplicationPage() {
         }
       }
 
-      // Candidature
       const { data: appsData } = await supabase
         .from('partecipazione')
         .select(`
@@ -192,11 +342,9 @@ export default function ManageApplicationPage() {
 
       if (appsData) setApplications(appsData)
 
-      // Team members
       const members = appsData?.filter(a => a?.stato === 'accepted') || []
       setTeamMembers(members)
 
-      // Fetch statistiche
       await fetchViewStats()
 
       setLoading(false)
@@ -314,9 +462,8 @@ export default function ManageApplicationPage() {
   }
 
   // Upload immagine
-  const uploadImage = async (file: File) => {
-    const fileExt = file.name.split('.').pop()
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+  const uploadImage = async (file: File | Blob) => {
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`
 
     const { error: uploadError } = await supabase.storage
       .from('project-media')
@@ -327,60 +474,28 @@ export default function ManageApplicationPage() {
     return data.publicUrl
   }
 
+  // Gestione selezione immagine (apre cropper)
   const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      setNewCoverFile(file)
-      const previewUrl = URL.createObjectURL(file)
-      setCoverPreview(previewUrl)
-      setCoverPositionY(50) // Resetta lo slider al centro
+      const url = URL.createObjectURL(file)
+      setTempImageUrl(url)
+      setShowCropper(true)
     }
   }
 
-  // Funzione per generare l'immagine croppata con Canvas
-  const generateCroppedFile = (imageUrl: string, positionY: number): Promise<File> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image()
-      img.crossOrigin = 'Anonymous'
-      img.onload = () => {
-        const canvas = document.createElement('canvas')
-        const targetRatio = 16 / 9
-        const imgRatio = img.width / img.height
-
-        canvas.width = 1200
-        canvas.height = Math.round(1200 / targetRatio)
-
-        const ctx = canvas.getContext('2d')
-        if (!ctx) return reject(new Error("Canvas context missing"))
-
-        let drawWidth = canvas.width
-        let drawHeight = canvas.height
-        let offsetX = 0
-        let offsetY = 0
-
-        if (imgRatio > targetRatio) {
-          drawHeight = canvas.height
-          drawWidth = img.width * (canvas.height / img.height)
-          offsetX = (canvas.width - drawWidth) / 2
-        } else {
-          drawWidth = canvas.width
-          drawHeight = img.height * (canvas.width / img.width)
-          offsetY = (canvas.height - drawHeight) * (positionY / 100)
-        }
-
-        ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight)
-
-        canvas.toBlob((blob) => {
-          if (blob) {
-            resolve(new File([blob], "cover-cropped.jpg", { type: "image/jpeg" }))
-          } else {
-            reject(new Error("Blob creation failed"))
-          }
-        }, 'image/jpeg', 0.9)
-      }
-      img.onerror = () => reject(new Error("Image load failed"))
-      img.src = imageUrl
-    })
+  // Callback quando il crop è completato
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    setShowCropper(false)
+    setTempImageUrl(null)
+    
+    // Crea file dal blob
+    const file = new File([croppedBlob], 'cover.jpg', { type: 'image/jpeg' })
+    setNewCoverFile(file)
+    
+    // Mostra preview
+    const previewUrl = URL.createObjectURL(croppedBlob)
+    setCoverPreview(previewUrl)
   }
 
   const handleSaveEdit = async () => {
@@ -390,10 +505,7 @@ export default function ManageApplicationPage() {
     try {
       let finalFotoUrl = editForm.foto_url
 
-      if (newCoverFile && coverPreview) {
-        const croppedFile = await generateCroppedFile(coverPreview, coverPositionY)
-        finalFotoUrl = await uploadImage(croppedFile)
-      } else if (newCoverFile) {
+      if (newCoverFile) {
         finalFotoUrl = await uploadImage(newCoverFile)
       }
 
@@ -426,17 +538,22 @@ export default function ManageApplicationPage() {
     setSavingEdit(false)
   }
 
+  // Broadcast email con Gmail
   const handleBroadcast = () => {
     const teamEmails = teamMembers
       .filter(m => m.studente?.email)
       .map(m => m.studente.email)
-      .join(',')
     
-    if (teamEmails) {
-      const subject = encodeURIComponent(`[${project?.titolo}] Aggiornamento`)
-      // Costruisce l'URL di Gmail passando le email in bcc (Ccn)
-      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&bcc=${teamEmails}&su=${subject}`
-      window.open(gmailUrl, '_blank')
+    if (teamEmails.length > 0) {
+      const to = teamEmails.join(',')
+      const subject = encodeURIComponent(`[${project?.titolo}] Aggiornamento dal team`)
+      const body = encodeURIComponent(`Ciao team!\n\n`)
+      
+      // Apri Gmail compose
+      window.open(
+        `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}&body=${body}`,
+        '_blank'
+      )
     }
   }
 
@@ -461,39 +578,45 @@ export default function ManageApplicationPage() {
 
   const filteredApps = applications?.filter(a => a?.stato === filter) || []
 
+  // Stile cartoon per le card
+  const cardStyle = "bg-white rounded-2xl border-2 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+  const cardStyleLight = "bg-white rounded-2xl border-2 border-gray-800 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.8)]"
+
   return (
     <div 
       className="min-h-screen pb-20 transition-colors duration-500"
-      style={{ backgroundColor: `rgba(${dominantColor}, 0.1)` }}
+      style={{ backgroundColor: `rgba(${dominantColor}, 0.15)` }}
     >
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-40">
+      <div className="bg-white/90 backdrop-blur-sm border-b-2 border-gray-900 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <button 
                 onClick={() => router.push(`/dashboard/my_teams/${bandoId}`)}
-                className="p-2 hover:bg-gray-100 rounded-xl text-gray-500 hover:text-gray-900 transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-xl text-gray-900 border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
               <div>
-                <p className="text-xs text-gray-500 font-medium">Gestione Progetto</p>
-                <h1 className="text-lg font-bold text-gray-900">{project.titolo}</h1>
+                <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Gestione Progetto</p>
+                <h1 className="text-lg font-black text-gray-900">{project.titolo}</h1>
               </div>
             </div>
 
-            <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${
-              project.stato === 'chiuso' ? 'bg-gray-100 text-gray-600' : 'bg-green-100 text-green-700'
+            <span className={`px-4 py-2 rounded-xl text-xs font-black border-2 ${
+              project.stato === 'chiuso' 
+                ? 'bg-gray-100 text-gray-600 border-gray-400' 
+                : 'bg-green-100 text-green-700 border-green-600'
             }`}>
               {project.stato === 'chiuso' ? '🔒 Chiuso' : '🟢 Aperto'}
             </span>
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 mt-4 bg-gray-100 p-1 rounded-xl w-fit overflow-x-auto">
+          <div className="flex gap-2 mt-4 overflow-x-auto pb-1">
             {[
               { id: 'candidature' as const, label: 'Candidature', icon: '📨', count: stats.pending },
               { id: 'team' as const, label: 'Team', icon: '👥', count: stats.accepted },
@@ -503,17 +626,17 @@ export default function ManageApplicationPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all whitespace-nowrap border-2 ${
                   activeTab === tab.id
-                    ? 'bg-white shadow-sm text-gray-900'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'bg-gray-900 text-white border-gray-900 shadow-none'
+                    : 'bg-white text-gray-600 border-gray-300 hover:border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
                 }`}
               >
                 <span>{tab.icon}</span>
                 {tab.label}
                 {tab.count !== undefined && tab.count > 0 && (
-                  <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
-                    activeTab === tab.id ? 'bg-red-100 text-red-600' : 'bg-gray-200 text-gray-600'
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
+                    activeTab === tab.id ? 'bg-red-500 text-white' : 'bg-red-100 text-red-600'
                   }`}>
                     {tab.count}
                   </span>
@@ -529,21 +652,23 @@ export default function ManageApplicationPage() {
         {/* Tab: Candidature */}
         {activeTab === 'candidature' && (
           <div className="space-y-6">
+            {/* Stats mini */}
             <div className="grid grid-cols-3 gap-4">
-              <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
-                <p className="text-2xl font-bold text-amber-600">{stats.pending}</p>
-                <p className="text-xs text-gray-500 font-medium">In attesa</p>
+              <div className={`${cardStyleLight} p-4`}>
+                <p className="text-2xl font-black text-amber-600">{stats.pending}</p>
+                <p className="text-xs text-gray-500 font-bold">In attesa</p>
               </div>
-              <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
-                <p className="text-2xl font-bold text-green-600">{stats.accepted}</p>
-                <p className="text-xs text-gray-500 font-medium">Accettate</p>
+              <div className={`${cardStyleLight} p-4`}>
+                <p className="text-2xl font-black text-green-600">{stats.accepted}</p>
+                <p className="text-xs text-gray-500 font-bold">Accettate</p>
               </div>
-              <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
-                <p className="text-2xl font-bold text-gray-600">{stats.rejected}</p>
-                <p className="text-xs text-gray-500 font-medium">Rifiutate</p>
+              <div className={`${cardStyleLight} p-4`}>
+                <p className="text-2xl font-black text-gray-600">{stats.rejected}</p>
+                <p className="text-xs text-gray-500 font-bold">Rifiutate</p>
               </div>
             </div>
 
+            {/* Filtri */}
             <div className="flex gap-2 overflow-x-auto pb-2">
               {[
                 { id: 'pending' as const, label: 'In Attesa', count: stats.pending, color: 'amber' },
@@ -553,28 +678,31 @@ export default function ManageApplicationPage() {
                 <button
                   key={f.id}
                   onClick={() => setFilter(f.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm whitespace-nowrap transition-all ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm whitespace-nowrap transition-all border-2 ${
                     filter === f.id
-                      ? f.color === 'amber' ? 'bg-amber-500 text-white' :
-                        f.color === 'green' ? 'bg-green-500 text-white' :
-                        'bg-gray-700 text-white'
-                      : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                      ? f.color === 'amber' ? 'bg-amber-500 text-white border-amber-700 shadow-[3px_3px_0px_0px_rgba(180,83,9,1)]' :
+                        f.color === 'green' ? 'bg-green-500 text-white border-green-700 shadow-[3px_3px_0px_0px_rgba(21,128,61,1)]' :
+                        'bg-gray-700 text-white border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'
+                      : 'bg-white border-gray-300 text-gray-600 hover:border-gray-500'
                   }`}
                 >
                   {f.label}
-                  <span className={`px-1.5 py-0.5 rounded-full text-xs ${filter === f.id ? 'bg-white/20' : 'bg-gray-100'}`}>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
+                    filter === f.id ? 'bg-white/30' : 'bg-gray-100'
+                  }`}>
                     {f.count}
                   </span>
                 </button>
               ))}
             </div>
 
+            {/* Lista candidature */}
             <div className="grid lg:grid-cols-3 gap-6">
               <div className="lg:col-span-1 space-y-3 max-h-[600px] overflow-y-auto pr-2">
                 {filteredApps.length === 0 ? (
-                  <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
+                  <div className={`${cardStyle} p-8 text-center`}>
                     <span className="text-4xl block mb-2">📭</span>
-                    <p className="text-gray-500 text-sm">Nessuna candidatura</p>
+                    <p className="text-gray-500 font-bold text-sm">Nessuna candidatura</p>
                   </div>
                 ) : (
                   filteredApps.map(app => (
@@ -582,16 +710,22 @@ export default function ManageApplicationPage() {
                       key={app.id}
                       onClick={() => setSelectedApp(app)}
                       className={`w-full text-left p-4 rounded-2xl border-2 transition-all ${
-                        selectedApp?.id === app.id ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 bg-white hover:border-gray-300'
+                        selectedApp?.id === app.id
+                          ? 'border-gray-900 bg-gray-900 text-white shadow-none translate-x-1 translate-y-1'
+                          : 'border-gray-800 bg-white hover:border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px]'
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <img src={app.studente?.avatar_url || '/default-avatar.png'} alt="" className="w-10 h-10 rounded-xl object-cover" />
+                        <img 
+                          src={app.studente?.avatar_url || '/default-avatar.png'} 
+                          alt=""
+                          className="w-10 h-10 rounded-xl object-cover border-2 border-gray-900"
+                        />
                         <div className="flex-1 min-w-0">
-                          <p className={`font-semibold truncate ${selectedApp?.id === app.id ? 'text-white' : 'text-gray-900'}`}>
+                          <p className={`font-bold truncate ${selectedApp?.id === app.id ? 'text-white' : 'text-gray-900'}`}>
                             {app.studente?.nome} {app.studente?.cognome}
                           </p>
-                          <p className={`text-xs ${selectedApp?.id === app.id ? 'text-gray-400' : 'text-gray-500'}`}>
+                          <p className={`text-xs font-medium ${selectedApp?.id === app.id ? 'text-gray-400' : 'text-gray-500'}`}>
                             {new Date(app.data_candidatura).toLocaleDateString('it-IT')}
                           </p>
                         </div>
@@ -603,13 +737,24 @@ export default function ManageApplicationPage() {
 
               <div className="lg:col-span-2">
                 {selectedApp ? (
-                  <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-                    <div className="flex items-start gap-4 mb-6 pb-6 border-b border-gray-100">
-                      <img src={selectedApp.studente?.avatar_url || '/default-avatar.png'} alt="" className="w-16 h-16 rounded-2xl object-cover" />
+                  <div className={`${cardStyle} p-6`}>
+                    <div className="flex items-start gap-4 mb-6 pb-6 border-b-2 border-gray-200">
+                      <img 
+                        src={selectedApp.studente?.avatar_url || '/default-avatar.png'} 
+                        alt=""
+                        className="w-16 h-16 rounded-2xl object-cover border-2 border-gray-900"
+                      />
                       <div className="flex-1">
-                        <h3 className="text-xl font-bold text-gray-900">{selectedApp.studente?.nome} {selectedApp.studente?.cognome}</h3>
-                        <p className="text-sm text-gray-500">{selectedApp.studente?.studente_corso?.[0]?.corso?.nome || 'Corso non specificato'}</p>
-                        <Link href={`/dashboard/user/${selectedApp.studente?.id}`} className="inline-block mt-2 text-xs font-medium text-blue-600 hover:text-blue-700">
+                        <h3 className="text-xl font-black text-gray-900">
+                          {selectedApp.studente?.nome} {selectedApp.studente?.cognome}
+                        </h3>
+                        <p className="text-sm text-gray-500 font-medium">
+                          {selectedApp.studente?.studente_corso?.[0]?.corso?.nome || 'Corso non specificato'}
+                        </p>
+                        <Link 
+                          href={`/dashboard/user/${selectedApp.studente?.id}`}
+                          className="inline-block mt-2 text-xs font-bold text-blue-600 hover:text-blue-700 underline"
+                        >
                           Vedi profilo completo →
                         </Link>
                       </div>
@@ -617,43 +762,56 @@ export default function ManageApplicationPage() {
 
                     {selectedApp.studente?.bio && (
                       <div className="mb-6">
-                        <p className="text-xs font-medium text-gray-500 mb-2">Bio</p>
-                        <p className="text-sm text-gray-600 italic">"{selectedApp.studente.bio}"</p>
+                        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Bio</p>
+                        <p className="text-sm text-gray-600 italic bg-gray-50 p-3 rounded-xl border border-gray-200">"{selectedApp.studente.bio}"</p>
                       </div>
                     )}
 
                     <div className="mb-6">
-                      <p className="text-xs font-medium text-gray-500 mb-2">Messaggio di candidatura</p>
-                      <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                        <p className="text-gray-700 whitespace-pre-wrap">{selectedApp.messaggio || <span className="italic text-gray-400">Nessun messaggio</span>}</p>
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Messaggio di candidatura</p>
+                      <div className="bg-gray-50 rounded-xl p-4 border-2 border-gray-200">
+                        <p className="text-gray-700 whitespace-pre-wrap font-medium">
+                          {selectedApp.messaggio || <span className="italic text-gray-400">Nessun messaggio</span>}
+                        </p>
                       </div>
                     </div>
 
                     {selectedApp.stato === 'pending' ? (
                       <div className="grid grid-cols-2 gap-3">
-                        <button onClick={() => { setModalAction('rejected'); setShowModal(true) }} className="py-3 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl font-medium text-sm transition-colors">
+                        <button 
+                          onClick={() => { setModalAction('rejected'); setShowModal(true) }}
+                          className="py-3 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl font-bold text-sm transition-colors border-2 border-red-300 hover:border-red-500"
+                        >
                           ❌ Rifiuta
                         </button>
-                        <button onClick={() => { setModalAction('accepted'); setShowModal(true) }} className="py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold text-sm transition-colors">
+                        <button 
+                          onClick={() => { setModalAction('accepted'); setShowModal(true) }}
+                          className="py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold text-sm transition-colors border-2 border-green-800 shadow-[3px_3px_0px_0px_rgba(21,128,61,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px]"
+                        >
                           ✅ Accetta
                         </button>
                       </div>
                     ) : (
-                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
-                        <p className={`font-medium text-sm ${selectedApp.stato === 'accepted' ? 'text-green-600' : 'text-red-600'}`}>
+                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border-2 border-gray-200">
+                        <p className={`font-bold text-sm ${
+                          selectedApp.stato === 'accepted' ? 'text-green-600' : 'text-red-600'
+                        }`}>
                           {selectedApp.stato === 'accepted' ? '✅ Nel team' : '❌ Rifiutata'}
                         </p>
-                        <button onClick={() => { setModalAction('pending'); setShowModal(true) }} className="text-xs text-gray-500 hover:text-gray-700 underline">
+                        <button 
+                          onClick={() => { setModalAction('pending'); setShowModal(true) }}
+                          className="text-xs text-gray-500 hover:text-gray-700 font-bold underline"
+                        >
                           Riporta in attesa
                         </button>
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 h-full min-h-[400px] flex items-center justify-center">
+                  <div className="bg-white rounded-2xl border-2 border-dashed border-gray-400 h-full min-h-[400px] flex items-center justify-center">
                     <div className="text-center">
                       <span className="text-5xl block mb-3">👤</span>
-                      <p className="text-gray-500 font-medium">Seleziona una candidatura</p>
+                      <p className="text-gray-500 font-bold">Seleziona una candidatura</p>
                     </div>
                   </div>
                 )}
@@ -666,26 +824,35 @@ export default function ManageApplicationPage() {
         {activeTab === 'team' && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Membri del Team ({teamMembers.length})</h2>
+              <h2 className="text-lg font-black text-gray-900">👥 Membri del Team ({teamMembers.length})</h2>
               <button
                 onClick={handleBroadcast}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium text-sm transition-colors"
+                disabled={teamMembers.length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm transition-all border-2 border-red-800 shadow-[3px_3px_0px_0px_rgba(127,29,29,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20 18h-2V9.25L12 13 6 9.25V18H4V6h1.2l6.8 4.25L18.8 6H20m0-2H4c-1.11 0-2 .89-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2z"/>
                 </svg>
-                Email a tutti
+                Apri Gmail
               </button>
             </div>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {teamMembers.map(member => (
-                <div key={member.id} className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
+                <div key={member.id} className={`${cardStyle} p-4`}>
                   <div className="flex items-start gap-3 mb-4">
-                    <img src={member.studente?.avatar_url || '/default-avatar.png'} alt="" className="w-12 h-12 rounded-xl object-cover" />
+                    <img 
+                      src={member.studente?.avatar_url || '/default-avatar.png'} 
+                      alt=""
+                      className="w-12 h-12 rounded-xl object-cover border-2 border-gray-900"
+                    />
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 truncate">{member.studente?.nome} {member.studente?.cognome}</p>
-                      <p className={`text-xs font-medium ${member.ruolo === 'admin' ? 'text-blue-600' : 'text-gray-400'}`}>
+                      <p className="font-bold text-gray-900 truncate">
+                        {member.studente?.nome} {member.studente?.cognome}
+                      </p>
+                      <p className={`text-xs font-bold ${
+                        member.ruolo === 'admin' ? 'text-blue-600' : 'text-gray-400'
+                      }`}>
                         {member.ruolo === 'admin' ? '🛡️ Admin' : '👤 Membro'}
                       </p>
                     </div>
@@ -693,24 +860,34 @@ export default function ManageApplicationPage() {
 
                   <div className="flex gap-2">
                     {member.ruolo !== 'admin' ? (
-                      <button onClick={() => handleRoleChange(member.id, 'admin')} className="flex-1 py-2 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                      <button
+                        onClick={() => handleRoleChange(member.id, 'admin')}
+                        className="flex-1 py-2 text-xs font-bold text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200"
+                      >
                         Promuovi Admin
                       </button>
                     ) : (
-                      <button onClick={() => handleRoleChange(member.id, 'membro')} className="flex-1 py-2 text-xs font-medium text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
+                      <button
+                        onClick={() => handleRoleChange(member.id, 'membro')}
+                        className="flex-1 py-2 text-xs font-bold text-amber-600 hover:bg-amber-50 rounded-lg transition-colors border border-amber-200"
+                      >
                         Rimuovi Admin
                       </button>
                     )}
-                    <button onClick={() => handleKickMember(member.id)} className="py-2 px-3 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                    <button
+                      onClick={() => handleKickMember(member.id)}
+                      className="py-2 px-3 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-200"
+                    >
                       ❌
                     </button>
                   </div>
                 </div>
               ))}
+
               {teamMembers.length === 0 && (
-                <div className="col-span-full bg-white rounded-2xl border-2 border-dashed border-gray-200 p-8 text-center">
+                <div className="col-span-full bg-white rounded-2xl border-2 border-dashed border-gray-400 p-8 text-center">
                   <span className="text-4xl block mb-2">👥</span>
-                  <p className="text-gray-500">Nessun membro nel team</p>
+                  <p className="text-gray-500 font-bold">Nessun membro nel team</p>
                 </div>
               )}
             </div>
@@ -720,82 +897,108 @@ export default function ManageApplicationPage() {
         {/* Tab: Statistiche */}
         {activeTab === 'statistiche' && (
           <div className="space-y-6">
-            <h2 className="text-lg font-semibold text-gray-900">📊 Statistiche Progetto</h2>
+            <h2 className="text-lg font-black text-gray-900">📊 Statistiche Progetto</h2>
             
             <div className="grid sm:grid-cols-3 gap-4">
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className={`${cardStyle} p-6`}>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center border-2 border-blue-600">
+                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
                   </div>
                   <div>
-                    <p className="text-3xl font-bold text-gray-900">{viewsCount}</p>
-                    <p className="text-xs text-gray-500">Visualizzazioni totali</p>
+                    <p className="text-3xl font-black text-gray-900">{viewsCount}</p>
+                    <p className="text-xs text-gray-500 font-bold">Visualizzazioni totali</p>
                   </div>
                 </div>
               </div>
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+              <div className={`${cardStyle} p-6`}>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center border-2 border-green-600">
+                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
                   <div>
-                    <p className="text-3xl font-bold text-gray-900">{viewsToday}</p>
-                    <p className="text-xs text-gray-500">Visite oggi</p>
+                    <p className="text-3xl font-black text-gray-900">{viewsToday}</p>
+                    <p className="text-xs text-gray-500 font-bold">Visite oggi</p>
                   </div>
                 </div>
               </div>
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+              <div className={`${cardStyle} p-6`}>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center border-2 border-purple-600">
+                    <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                   </div>
                   <div>
-                    <p className="text-3xl font-bold text-gray-900">{viewsThisWeek}</p>
-                    <p className="text-xs text-gray-500">Visite questa settimana</p>
+                    <p className="text-3xl font-black text-gray-900">{viewsThisWeek}</p>
+                    <p className="text-xs text-gray-500 font-bold">Visite questa settimana</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-              <h3 className="text-base font-semibold text-gray-900 mb-4">📈 Tassi di Conversione</h3>
+            {/* Conversioni */}
+            <div className={`${cardStyle} p-6`}>
+              <h3 className="text-base font-black text-gray-900 mb-4">📈 Tassi di Conversione</h3>
               <div className="grid sm:grid-cols-2 gap-6">
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-gray-600">Visite → Candidature</span>
-                    <span className="text-sm font-bold text-gray-900">{viewsCount > 0 ? ((stats.total / viewsCount) * 100).toFixed(1) : 0}%</span>
+                    <span className="text-sm text-gray-600 font-medium">Visite → Candidature</span>
+                    <span className="text-sm font-black text-gray-900">
+                      {viewsCount > 0 ? ((stats.total / viewsCount) * 100).toFixed(1) : 0}%
+                    </span>
                   </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${viewsCount > 0 ? Math.min((stats.total / viewsCount) * 100, 100) : 0}%` }} />
+                  <div className="h-3 bg-gray-100 rounded-full overflow-hidden border-2 border-gray-300">
+                    <div 
+                      className="h-full bg-blue-500 rounded-full transition-all"
+                      style={{ width: `${viewsCount > 0 ? Math.min((stats.total / viewsCount) * 100, 100) : 0}%` }}
+                    />
                   </div>
                 </div>
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-gray-600">Candidature → Accettate</span>
-                    <span className="text-sm font-bold text-gray-900">{stats.total > 0 ? ((stats.accepted / stats.total) * 100).toFixed(1) : 0}%</span>
+                    <span className="text-sm text-gray-600 font-medium">Candidature → Accettate</span>
+                    <span className="text-sm font-black text-gray-900">
+                      {stats.total > 0 ? ((stats.accepted / stats.total) * 100).toFixed(1) : 0}%
+                    </span>
                   </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${stats.total > 0 ? (stats.accepted / stats.total) * 100 : 0}%` }} />
+                  <div className="h-3 bg-gray-100 rounded-full overflow-hidden border-2 border-gray-300">
+                    <div 
+                      className="h-full bg-green-500 rounded-full transition-all"
+                      style={{ width: `${stats.total > 0 ? (stats.accepted / stats.total) * 100 : 0}%` }}
+                    />
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl p-6 text-white">
-              <h3 className="text-base font-semibold mb-4">📋 Riepilogo</h3>
+            {/* Summary */}
+            <div className="bg-gray-900 rounded-2xl p-6 text-white border-2 border-gray-700 shadow-[4px_4px_0px_0px_rgba(55,65,81,1)]">
+              <h3 className="text-base font-black mb-4">📋 Riepilogo</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div><p className="text-2xl font-bold">{viewsCount}</p><p className="text-xs text-gray-400">Visite</p></div>
-                <div><p className="text-2xl font-bold">{stats.total}</p><p className="text-xs text-gray-400">Candidature</p></div>
-                <div><p className="text-2xl font-bold">{stats.accepted}</p><p className="text-xs text-gray-400">Membri</p></div>
-                <div><p className="text-2xl font-bold">{stats.pending}</p><p className="text-xs text-gray-400">In attesa</p></div>
+                <div>
+                  <p className="text-2xl font-black">{viewsCount}</p>
+                  <p className="text-xs text-gray-400 font-bold">Visite</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-black">{stats.total}</p>
+                  <p className="text-xs text-gray-400 font-bold">Candidature</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-black">{stats.accepted}</p>
+                  <p className="text-xs text-gray-400 font-bold">Membri</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-black">{stats.pending}</p>
+                  <p className="text-xs text-gray-400 font-bold">In attesa</p>
+                </div>
               </div>
             </div>
           </div>
@@ -805,21 +1008,24 @@ export default function ManageApplicationPage() {
         {activeTab === 'impostazioni' && (
           <div className="space-y-6 max-w-2xl">
             
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">✏️ Modifica Progetto</h3>
+            {/* Modifica Progetto */}
+            <div className={`${cardStyle} p-6`}>
+              <h3 className="text-lg font-black text-gray-900 mb-4">✏️ Modifica Progetto</h3>
               
               {editSuccess && (
-                <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-xl text-sm font-medium flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                <div className="mb-4 p-3 bg-green-50 border-2 border-green-500 text-green-700 rounded-xl text-sm font-bold flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
                   Modifiche salvate con successo!
                 </div>
               )}
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Immagine di Copertina</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Immagine di Copertina</label>
                   <div 
-                    className="relative border-2 border-dashed border-gray-200 rounded-xl overflow-hidden hover:border-gray-300 transition-colors group cursor-pointer"
+                    className="relative border-2 border-dashed border-gray-400 rounded-xl overflow-hidden hover:border-gray-900 transition-colors group cursor-pointer bg-gray-50"
                     style={{ aspectRatio: '16/9' }}
                   >
                     <input 
@@ -830,94 +1036,126 @@ export default function ManageApplicationPage() {
                     />
                     {coverPreview ? (
                       <>
-                        <img 
-                          src={coverPreview} 
-                          alt="Preview" 
-                          className="w-full h-full object-cover transition-all" 
-                          style={{ objectPosition: newCoverFile ? `center ${coverPositionY}%` : 'center center' }} 
-                        />
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <span className="text-white font-medium text-sm bg-white/20 backdrop-blur-sm px-4 py-2 rounded-xl">Cambia immagine</span>
+                        <img src={coverPreview} alt="Preview" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="text-white font-bold text-sm bg-gray-900 px-4 py-2 rounded-xl border-2 border-white">
+                            ✂️ Cambia e ritaglia
+                          </span>
                         </div>
                       </>
                     ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50">
-                        <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <svg className="w-10 h-10 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
-                        <p className="text-sm text-gray-500">Clicca per caricare</p>
+                        <p className="text-sm text-gray-500 font-bold">Clicca per caricare e ritagliare</p>
                       </div>
                     )}
                   </div>
-                  
-                  {/* Slider Visibile solo quando carichi una nuova immagine */}
-                  {newCoverFile && coverPreview && (
-                    <div className="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-xl animate-in fade-in zoom-in duration-300">
-                      <label className="block text-sm font-medium text-blue-900 mb-3 flex items-center gap-2">
-                        <span>↕️</span> Regola l'inquadratura verticale
-                      </label>
-                      <input 
-                        type="range" 
-                        min="0" 
-                        max="100" 
-                        value={coverPositionY} 
-                        onChange={(e) => setCoverPositionY(Number(e.target.value))}
-                        className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                      />
-                      <div className="flex justify-between text-xs text-blue-600 font-medium mt-2 px-1">
-                        <span>Alto</span>
-                        <span>Centro</span>
-                        <span>Basso</span>
-                      </div>
-                    </div>
+                  {newCoverFile && (
+                    <p className="text-xs text-blue-600 mt-2 font-bold">
+                      ✂️ Immagine ritagliata pronta per il salvataggio
+                    </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Titolo Progetto</label>
-                  <input type="text" value={editForm.titolo} onChange={(e) => setEditForm({ ...editForm, titolo: e.target.value })} className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none font-medium" />
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Titolo Progetto</label>
+                  <input
+                    type="text"
+                    value={editForm.titolo}
+                    onChange={(e) => setEditForm({ ...editForm, titolo: e.target.value })}
+                    className="w-full px-4 py-3 bg-gray-50 rounded-xl border-2 border-gray-300 focus:border-gray-900 outline-none font-bold"
+                  />
                 </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Descrizione</label>
-                  <textarea rows={5} value={editForm.descrizione} onChange={(e) => setEditForm({ ...editForm, descrizione: e.target.value })} className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none resize-none" />
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Descrizione</label>
+                  <textarea
+                    rows={5}
+                    value={editForm.descrizione}
+                    onChange={(e) => setEditForm({ ...editForm, descrizione: e.target.value })}
+                    className="w-full px-4 py-3 bg-gray-50 rounded-xl border-2 border-gray-300 focus:border-gray-900 outline-none resize-none font-medium"
+                  />
                 </div>
-                <button onClick={handleSaveEdit} disabled={savingEdit} className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                  {savingEdit ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Salvataggio...</> : 'Salva Modifiche'}
+
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={savingEdit}
+                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2 border-2 border-blue-800 shadow-[4px_4px_0px_0px_rgba(30,64,175,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1"
+                >
+                  {savingEdit ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Salvataggio...
+                    </>
+                  ) : 'Salva Modifiche'}
                 </button>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">🔗 Link di Progetto</h3>
+            {/* Link */}
+            <div className={`${cardStyle} p-6`}>
+              <h3 className="text-lg font-black text-gray-900 mb-4">🔗 Link di Progetto</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">GitHub Repository</label>
-                  <input type="url" value={linksForm.github} onChange={(e) => setLinksForm({ ...linksForm, github: e.target.value })} placeholder="https://github.com/..." className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 outline-none" />
+                  <label className="block text-sm font-bold text-gray-700 mb-2">GitHub Repository</label>
+                  <input
+                    type="url"
+                    value={linksForm.github}
+                    onChange={(e) => setLinksForm({ ...linksForm, github: e.target.value })}
+                    placeholder="https://github.com/..."
+                    className="w-full px-4 py-3 bg-gray-50 rounded-xl border-2 border-gray-300 focus:border-gray-900 outline-none"
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Google Drive</label>
-                  <input type="url" value={linksForm.drive} onChange={(e) => setLinksForm({ ...linksForm, drive: e.target.value })} placeholder="https://drive.google.com/..." className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 outline-none" />
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Google Drive</label>
+                  <input
+                    type="url"
+                    value={linksForm.drive}
+                    onChange={(e) => setLinksForm({ ...linksForm, drive: e.target.value })}
+                    placeholder="https://drive.google.com/..."
+                    className="w-full px-4 py-3 bg-gray-50 rounded-xl border-2 border-gray-300 focus:border-gray-900 outline-none"
+                  />
                 </div>
-                <button onClick={handleSaveLinks} disabled={savingLinks} className="w-full py-3 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-medium transition-colors disabled:opacity-50">
+                <button
+                  onClick={handleSaveLinks}
+                  disabled={savingLinks}
+                  className="w-full py-3 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-bold transition-all disabled:opacity-50 border-2 border-gray-700 shadow-[4px_4px_0px_0px_rgba(55,65,81,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1"
+                >
                   {savingLinks ? 'Salvataggio...' : 'Salva Link'}
                 </button>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">📋 Stato Candidature</h3>
-              <p className="text-sm text-gray-500 mb-4">
-                {project.stato === 'aperto' ? 'Il progetto è aperto e accetta nuove candidature.' : 'Il progetto è chiuso, nessuna nuova candidatura possibile.'}
+            {/* Stato */}
+            <div className={`${cardStyle} p-6`}>
+              <h3 className="text-lg font-black text-gray-900 mb-4">📋 Stato Candidature</h3>
+              <p className="text-sm text-gray-500 mb-4 font-medium">
+                {project.stato === 'aperto' 
+                  ? 'Il progetto è aperto e accetta nuove candidature.'
+                  : 'Il progetto è chiuso, nessuna nuova candidatura possibile.'}
               </p>
-              <button onClick={handleToggleStatus} className={`w-full py-3 rounded-xl font-medium transition-colors ${project.stato === 'aperto' ? 'bg-amber-100 hover:bg-amber-200 text-amber-700' : 'bg-green-100 hover:bg-green-200 text-green-700'}`}>
+              <button
+                onClick={handleToggleStatus}
+                className={`w-full py-3 rounded-xl font-bold transition-all border-2 ${
+                  project.stato === 'aperto'
+                    ? 'bg-amber-100 hover:bg-amber-200 text-amber-700 border-amber-500'
+                    : 'bg-green-100 hover:bg-green-200 text-green-700 border-green-500'
+                }`}
+              >
                 {project.stato === 'aperto' ? '🔒 Chiudi Candidature' : '🔓 Riapri Candidature'}
               </button>
             </div>
 
-            <div className="bg-red-50 rounded-2xl border border-red-200 p-6">
-              <h3 className="text-lg font-semibold text-red-700 mb-2">⚠️ Zona Pericolosa</h3>
-              <p className="text-sm text-red-600 mb-4">Questa azione è irreversibile.</p>
-              <button onClick={handleDeleteProject} className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors">
+            {/* Danger Zone */}
+            <div className="bg-red-50 rounded-2xl border-2 border-red-500 p-6 shadow-[4px_4px_0px_0px_rgba(185,28,28,1)]">
+              <h3 className="text-lg font-black text-red-700 mb-2">⚠️ Zona Pericolosa</h3>
+              <p className="text-sm text-red-600 mb-4 font-medium">Questa azione è irreversibile.</p>
+              <button
+                onClick={handleDeleteProject}
+                className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-all border-2 border-red-800"
+              >
                 🗑️ Elimina Progetto
               </button>
             </div>
@@ -928,21 +1166,47 @@ export default function ManageApplicationPage() {
       {/* Modal conferma */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Conferma azione</h3>
-            <p className="text-gray-500 mb-6">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full border-2 border-gray-900 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+            <h3 className="text-xl font-black text-gray-900 mb-2">Conferma azione</h3>
+            <p className="text-gray-500 mb-6 font-medium">
               {modalAction === 'accepted' && `Accettare ${selectedApp?.studente?.nome} nel team?`}
               {modalAction === 'rejected' && `Rifiutare la candidatura di ${selectedApp?.studente?.nome}?`}
               {modalAction === 'pending' && `Riportare ${selectedApp?.studente?.nome} in attesa?`}
             </p>
             <div className="flex gap-3">
-              <button onClick={() => setShowModal(false)} disabled={actionLoading} className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors">Annulla</button>
-              <button onClick={handleAction} disabled={actionLoading} className={`flex-1 py-3 rounded-xl font-medium text-white transition-colors ${modalAction === 'accepted' ? 'bg-green-600 hover:bg-green-700' : modalAction === 'rejected' ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-500 hover:bg-amber-600'}`}>
+              <button
+                onClick={() => setShowModal(false)}
+                disabled={actionLoading}
+                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold border-2 border-gray-300"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleAction}
+                disabled={actionLoading}
+                className={`flex-1 py-3 rounded-xl font-bold text-white border-2 ${
+                  modalAction === 'accepted' ? 'bg-green-600 hover:bg-green-700 border-green-800' :
+                  modalAction === 'rejected' ? 'bg-red-600 hover:bg-red-700 border-red-800' :
+                  'bg-amber-500 hover:bg-amber-600 border-amber-700'
+                }`}
+              >
                 {actionLoading ? '...' : 'Conferma'}
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Image Cropper Modal */}
+      {showCropper && tempImageUrl && (
+        <ImageCropper
+          imageSrc={tempImageUrl}
+          onCropComplete={handleCropComplete}
+          onCancel={() => {
+            setShowCropper(false)
+            setTempImageUrl(null)
+          }}
+        />
       )}
     </div>
   )
