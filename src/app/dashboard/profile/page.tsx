@@ -6,6 +6,12 @@ import { useRouter } from 'next/navigation'
 
 import { useUser } from '@/app/context/UserContext'
 
+interface Tag {
+  id: string
+  nome: string
+  categoria?: string
+}
+
 export default function ProfilePage() {
   const router = useRouter()
   const supabase = createClient()
@@ -43,7 +49,8 @@ export default function ProfilePage() {
 
   // --- STATI TAG ---
   const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const [availableInterests, setAvailableInterests] = useState<{id: string, nome: string}[]>([])
+  const [availableInterests, setAvailableInterests] = useState<Tag[]>([])
+  const [customTagInput, setCustomTagInput] = useState('')
 
   // --- STATI UI ---
   const [loading, setLoading] = useState(true)
@@ -96,7 +103,7 @@ export default function ProfilePage() {
 
         const { data: tags } = await supabase
           .from('interesse')
-          .select('id, nome')
+          .select('*') // Prendiamo anche eventuali categorie se presenti
           .order('nome', { ascending: true })
         
         if (tags) setAvailableInterests(tags)
@@ -161,12 +168,47 @@ export default function ProfilePage() {
     }
   }
 
+  // --- GESTIONE TAG ---
   const handleTagToggle = (tagId: string) => {
     if (!isEditing) return
     setSelectedTags(prev => 
       prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]
     )
   }
+
+  const handleAddCustomTag = (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    const trimmedInput = customTagInput.trim()
+    if (!trimmedInput) return
+
+    // Controlla se esiste già (case insensitive)
+    const existingTag = availableInterests.find(t => t.nome.toLowerCase() === trimmedInput.toLowerCase())
+    
+    if (existingTag) {
+      if (!selectedTags.includes(existingTag.id)) {
+        setSelectedTags(prev => [...prev, existingTag.id])
+      }
+    } else {
+      // Crea un tag temporaneo
+      const newId = `temp_${Date.now()}`
+      const newTag: Tag = { 
+        id: newId, 
+        nome: trimmedInput, 
+        categoria: 'I Tuoi Tag' 
+      }
+      setAvailableInterests(prev => [...prev, newTag])
+      setSelectedTags(prev => [...prev, newId])
+    }
+    setCustomTagInput('')
+  }
+
+  // Raggruppa i tag per categoria
+  const groupedInterests = availableInterests.reduce((acc, tag) => {
+    const cat = tag.categoria || 'Generali'
+    if (!acc[cat]) acc[cat] = []
+    acc[cat].push(tag)
+    return acc
+  }, {} as Record<string, Tag[]>)
 
   const handleRemoveCv = () => {
     setCvFile(null)
@@ -234,11 +276,44 @@ export default function ProfilePage() {
         }
       }
 
+      // 1. Processa i tag temporanei (quelli creati dall'utente)
+      const finalTagIds: string[] = []
+      
+      for (const tagId of selectedTags) {
+        if (tagId.startsWith('temp_')) {
+          const tagObj = availableInterests.find(t => t.id === tagId)
+          if (tagObj) {
+            // Controlla se nel frattempo qualcun altro lo ha creato
+            const { data: existing } = await supabase
+              .from('interesse')
+              .select('id')
+              .ilike('nome', tagObj.nome)
+              .maybeSingle()
+
+            if (existing) {
+              finalTagIds.push(existing.id)
+            } else {
+              // Inserisce il nuovo tag (Senza la colonna 'categoria' per non rompere il DB se non esiste)
+              const { data: newTag, error: tagErr } = await supabase
+                .from('interesse')
+                .insert({ nome: tagObj.nome })
+                .select('id')
+                .single()
+              
+              if (newTag && !tagErr) finalTagIds.push(newTag.id)
+            }
+          }
+        } else {
+          finalTagIds.push(tagId)
+        }
+      }
+
+      // 2. Salva i collegamenti studente_interesse
       const { error: deleteError } = await supabase.from('studente_interesse').delete().eq('studente_id', user.id)
       if (deleteError) throw deleteError
 
-      if (selectedTags.length > 0) {
-        const tagInserts = selectedTags.map(tagId => ({ studente_id: user.id, interesse_id: tagId }))
+      if (finalTagIds.length > 0) {
+        const tagInserts = finalTagIds.map(id => ({ studente_id: user.id, interesse_id: id }))
         const { error: insertError } = await supabase.from('studente_interesse').insert(tagInserts)
         if (insertError) throw insertError
       }
@@ -573,7 +648,7 @@ export default function ProfilePage() {
                 <div className="mt-4">
                   {isEditing ? (
                     <div className="flex flex-col gap-4">
-                      <label className="w-full bg-white p-6 rounded-xl border-4 border-dashed border-gray-900 cursor-pointer hover:bg-gray-50 transition-colors flex flex-col items-center justify-center text-center">
+                      <label className="w-full bg-white p-6 rounded-xl border-4 border-dashed border-gray-900 cursor-pointer hover:bg-red-100 transition-colors flex flex-col items-center justify-center text-center">
                         <span className="text-4xl mb-2">📥</span>
                         <span className="font-black uppercase tracking-widest text-gray-900">
                           {cvFile ? cvFile.name : (cvUrl ? 'Sostituisci CV' : 'Carica PDF')}
@@ -603,32 +678,76 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* COMPETENZE / TAGS */}
+              {/* COMPETENZE / TAGS - ORA RAGGRUPPATE E CON AGGIUNTA CUSTOM */}
               <div className="bg-purple-50 border-4 border-gray-900 rounded-2xl p-6 relative">
                 <span className="absolute -top-5 left-6 bg-white border-4 border-gray-900 px-4 py-1 rounded-xl font-black uppercase tracking-widest text-gray-900 text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                   Skill & Passioni ⭐
                 </span>
-                <div className="mt-4 flex flex-wrap gap-3">
-                  {availableInterests.map(tag => {
-                    const isSelected = selectedTags.includes(tag.id)
+                
+                <div className="mt-4 max-h-[400px] overflow-y-auto pr-2">
+                  
+                  {isEditing && (
+                    <div className="mb-6 bg-white p-4 rounded-xl border-4 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                      <p className="text-xs font-black uppercase tracking-widest text-gray-600 mb-2">Aggiungi nuovo tag</p>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={customTagInput}
+                          onChange={(e) => setCustomTagInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleAddCustomTag(e)
+                          }}
+                          placeholder="Scrivi una competenza..."
+                          className="flex-1 px-3 py-2 border-2 border-gray-900 rounded-lg focus:outline-none font-bold text-gray-900"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddCustomTag}
+                          className="px-4 py-2 bg-purple-400 text-gray-900 border-2 border-gray-900 rounded-lg font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Rendering dei tag raggruppati per categoria */}
+                  {Object.entries(groupedInterests).map(([categoria, tags]) => {
+                    // In modalità view, mostra la categoria solo se contiene almeno un tag selezionato
+                    const hasSelectedTags = tags.some(t => selectedTags.includes(t.id))
+                    if (!isEditing && !hasSelectedTags) return null
+
                     return (
-                      <button
-                        key={tag.id}
-                        type="button"
-                        onClick={() => handleTagToggle(tag.id)}
-                        disabled={!isEditing}
-                        className={`px-4 py-2 rounded-xl font-black uppercase tracking-widest text-sm transition-all border-4 border-gray-900 ${
-                          isSelected 
-                            ? 'bg-purple-400 text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] -translate-y-1 rotate-2' 
-                            : isEditing
-                              ? 'bg-white text-gray-600 hover:bg-gray-100 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
-                              : 'hidden'
-                        }`}
-                      >
-                        {tag.nome}
-                      </button>
+                      <div key={categoria} className="mb-6 last:mb-0">
+                        <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-3 border-b-2 border-gray-900 inline-block">
+                          {categoria}
+                        </h4>
+                        <div className="flex flex-wrap gap-3">
+                          {tags.map(tag => {
+                            const isSelected = selectedTags.includes(tag.id)
+                            return (
+                              <button
+                                key={tag.id}
+                                type="button"
+                                onClick={() => handleTagToggle(tag.id)}
+                                disabled={!isEditing}
+                                className={`px-4 py-2 rounded-xl font-black uppercase tracking-widest text-sm transition-all border-4 border-gray-900 ${
+                                  isSelected 
+                                    ? 'bg-purple-400 text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] -translate-y-1 rotate-2' 
+                                    : isEditing
+                                      ? 'bg-white text-gray-600 hover:bg-gray-100 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                                      : 'hidden'
+                                }`}
+                              >
+                                {tag.nome}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
                     )
                   })}
+                  
                   {selectedTags.length === 0 && !isEditing && (
                     <span className="text-gray-500 font-bold italic">Nessuna competenza selezionata</span>
                   )}
