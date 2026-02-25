@@ -81,7 +81,7 @@ export default function ProfilePage() {
     }
   }, [cvFile, cvUrl])
 
-  // CARICAMENTO DATI (Versione corretta con tabella PARTECIPAZIONE)
+  // CARICAMENTO DATI
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
@@ -116,28 +116,16 @@ export default function ProfilePage() {
           setHiddenProjects(studente.progetti_nascosti || [])
         }
 
-        // --- FETCH PROGETTI PIATTAFORMA (Tabella PARTECIPAZIONE) ---
-        console.log("🕵️ Cerco partecipazioni per l'utente:", user.id)
-
-        // 1. Progetti creati dall'utente
         const { data: creati } = await supabase
           .from('bando')
           .select('id, titolo, descrizione')
           .eq('studente_id', user.id)
 
-        // 2. Progetti a cui partecipa (Tabella Partecipazione)
         const { data: partecipazioni, error: errPart } = await (supabase as any)
           .from('partecipazione')
           .select('bando_id, stato, ruolo')
           .eq('studente_id', user.id)
 
-        if (errPart) {
-          console.error("❌ Errore lettura tabella partecipazione:", errPart)
-        } else {
-          console.log("✅ Partecipazioni trovate:", partecipazioni)
-        }
-
-        // Filtriamo solo quelle accettate/attive
         const bandoIds = partecipazioni
           ?.filter((p: any) => 
             p.stato?.toLowerCase().includes('accettat') || 
@@ -154,12 +142,9 @@ export default function ProfilePage() {
           if (res) partecipati = res
         }
 
-        // Uniamo i progetti creati e quelli a cui partecipa
         const allProjects = [...(creati || []), ...partecipati].filter((v,i,a)=>a.findIndex(v2=>(v2.id===v.id))===i)
-        
         setMyPlatformProjects(allProjects)
 
-        // --- CARICAMENTO TAG E CORSI (Rimanenti) ---
         const { data: tags } = await supabase.from('interesse').select('*').order('nome', { ascending: true })
         if (tags) setAvailableInterests(tags)
 
@@ -178,8 +163,8 @@ export default function ProfilePage() {
         if (myTags) setSelectedTags(myTags.map((t: any) => t.interesse_id))
 
       } catch (err: any) {
-        console.error("Errore generale caricamento:", err)
-        setError("Errore nel recupero dei progetti.")
+        console.error("Errore caricamento:", err)
+        setError("Errore nel recupero dei dati.")
       } finally {
         setLoading(false)
       }
@@ -206,7 +191,6 @@ export default function ProfilePage() {
     }
   }
 
-  // --- GESTIONE TAG ---
   const handleTagToggle = (tagId: string) => {
     if (!isEditing) return
     setSelectedTags(prev => prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId])
@@ -235,7 +219,6 @@ export default function ProfilePage() {
     return acc
   }, {} as Record<string, Tag[]>)
 
-  // --- GESTIONE PROGETTI VETRINA ---
   const toggleProjectVisibility = (id: string) => {
     setHiddenProjects(prev => prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id])
   }
@@ -267,7 +250,6 @@ export default function ProfilePage() {
       if (bannerFile) finalBannerUrl = await uploadFile(bannerFile, 'banners')
       if (cvFile) finalCvUrl = await uploadFile(cvFile, 'documents')
 
-      // AGGIORNA STUDENTE E SETTINGS
       const { error: updateError } = await supabase
         .from('studente')
         .update({
@@ -289,20 +271,16 @@ export default function ProfilePage() {
 
       if (corsoSelezionato) {
         if (studenteCorsoId) {
-          const { error: corsoError } = await supabase.from('studente_corso').update({ corso_id: corsoSelezionato, anno_inizio: annoInizio }).eq('id', studenteCorsoId)
-          if (corsoError) throw corsoError
+          await supabase.from('studente_corso').update({ corso_id: corsoSelezionato, anno_inizio: annoInizio }).eq('id', studenteCorsoId)
         } else {
-          const { data: newCorso, error: corsoError } = await supabase.from('studente_corso').insert({ studente_id: user.id, corso_id: corsoSelezionato, anno_inizio: annoInizio, completato: false }).select('id').single()
-          if (corsoError) throw corsoError
+          const { data: newCorso } = await supabase.from('studente_corso').insert({ studente_id: user.id, corso_id: corsoSelezionato, anno_inizio: annoInizio, completato: false }).select('id').single()
           if (newCorso) setStudenteCorsoId(newCorso.id)
         }
       }
 
-      // TAGS
-      const { data: defaultCat, error: catError } = await supabase.from('categoria').select('id').limit(1).single()
+      const { data: defaultCat } = await supabase.from('categoria').select('id').limit(1).single()
       
       const finalTagIds: string[] = []
-      
       for (const tagId of selectedTags) {
         if (tagId.startsWith('temp_')) {
           const tagObj = availableInterests.find(t => t.id === tagId)
@@ -311,8 +289,8 @@ export default function ProfilePage() {
             if (existing) {
               finalTagIds.push(existing.id)
             } else {
-              const { data: newTag, error: tagErr } = await supabase.from('interesse').insert({ nome: tagObj.nome, categoria_id: defaultCat.id }).select('id').single()
-              if (newTag && !tagErr) finalTagIds.push(newTag.id)
+              const { data: newTag } = await supabase.from('interesse').insert({ nome: tagObj.nome, categoria_id: defaultCat.id }).select('id').single()
+              if (newTag) finalTagIds.push(newTag.id)
             }
           }
         } else {
@@ -340,7 +318,6 @@ export default function ProfilePage() {
       setTimeout(() => setSuccess(false), 3000)
 
     } catch (err: any) {
-      console.error("Errore salvataggio:", err)
       setError(err.message || "Errore durante il salvataggio.")
     } finally {
       setSaving(false)
@@ -350,39 +327,39 @@ export default function ProfilePage() {
   if (loading) return (
     <div className="min-h-[60vh] flex items-center justify-center">
       <div className="text-center">
-        <div className="text-6xl animate-bounce mb-4">🚀</div>
-        <p className="text-gray-900 font-black uppercase tracking-widest text-xl">Caricamento Profilo...</p>
+        <div className="text-5xl sm:text-6xl animate-bounce mb-4">🚀</div>
+        <p className="text-gray-900 font-black uppercase tracking-widest text-sm sm:text-xl">Caricamento...</p>
       </div>
     </div>
   )
 
   return (
-    <div className="max-w-5xl mx-auto pb-20 px-4">
+    <div className="max-w-5xl mx-auto pb-12 sm:pb-20 px-3 sm:px-4">
       
       {/* HEADER & CONTROLLI */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
-        <button onClick={() => router.push('/dashboard')} className="px-5 py-3 bg-white border-4 border-gray-900 rounded-xl font-black text-gray-900 uppercase tracking-widest shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all flex items-center gap-2">
-          <span className="text-xl">🔙</span> Dashboard
+      <div className="flex flex-row items-center justify-between gap-2 mb-6 sm:mb-8">
+        <button onClick={() => router.push('/dashboard')} className="px-3 sm:px-5 py-2 sm:py-3 bg-white border-[3px] sm:border-4 border-gray-900 rounded-lg sm:rounded-xl font-black text-gray-900 uppercase tracking-widest shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center gap-1.5 sm:gap-2 text-xs sm:text-base">
+          <span className="text-sm sm:text-xl">🔙</span> <span className="hidden xs:inline">Dashboard</span>
         </button>
         {!isEditing ? (
-          <button onClick={() => setIsEditing(true)} className="px-5 py-3 bg-yellow-300 border-4 border-gray-900 rounded-xl font-black text-gray-900 uppercase tracking-widest shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all flex items-center gap-2">
-            <span className="text-xl">✏️</span> Modifica Profilo
+          <button onClick={() => setIsEditing(true)} className="px-3 sm:px-5 py-2 sm:py-3 bg-yellow-300 border-[3px] sm:border-4 border-gray-900 rounded-lg sm:rounded-xl font-black text-gray-900 uppercase tracking-widest shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center gap-1.5 sm:gap-2 text-xs sm:text-base">
+            <span className="text-sm sm:text-xl">✏️</span> Modifica
           </button>
         ) : (
-          <button onClick={handleCancelEdit} className="px-5 py-3 bg-gray-200 border-4 border-gray-900 rounded-xl font-black text-gray-900 uppercase tracking-widest shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all flex items-center gap-2">
-            <span className="text-xl">❌</span> Annulla
+          <button onClick={handleCancelEdit} className="px-3 sm:px-5 py-2 sm:py-3 bg-gray-200 border-[3px] sm:border-4 border-gray-900 rounded-lg sm:rounded-xl font-black text-gray-900 uppercase tracking-widest shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center gap-1.5 sm:gap-2 text-xs sm:text-base">
+            <span className="text-sm sm:text-xl">❌</span> Annulla
           </button>
         )}
       </div>
 
-      {error && <div className="mb-8 p-4 bg-red-400 border-4 border-gray-900 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] rounded-2xl font-black text-gray-900 text-lg uppercase flex items-center gap-3 animate-in shake"><span>⚠️</span> {error}</div>}
-      {success && <div className="mb-8 p-4 bg-green-400 border-4 border-gray-900 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] rounded-2xl font-black text-gray-900 text-lg uppercase flex items-center gap-3"><span>🎉</span> Profilo aggiornato con successo!</div>}
+      {error && <div className="mb-6 p-3 sm:p-4 bg-red-400 border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rounded-xl font-black text-gray-900 text-sm sm:text-lg uppercase flex items-center gap-2 animate-in shake"><span>⚠️</span> {error}</div>}
+      {success && <div className="mb-6 p-3 sm:p-4 bg-green-400 border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rounded-xl font-black text-gray-900 text-sm sm:text-lg uppercase flex items-center gap-2"><span>🎉</span> Aggiornato!</div>}
 
       <form onSubmit={handleSave}>
-        <div className="bg-white rounded-[2rem] border-4 border-gray-900 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] overflow-hidden relative">
+        <div className="bg-white rounded-2xl sm:rounded-[2rem] border-[3px] sm:border-4 border-gray-900 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] sm:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] overflow-hidden relative">
           
-          {/* BANNER CARTOON (CON ZOOM E POSIZIONE) */}
-          <div className="h-48 sm:h-72 bg-gray-200 border-b-4 border-gray-900 relative overflow-hidden pattern-dots group">
+          {/* BANNER CARTOON (Più basso su mobile) */}
+          <div className="h-32 sm:h-72 bg-gray-200 border-b-[3px] sm:border-b-4 border-gray-900 relative overflow-hidden pattern-dots group">
             {(bannerFile || bannerUrl) ? (
               <img 
                 src={bannerFile ? URL.createObjectURL(bannerFile) : bannerUrl} 
@@ -395,27 +372,26 @@ export default function ProfilePage() {
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-blue-400">
-                <span className="text-6xl opacity-50">🖼️</span>
+                <span className="text-4xl sm:text-6xl opacity-50">🖼️</span>
               </div>
             )}
             
-            {/* PANNELLO DI CONTROLLO BANNER */}
             {isEditing && (
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-4">
-                <label className="bg-white text-gray-900 px-6 py-3 border-4 border-gray-900 rounded-xl font-black uppercase tracking-widest shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all cursor-pointer flex items-center gap-2">
-                  <span>📸</span> Cambia Immagine
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 sm:gap-4 p-2">
+                <label className="bg-white text-gray-900 px-3 sm:px-6 py-2 sm:py-3 border-2 sm:border-4 border-gray-900 rounded-lg sm:rounded-xl font-black uppercase tracking-widest shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all cursor-pointer flex items-center gap-1 text-xs sm:text-base">
+                  <span>📸</span> Cambia
                   <input type="file" className="hidden" accept="image/*" onChange={(e) => setBannerFile(e.target.files?.[0] || null)} />
                 </label>
 
                 {(bannerFile || bannerUrl) && (
-                  <div className="bg-yellow-300 border-4 border-gray-900 p-4 rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col sm:flex-row gap-4 items-center" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex flex-col w-32">
-                      <label className="text-[10px] font-black uppercase text-gray-900 mb-1">🔍 Zoom</label>
-                      <input type="range" min="1" max="3" step="0.1" value={bannerScale} onChange={(e) => setBannerScale(parseFloat(e.target.value))} className="accent-gray-900 cursor-pointer"/>
+                  <div className="bg-yellow-300 border-2 sm:border-4 border-gray-900 p-2 sm:p-4 rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex flex-col sm:flex-row gap-2 sm:gap-4 items-center" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex flex-col w-24 sm:w-32">
+                      <label className="text-[9px] sm:text-[10px] font-black uppercase text-gray-900 mb-0.5">🔍 Zoom</label>
+                      <input type="range" min="1" max="3" step="0.1" value={bannerScale} onChange={(e) => setBannerScale(parseFloat(e.target.value))} className="accent-gray-900 cursor-pointer h-1 sm:h-2"/>
                     </div>
-                    <div className="flex flex-col w-32">
-                      <label className="text-[10px] font-black uppercase text-gray-900 mb-1">↕️ Altezza</label>
-                      <input type="range" min="0" max="100" step="1" value={bannerPosY} onChange={(e) => setBannerPosY(parseInt(e.target.value))} className="accent-gray-900 cursor-pointer"/>
+                    <div className="flex flex-col w-24 sm:w-32">
+                      <label className="text-[9px] sm:text-[10px] font-black uppercase text-gray-900 mb-0.5">↕️ Posizione</label>
+                      <input type="range" min="0" max="100" step="1" value={bannerPosY} onChange={(e) => setBannerPosY(parseInt(e.target.value))} className="accent-gray-900 cursor-pointer h-1 sm:h-2"/>
                     </div>
                   </div>
                 )}
@@ -423,53 +399,53 @@ export default function ProfilePage() {
             )}
           </div>
 
-          <div className="px-6 sm:px-12 pb-12">
+          <div className="px-4 sm:px-12 pb-8 sm:pb-12">
             
             {/* AVATAR & NOME */}
-            <div className="flex flex-col sm:flex-row gap-6 -mt-16 sm:-mt-20 mb-10 relative z-10">
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 -mt-12 sm:-mt-20 mb-6 sm:mb-10 relative z-10">
               <div className="relative flex-shrink-0 mx-auto sm:mx-0">
-                <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-gray-900 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden bg-white">
+                <div className="w-24 h-24 sm:w-40 sm:h-40 rounded-full border-[3px] sm:border-4 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden bg-white">
                   {(avatarFile || avatarUrl) ? (
                     <img src={avatarFile ? URL.createObjectURL(avatarFile) : avatarUrl} className="w-full h-full object-cover" alt="Avatar"/>
                   ) : (
                     <div className="w-full h-full bg-red-400 flex items-center justify-center">
-                      <span className="text-5xl font-black text-gray-900 uppercase">{nome.charAt(0)}{cognome.charAt(0)}</span>
+                      <span className="text-3xl sm:text-5xl font-black text-gray-900 uppercase">{nome.charAt(0)}{cognome.charAt(0)}</span>
                     </div>
                   )}
                 </div>
                 {globalUser?.is_system_admin && (
-                  <div className="absolute bottom-0 right-0 bg-yellow-300 border-4 border-gray-900 text-gray-900 px-3 py-1 rounded-xl text-xs font-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] uppercase -rotate-6">
+                  <div className="absolute bottom-0 right-0 bg-yellow-300 border-2 sm:border-4 border-gray-900 text-gray-900 px-2 py-0.5 sm:px-3 sm:py-1 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] uppercase -rotate-6">
                     ⚡ Staff
                   </div>
                 )}
                 {isEditing && (
                   <label className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 hover:opacity-100 transition-opacity cursor-pointer rounded-full">
-                    <span className="text-white font-black uppercase text-sm">Cambia 📸</span>
+                    <span className="text-white font-black uppercase text-xs sm:text-sm">📸</span>
                     <input type="file" className="hidden" accept="image/*" onChange={(e) => setAvatarFile(e.target.files?.[0] || null)} />
                   </label>
                 )}
               </div>
 
-              <div className="flex-1 pt-4 sm:pt-24 text-center sm:text-left">
+              <div className="flex-1 pt-2 sm:pt-24 text-center sm:text-left">
                 {isEditing ? (
-                  <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
-                      <label className="block text-xs font-black uppercase tracking-widest text-gray-600 mb-2">Nome</label>
-                      <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} required className="w-full px-4 py-3 bg-white rounded-xl border-4 border-gray-900 focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-black text-gray-900 transition-all text-lg uppercase" />
+                      <label className="block text-[10px] sm:text-xs font-black uppercase tracking-widest text-gray-600 mb-1">Nome</label>
+                      <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} required className="w-full px-3 py-2 sm:px-4 sm:py-3 bg-white rounded-lg sm:rounded-xl border-[3px] sm:border-4 border-gray-900 focus:outline-none focus:translate-x-[2px] focus:translate-y-[2px] shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] font-black text-gray-900 transition-all text-sm sm:text-lg uppercase" />
                     </div>
                     <div>
-                      <label className="block text-xs font-black uppercase tracking-widest text-gray-600 mb-2">Cognome</label>
-                      <input type="text" value={cognome} onChange={(e) => setCognome(e.target.value)} required className="w-full px-4 py-3 bg-white rounded-xl border-4 border-gray-900 focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-black text-gray-900 transition-all text-lg uppercase" />
+                      <label className="block text-[10px] sm:text-xs font-black uppercase tracking-widest text-gray-600 mb-1">Cognome</label>
+                      <input type="text" value={cognome} onChange={(e) => setCognome(e.target.value)} required className="w-full px-3 py-2 sm:px-4 sm:py-3 bg-white rounded-lg sm:rounded-xl border-[3px] sm:border-4 border-gray-900 focus:outline-none focus:translate-x-[2px] focus:translate-y-[2px] shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] font-black text-gray-900 transition-all text-sm sm:text-lg uppercase" />
                     </div>
                   </div>
                 ) : (
                   <>
-                    <h1 className="text-4xl sm:text-5xl font-black text-gray-900 uppercase italic tracking-tighter leading-none mb-2">
+                    <h1 className="text-2xl sm:text-5xl font-black text-gray-900 uppercase italic tracking-tighter leading-none mb-1 sm:mb-2">
                       {nome} <span className="text-red-600">{cognome}</span>
                     </h1>
                     {globalUser?.corso_studi && (
-                      <div className="inline-block bg-white border-2 border-gray-900 px-3 py-1.5 rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] mt-2">
-                        <p className="text-gray-900 font-bold text-sm uppercase tracking-widest">
+                      <div className="inline-block bg-white border-2 border-gray-900 px-2 py-1 sm:px-3 sm:py-1.5 rounded-md sm:rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] mt-1 sm:mt-2">
+                        <p className="text-gray-900 font-bold text-[10px] sm:text-sm uppercase tracking-widest">
                           🎓 {globalUser.corso_studi} • Anno {globalUser.anno_corso}
                         </p>
                       </div>
@@ -480,95 +456,95 @@ export default function ProfilePage() {
             </div>
 
             {/* SEZIONE BIO */}
-            <div className="mb-10 bg-blue-50 border-4 border-gray-900 rounded-2xl p-6 relative">
-              <span className="absolute -top-5 left-6 bg-white border-4 border-gray-900 px-4 py-1 rounded-xl font-black uppercase tracking-widest text-gray-900 text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">Chi Sono 💭</span>
+            <div className="mb-6 sm:mb-10 bg-blue-50 border-[3px] sm:border-4 border-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 relative mt-4">
+              <span className="absolute -top-3.5 sm:-top-5 left-4 sm:left-6 bg-white border-2 sm:border-4 border-gray-900 px-3 py-0.5 sm:px-4 sm:py-1 rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-gray-900 text-[10px] sm:text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">Chi Sono 💭</span>
               {isEditing ? (
-                <textarea rows={4} value={bio} onChange={(e) => setBio(e.target.value)} className="w-full px-4 py-4 mt-2 bg-white rounded-xl border-4 border-gray-900 focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-bold text-gray-900 transition-all resize-none text-base" placeholder="Scrivi qualcosa di figo su di te..." />
+                <textarea rows={3} value={bio} onChange={(e) => setBio(e.target.value)} className="w-full px-3 py-2 sm:px-4 sm:py-4 mt-1 sm:mt-2 bg-white rounded-lg sm:rounded-xl border-[3px] sm:border-4 border-gray-900 focus:outline-none focus:translate-x-[2px] focus:translate-y-[2px] shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] font-bold text-gray-900 transition-all resize-none text-sm sm:text-base" placeholder="Scrivi qualcosa di figo su di te..." />
               ) : (
-                <p className="text-gray-900 font-bold text-lg leading-relaxed mt-2">{bio || <span className="text-gray-500 italic font-medium">Nessuna biografia inserita. È un tipo misterioso.</span>}</p>
+                <p className="text-gray-900 font-bold text-sm sm:text-lg leading-relaxed mt-1 sm:mt-2">{bio || <span className="text-gray-500 italic font-medium">Nessuna biografia inserita. È un tipo misterioso.</span>}</p>
               )}
             </div>
 
             {/* CORSO E SOCIAL */}
-            <div className="grid md:grid-cols-2 gap-10 mb-10">
-              <div className="bg-yellow-50 border-4 border-gray-900 rounded-2xl p-6 relative">
-                <span className="absolute -top-5 left-6 bg-white border-4 border-gray-900 px-4 py-1 rounded-xl font-black uppercase tracking-widest text-gray-900 text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">Studi 📚</span>
+            <div className="grid md:grid-cols-2 gap-6 sm:gap-10 mb-6 sm:mb-10">
+              <div className="bg-yellow-50 border-[3px] sm:border-4 border-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 relative mt-2">
+                <span className="absolute -top-3.5 sm:-top-5 left-4 sm:left-6 bg-white border-2 sm:border-4 border-gray-900 px-3 py-0.5 sm:px-4 sm:py-1 rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-gray-900 text-[10px] sm:text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">Studi 📚</span>
                 {isEditing ? (
-                  <div className="grid gap-4 mt-2">
-                    <select value={corsoSelezionato || ''} onChange={(e) => setCorsoSelezionato(e.target.value || null)} className="w-full px-4 py-3 bg-white rounded-xl border-4 border-gray-900 focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-bold text-gray-900 transition-all cursor-pointer">
+                  <div className="grid gap-3 sm:gap-4 mt-1 sm:mt-2">
+                    <select value={corsoSelezionato || ''} onChange={(e) => setCorsoSelezionato(e.target.value || null)} className="w-full px-3 py-2 sm:px-4 sm:py-3 bg-white rounded-lg sm:rounded-xl border-[3px] sm:border-4 border-gray-900 focus:outline-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] font-bold text-gray-900 text-xs sm:text-base cursor-pointer">
                       <option value="">Seleziona un corso...</option>
                       {corsiDisponibili.map(corso => <option key={corso.id} value={corso.id}>{corso.nome}</option>)}
                     </select>
-                    <select value={annoInizio} onChange={(e) => setAnnoInizio(parseInt(e.target.value))} className="w-full px-4 py-3 bg-white rounded-xl border-4 border-gray-900 focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-bold text-gray-900 transition-all cursor-pointer">
+                    <select value={annoInizio} onChange={(e) => setAnnoInizio(parseInt(e.target.value))} className="w-full px-3 py-2 sm:px-4 sm:py-3 bg-white rounded-lg sm:rounded-xl border-[3px] sm:border-4 border-gray-900 focus:outline-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] font-bold text-gray-900 text-xs sm:text-base cursor-pointer">
                       {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(year => <option key={year} value={year}>{year}</option>)}
                     </select>
                   </div>
                 ) : (
-                  <div className="mt-2 flex items-center gap-4">
+                  <div className="mt-1 sm:mt-2 flex items-center gap-3 sm:gap-4">
                     {corsoSelezionato ? (
                       <>
-                        <div className="w-16 h-16 rounded-xl bg-white border-4 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center -rotate-6"><span className="text-3xl">🎓</span></div>
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg sm:rounded-xl bg-white border-2 sm:border-4 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center -rotate-6"><span className="text-xl sm:text-3xl">🎓</span></div>
                         <div>
-                          <p className="font-black text-gray-900 text-xl uppercase tracking-tighter">{corsiDisponibili.find(c => c.id === corsoSelezionato)?.nome || globalUser?.corso_studi}</p>
-                          <p className="text-sm font-bold text-gray-600 uppercase tracking-widest mt-1">{new Date().getFullYear() - annoInizio}° Anno (Iscritto nel {annoInizio})</p>
+                          <p className="font-black text-gray-900 text-sm sm:text-xl uppercase tracking-tighter leading-tight">{corsiDisponibili.find(c => c.id === corsoSelezionato)?.nome || globalUser?.corso_studi}</p>
+                          <p className="text-[10px] sm:text-sm font-bold text-gray-600 uppercase tracking-widest mt-0.5 sm:mt-1">{new Date().getFullYear() - annoInizio}° Anno (Iscritto nel {annoInizio})</p>
                         </div>
                       </>
                     ) : (
-                      <span className="text-gray-500 font-bold italic">Nessun corso selezionato</span>
+                      <span className="text-gray-500 font-bold italic text-sm">Nessun corso selezionato</span>
                     )}
                   </div>
                 )}
               </div>
 
-              <div className="bg-green-50 border-4 border-gray-900 rounded-2xl p-6 relative">
-                <span className="absolute -top-5 left-6 bg-white border-4 border-gray-900 px-4 py-1 rounded-xl font-black uppercase tracking-widest text-gray-900 text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">Collegamenti 🔗</span>
+              <div className="bg-green-50 border-[3px] sm:border-4 border-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 relative mt-2 md:mt-0">
+                <span className="absolute -top-3.5 sm:-top-5 left-4 sm:left-6 bg-white border-2 sm:border-4 border-gray-900 px-3 py-0.5 sm:px-4 sm:py-1 rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-gray-900 text-[10px] sm:text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">Collegamenti 🔗</span>
                 {isEditing ? (
-                  <div className="grid gap-3 mt-2">
-                    <input type="url" value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} placeholder="LinkedIn URL" className="w-full px-4 py-2 bg-white border-4 border-gray-900 rounded-lg font-bold text-gray-900 outline-none" />
-                    <input type="url" value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} placeholder="GitHub URL" className="w-full px-4 py-2 bg-white border-4 border-gray-900 rounded-lg font-bold text-gray-900 outline-none" />
-                    <input type="url" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="Sito Web URL" className="w-full px-4 py-2 bg-white border-4 border-gray-900 rounded-lg font-bold text-gray-900 outline-none" />
+                  <div className="grid gap-2 sm:gap-3 mt-1 sm:mt-2">
+                    <input type="url" value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} placeholder="LinkedIn URL" className="w-full px-3 py-2 bg-white border-2 sm:border-4 border-gray-900 rounded-lg text-xs sm:text-base font-bold text-gray-900 outline-none" />
+                    <input type="url" value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} placeholder="GitHub URL" className="w-full px-3 py-2 bg-white border-2 sm:border-4 border-gray-900 rounded-lg text-xs sm:text-base font-bold text-gray-900 outline-none" />
+                    <input type="url" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="Sito Web URL" className="w-full px-3 py-2 bg-white border-2 sm:border-4 border-gray-900 rounded-lg text-xs sm:text-base font-bold text-gray-900 outline-none" />
                   </div>
                 ) : (
-                  <div className="flex flex-wrap gap-4 mt-2">
-                    {linkedinUrl && <a href={linkedinUrl.startsWith('http') ? linkedinUrl : `https://${linkedinUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-3 bg-white border-4 border-gray-900 rounded-xl font-black uppercase text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all"><span className="text-xl">💼</span> LinkedIn</a>}
-                    {githubUrl && <a href={githubUrl.startsWith('http') ? githubUrl : `https://${githubUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-3 bg-white border-4 border-gray-900 rounded-xl font-black uppercase text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all"><span className="text-xl">💻</span> GitHub</a>}
-                    {websiteUrl && <a href={websiteUrl.startsWith('http') ? websiteUrl : `https://${websiteUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-3 bg-white border-4 border-gray-900 rounded-xl font-black uppercase text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all"><span className="text-xl">🌐</span> Web</a>}
-                    {twitterUrl && <a href={twitterUrl.startsWith('http') ? twitterUrl : `https://${twitterUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-3 bg-white border-4 border-gray-900 rounded-xl font-black uppercase text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all"><span className="text-xl">🐦</span> Twitter</a>}
-                    {!linkedinUrl && !githubUrl && !websiteUrl && !twitterUrl && <span className="text-gray-500 font-bold italic">Nessun collegamento inserito.</span>}
+                  <div className="flex flex-wrap gap-2 sm:gap-4 mt-1 sm:mt-2">
+                    {linkedinUrl && <a href={linkedinUrl.startsWith('http') ? linkedinUrl : `https://${linkedinUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 sm:px-6 py-1.5 sm:py-3 bg-white border-2 sm:border-4 border-gray-900 rounded-lg sm:rounded-xl font-black uppercase text-[10px] sm:text-sm text-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"><span className="text-sm sm:text-xl">💼</span> LinkedIn</a>}
+                    {githubUrl && <a href={githubUrl.startsWith('http') ? githubUrl : `https://${githubUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 sm:px-6 py-1.5 sm:py-3 bg-white border-2 sm:border-4 border-gray-900 rounded-lg sm:rounded-xl font-black uppercase text-[10px] sm:text-sm text-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"><span className="text-sm sm:text-xl">💻</span> GitHub</a>}
+                    {websiteUrl && <a href={websiteUrl.startsWith('http') ? websiteUrl : `https://${websiteUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 sm:px-6 py-1.5 sm:py-3 bg-white border-2 sm:border-4 border-gray-900 rounded-lg sm:rounded-xl font-black uppercase text-[10px] sm:text-sm text-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"><span className="text-sm sm:text-xl">🌐</span> Web</a>}
+                    {twitterUrl && <a href={twitterUrl.startsWith('http') ? twitterUrl : `https://${twitterUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 sm:px-6 py-1.5 sm:py-3 bg-white border-2 sm:border-4 border-gray-900 rounded-lg sm:rounded-xl font-black uppercase text-[10px] sm:text-sm text-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"><span className="text-sm sm:text-xl">🐦</span> Twitter</a>}
+                    {!linkedinUrl && !githubUrl && !websiteUrl && !twitterUrl && <span className="text-gray-500 font-bold italic text-sm">Nessun collegamento inserito.</span>}
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-10 mb-10">
+            <div className="grid md:grid-cols-2 gap-6 sm:gap-10 mb-6 sm:mb-10">
               {/* CURRICULUM */}
-              <div className="bg-red-50 border-4 border-gray-900 rounded-2xl p-6 relative">
-                <span className="absolute -top-5 left-6 bg-white border-4 border-gray-900 px-4 py-1 rounded-xl font-black uppercase tracking-widest text-gray-900 text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">Curriculum 📄</span>
-                <div className="mt-4">
+              <div className="bg-red-50 border-[3px] sm:border-4 border-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 relative mt-2 md:mt-0">
+                <span className="absolute -top-3.5 sm:-top-5 left-4 sm:left-6 bg-white border-2 sm:border-4 border-gray-900 px-3 py-0.5 sm:px-4 sm:py-1 rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-gray-900 text-[10px] sm:text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">Curriculum 📄</span>
+                <div className="mt-2 sm:mt-4">
                   {isEditing ? (
-                    <div className="flex flex-col gap-4">
-                      <label className="w-full bg-white p-6 rounded-xl border-4 border-dashed border-gray-900 cursor-pointer hover:bg-red-100 transition-colors flex flex-col items-center justify-center text-center">
-                        <span className="text-4xl mb-2">📥</span>
-                        <span className="font-black uppercase tracking-widest text-gray-900">{cvFile ? cvFile.name : (cvUrl ? 'Sostituisci CV' : 'Carica PDF')}</span>
+                    <div className="flex flex-col gap-3 sm:gap-4">
+                      <label className="w-full bg-white p-4 sm:p-6 rounded-lg sm:rounded-xl border-[3px] sm:border-4 border-dashed border-gray-900 cursor-pointer hover:bg-red-100 transition-colors flex flex-col items-center justify-center text-center">
+                        <span className="text-2xl sm:text-4xl mb-1 sm:mb-2">📥</span>
+                        <span className="font-black uppercase tracking-widest text-gray-900 text-xs sm:text-base">{cvFile ? cvFile.name : (cvUrl ? 'Sostituisci CV' : 'Carica PDF')}</span>
                         <input type="file" className="hidden" accept=".pdf" onChange={(e) => setCvFile(e.target.files?.[0] || null)} />
                       </label>
                       {(cvFile || cvUrl) && (
-                        <button type="button" onClick={handleRemoveCv} className="px-4 py-3 bg-gray-900 text-white rounded-xl font-black uppercase tracking-widest shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all">
+                        <button type="button" onClick={handleRemoveCv} className="px-3 sm:px-4 py-2 sm:py-3 bg-gray-900 text-white rounded-lg sm:rounded-xl font-black uppercase tracking-widest shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all text-xs sm:text-sm">
                           🗑️ Rimuovi CV
                         </button>
                       )}
                     </div>
                   ) : (
-                    <div className="flex items-center justify-center p-4">
+                    <div className="flex items-center justify-center p-2 sm:p-4">
                       {cvPreviewUrl ? (
-                        <a href={cvPreviewUrl} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-2 group">
-                          <div className="w-20 h-20 bg-white border-4 border-gray-900 rounded-2xl flex items-center justify-center shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] group-hover:translate-x-[4px] group-hover:translate-y-[4px] group-hover:shadow-none transition-all">
-                            <span className="text-4xl">📋</span>
+                        <a href={cvPreviewUrl} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1 sm:gap-2 group">
+                          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white border-[3px] sm:border-4 border-gray-900 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] group-hover:translate-x-[2px] group-hover:translate-y-[2px] group-hover:shadow-none transition-all">
+                            <span className="text-3xl sm:text-4xl">📋</span>
                           </div>
-                          <span className="font-black uppercase tracking-widest text-gray-900 mt-2">Apri CV</span>
+                          <span className="font-black uppercase tracking-widest text-gray-900 mt-1 sm:mt-2 text-xs sm:text-base">Apri CV</span>
                         </a>
                       ) : (
-                        <span className="text-gray-500 font-bold italic">Nessun CV caricato</span>
+                        <span className="text-gray-500 font-bold italic text-sm">Nessun CV caricato</span>
                       )}
                     </div>
                   )}
@@ -576,15 +552,15 @@ export default function ProfilePage() {
               </div>
 
               {/* COMPETENZE / TAGS */}
-              <div className="bg-purple-50 border-4 border-gray-900 rounded-2xl p-6 relative">
-                <span className="absolute -top-5 left-6 bg-white border-4 border-gray-900 px-4 py-1 rounded-xl font-black uppercase tracking-widest text-gray-900 text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">Skill & Passioni ⭐</span>
-                <div className="mt-4 max-h-[400px] overflow-y-auto pr-2">
+              <div className="bg-purple-50 border-[3px] sm:border-4 border-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 relative mt-2 md:mt-0">
+                <span className="absolute -top-3.5 sm:-top-5 left-4 sm:left-6 bg-white border-2 sm:border-4 border-gray-900 px-3 py-0.5 sm:px-4 sm:py-1 rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-gray-900 text-[10px] sm:text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">Skill & Passioni ⭐</span>
+                <div className="mt-2 sm:mt-4 max-h-[300px] sm:max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                   {isEditing && (
-                    <div className="mb-6 bg-white p-4 rounded-xl border-4 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                      <p className="text-xs font-black uppercase tracking-widest text-gray-600 mb-2">Aggiungi nuovo tag</p>
+                    <div className="mb-4 sm:mb-6 bg-white p-3 sm:p-4 rounded-lg sm:rounded-xl border-2 sm:border-4 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                      <p className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-gray-600 mb-1.5 sm:mb-2">Aggiungi nuovo tag</p>
                       <div className="flex gap-2">
-                        <input type="text" value={customTagInput} onChange={(e) => setCustomTagInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleAddCustomTag(e) }} placeholder="Scrivi e premi '+'" className="flex-1 px-3 py-2 border-2 border-gray-900 rounded-lg focus:outline-none font-bold text-gray-900" />
-                        <button type="button" onClick={handleAddCustomTag} className="px-4 py-2 bg-purple-400 text-gray-900 border-2 border-gray-900 rounded-lg font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all">+</button>
+                        <input type="text" value={customTagInput} onChange={(e) => setCustomTagInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleAddCustomTag(e) }} placeholder="Scrivi e premi '+'" className="flex-1 px-2 py-1 sm:px-3 sm:py-2 border-2 border-gray-900 rounded-md sm:rounded-lg focus:outline-none font-bold text-gray-900 text-xs sm:text-sm" />
+                        <button type="button" onClick={handleAddCustomTag} className="px-3 sm:px-4 py-1 sm:py-2 bg-purple-400 text-gray-900 border-2 border-gray-900 rounded-md sm:rounded-lg font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all">+</button>
                       </div>
                     </div>
                   )}
@@ -592,16 +568,16 @@ export default function ProfilePage() {
                     const hasSelectedTags = tags.some(t => selectedTags.includes(t.id))
                     if (!isEditing && !hasSelectedTags) return null
                     return (
-                      <div key={categoria} className="mb-6 last:mb-0">
-                        <h4 className="text-xs font-black text-gray-900 uppercase tracking-widest mb-3 border-b-2 border-gray-900 inline-block">{categoria}</h4>
-                        <div className="flex flex-wrap gap-3">
+                      <div key={categoria} className="mb-4 sm:mb-6 last:mb-0">
+                        <h4 className="text-[10px] sm:text-xs font-black text-gray-900 uppercase tracking-widest mb-2 sm:mb-3 border-b-2 border-gray-900 inline-block">{categoria}</h4>
+                        <div className="flex flex-wrap gap-2 sm:gap-3">
                           {tags.map(tag => {
                             const isSelected = selectedTags.includes(tag.id)
                             return (
                               <button
                                 key={tag.id} type="button" onClick={() => handleTagToggle(tag.id)} disabled={!isEditing}
-                                className={`px-4 py-2 rounded-xl font-black uppercase tracking-widest text-sm transition-all border-4 border-gray-900 ${
-                                  isSelected ? 'bg-purple-400 text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] -translate-y-1 rotate-2' : isEditing ? 'bg-white text-gray-600 hover:bg-gray-100 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'hidden'
+                                className={`px-2 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-[10px] sm:text-sm transition-all border-2 sm:border-4 border-gray-900 ${
+                                  isSelected ? 'bg-purple-400 text-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] -translate-y-0.5 sm:-translate-y-1 rotate-1 sm:rotate-2' : isEditing ? 'bg-white text-gray-600 hover:bg-gray-100' : 'hidden'
                                 }`}
                               >
                                 {tag.nome}
@@ -612,43 +588,43 @@ export default function ProfilePage() {
                       </div>
                     )
                   })}
-                  {selectedTags.length === 0 && !isEditing && <span className="text-gray-500 font-bold italic">Nessuna competenza selezionata</span>}
+                  {selectedTags.length === 0 && !isEditing && <span className="text-gray-500 font-bold italic text-sm">Nessuna competenza selezionata</span>}
                 </div>
               </div>
             </div>
 
             {/* VETRINA PROGETTI IN PIATTAFORMA */}
-            <div className="mb-10 bg-orange-50 border-4 border-gray-900 rounded-2xl p-6 relative">
-              <span className="absolute -top-5 left-6 bg-white border-4 border-gray-900 px-4 py-1 rounded-xl font-black uppercase tracking-widest text-gray-900 text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                I Miei Progetti (Piattaforma) 🚀
+            <div className="mb-6 sm:mb-10 bg-orange-50 border-[3px] sm:border-4 border-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 relative mt-2">
+              <span className="absolute -top-3.5 sm:-top-5 left-4 sm:left-6 bg-white border-2 sm:border-4 border-gray-900 px-3 py-0.5 sm:px-4 sm:py-1 rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-gray-900 text-[10px] sm:text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                I Miei Progetti 🚀
               </span>
               
-              <div className="mt-4">
+              <div className="mt-2 sm:mt-4">
                 {myPlatformProjects.length === 0 ? (
-                  <p className="text-gray-500 font-bold italic">Non hai ancora partecipato a nessun progetto in piattaforma.</p>
+                  <p className="text-gray-500 font-bold italic text-sm sm:text-base">Non hai ancora partecipato a nessun progetto in piattaforma.</p>
                 ) : (
-                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {myPlatformProjects.map(proj => {
                       const isHidden = hiddenProjects.includes(proj.id)
                       if (!isEditing && isHidden) return null
 
                       return (
-                        <div key={proj.id} className={`bg-white border-4 border-gray-900 p-5 rounded-2xl flex flex-col justify-between transition-all ${isHidden ? 'opacity-50 grayscale' : 'shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1'}`}>
+                        <div key={proj.id} className={`bg-white border-2 sm:border-4 border-gray-900 p-3 sm:p-5 rounded-xl sm:rounded-2xl flex flex-col justify-between transition-all ${isHidden ? 'opacity-50 grayscale' : 'shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1'}`}>
                           <div>
-                            <h4 className="font-black text-lg uppercase text-gray-900 leading-tight mb-2 truncate">{proj.titolo}</h4>
-                            <p className="text-xs font-bold text-gray-600 line-clamp-3 mb-4">{proj.descrizione}</p>
+                            <h4 className="font-black text-sm sm:text-lg uppercase text-gray-900 leading-tight mb-1 sm:mb-2 truncate">{proj.titolo}</h4>
+                            <p className="text-[10px] sm:text-xs font-bold text-gray-600 line-clamp-2 sm:line-clamp-3 mb-3 sm:mb-4">{proj.descrizione}</p>
                           </div>
                           
                           {isEditing ? (
                             <button 
                               type="button" 
                               onClick={() => toggleProjectVisibility(proj.id)}
-                              className="mt-auto px-3 py-2 border-2 border-gray-900 rounded-xl text-xs font-black uppercase w-full hover:bg-gray-100 transition-colors"
+                              className="mt-auto px-2 py-1.5 sm:px-3 sm:py-2 border-2 border-gray-900 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-black uppercase w-full hover:bg-gray-100 transition-colors"
                             >
-                              {isHidden ? '👁️ Mostra nel Profilo' : '🙈 Nascondi dal Profilo'}
+                              {isHidden ? '👁️ Mostra' : '🙈 Nascondi'}
                             </button>
                           ) : (
-                            <Link href={`/dashboard/projects/${proj.id}`} className="mt-auto block text-center w-full py-2.5 bg-gray-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 border-2 border-gray-900 transition-colors">
+                            <Link href={`/dashboard/projects/${proj.id}`} className="mt-auto block text-center w-full py-2 sm:py-2.5 bg-gray-900 text-white rounded-lg sm:rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 border-2 border-gray-900 transition-colors">
                               Vedi Progetto ↗
                             </Link>
                           )}
@@ -662,11 +638,11 @@ export default function ProfilePage() {
 
             {/* PULSANTONE SALVA */}
             {isEditing && (
-              <div className="mt-12">
+              <div className="mt-8 sm:mt-12">
                 <button 
                   type="submit" 
                   disabled={saving}
-                  className="w-full py-5 bg-red-600 rounded-2xl font-black text-white text-2xl uppercase tracking-widest border-4 border-gray-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[6px] hover:translate-y-[6px] hover:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                  className="w-full py-4 sm:py-5 bg-red-600 rounded-xl sm:rounded-2xl font-black text-white text-lg sm:text-2xl uppercase tracking-widest border-[3px] sm:border-4 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 sm:gap-3"
                 >
                   {saving ? 'Salvataggio... ⏳' : 'Salva Modifiche 💥'}
                 </button>
