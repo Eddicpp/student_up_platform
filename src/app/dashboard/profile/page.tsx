@@ -12,6 +12,15 @@ interface Tag {
   categoria?: string
 }
 
+// ✅ NUOVA INTERFACCIA PER I PROGETTI
+interface ProgettoVetrina {
+  id: string
+  titolo: string
+  ruolo: string
+  link: string
+  visibile: boolean
+}
+
 export default function ProfilePage() {
   const router = useRouter()
   const supabase = createClient()
@@ -47,10 +56,13 @@ export default function ProfilePage() {
   const [bannerFile, setBannerFile] = useState<File | null>(null)
   const [cvFile, setCvFile] = useState<File | null>(null)
 
-  // --- STATI TAG ---
+  // --- STATI TAG E PROGETTI ---
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [availableInterests, setAvailableInterests] = useState<Tag[]>([])
   const [customTagInput, setCustomTagInput] = useState('')
+
+  const [progettiVetrina, setProgettiVetrina] = useState<ProgettoVetrina[]>([])
+  const [nuovoProgetto, setNuovoProgetto] = useState({ titolo: '', ruolo: '', link: '' })
 
   // --- STATI UI ---
   const [loading, setLoading] = useState(true)
@@ -99,9 +111,10 @@ export default function ProfilePage() {
           setGithubUrl(studente.github_url || '')
           setWebsiteUrl(studente.website_url || '')
           setTwitterUrl(studente.twitter_url || '')
+          // Carica progetti vetrina
+          setProgettiVetrina(studente.progetti_vetrina || [])
         }
 
-        // Modificata per provare a prendere la categoria (se non c'è la join, raggrupperà comunque in Generali)
         const { data: tags } = await supabase
           .from('interesse')
           .select('*') 
@@ -160,7 +173,7 @@ export default function ProfilePage() {
         .from(bucket)
         .upload(fileName, file, { cacheControl: '3600', upsert: true })
 
-      if (uploadError) throw new Error(`Errore caricamento nel bucket ${bucket}.`)
+      if (uploadError) throw new Error(`Errore caricamento nel bucket ${bucket}. Assicurati di aver configurato i permessi.`)
       
       const { data } = supabase.storage.from(bucket).getPublicUrl(fileName)
       return data.publicUrl
@@ -169,7 +182,7 @@ export default function ProfilePage() {
     }
   }
 
-  // --- GESTIONE TAG ---
+  // --- GESTIONE TAG E PROGETTI ---
   const handleTagToggle = (tagId: string) => {
     if (!isEditing) return
     setSelectedTags(prev => 
@@ -182,28 +195,39 @@ export default function ProfilePage() {
     const trimmedInput = customTagInput.trim()
     if (!trimmedInput) return
 
-    // Controlla se esiste già (case insensitive)
     const existingTag = availableInterests.find(t => t.nome.toLowerCase() === trimmedInput.toLowerCase())
-    
     if (existingTag) {
-      if (!selectedTags.includes(existingTag.id)) {
-        setSelectedTags(prev => [...prev, existingTag.id])
-      }
+      if (!selectedTags.includes(existingTag.id)) setSelectedTags(prev => [...prev, existingTag.id])
     } else {
-      // Crea un tag temporaneo
       const newId = `temp_${Date.now()}`
-      const newTag: Tag = { 
-        id: newId, 
-        nome: trimmedInput, 
-        categoria: 'I Tuoi Tag' 
-      }
-      setAvailableInterests(prev => [...prev, newTag])
+      setAvailableInterests(prev => [...prev, { id: newId, nome: trimmedInput, categoria: 'I Tuoi Tag' }])
       setSelectedTags(prev => [...prev, newId])
     }
     setCustomTagInput('')
   }
 
-  // Raggruppa i tag per categoria
+  // Aggiungi Progetto
+  const handleAddProject = () => {
+    if (!nuovoProgetto.titolo.trim() || !nuovoProgetto.ruolo.trim()) return
+    const newProject: ProgettoVetrina = {
+      id: `proj_${Date.now()}`,
+      titolo: nuovoProgetto.titolo.trim(),
+      ruolo: nuovoProgetto.ruolo.trim(),
+      link: nuovoProgetto.link.trim(),
+      visibile: true
+    }
+    setProgettiVetrina([...progettiVetrina, newProject])
+    setNuovoProgetto({ titolo: '', ruolo: '', link: '' })
+  }
+
+  const handleToggleProjectVisibility = (id: string) => {
+    setProgettiVetrina(prev => prev.map(p => p.id === id ? { ...p, visibile: !p.visibile } : p))
+  }
+
+  const handleRemoveProject = (id: string) => {
+    setProgettiVetrina(prev => prev.filter(p => p.id !== id))
+  }
+
   const groupedInterests = availableInterests.reduce((acc, tag) => {
     const cat = tag.categoria || 'Generali'
     if (!acc[cat]) acc[cat] = []
@@ -217,11 +241,6 @@ export default function ProfilePage() {
   }
 
   const handleCancelEdit = () => {
-    setIsEditing(false)
-    setAvatarFile(null)
-    setBannerFile(null)
-    setCvFile(null)
-    setError(null)
     window.location.reload()
   }
 
@@ -243,6 +262,7 @@ export default function ProfilePage() {
       if (bannerFile) finalBannerUrl = await uploadFile(bannerFile, 'banners')
       if (cvFile) finalCvUrl = await uploadFile(cvFile, 'documents')
 
+      // 1. Aggiorna studente (Inclusi i progetti)
       const { error: updateError } = await supabase
         .from('studente')
         .update({
@@ -254,76 +274,39 @@ export default function ProfilePage() {
           github_url: githubUrl,
           website_url: websiteUrl,
           twitter_url: twitterUrl,
+          progetti_vetrina: progettiVetrina, // Salvataggio progetti
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id)
 
       if (updateError) throw updateError
 
+      // 2. Corsi
       if (corsoSelezionato) {
         if (studenteCorsoId) {
-          const { error: corsoError } = await supabase
-            .from('studente_corso')
-            .update({ corso_id: corsoSelezionato, anno_inizio: annoInizio })
-            .eq('id', studenteCorsoId)
+          const { error: corsoError } = await supabase.from('studente_corso').update({ corso_id: corsoSelezionato, anno_inizio: annoInizio }).eq('id', studenteCorsoId)
           if (corsoError) throw corsoError
         } else {
-          const { data: newCorso, error: corsoError } = await supabase
-            .from('studente_corso')
-            .insert({ studente_id: user.id, corso_id: corsoSelezionato, anno_inizio: annoInizio, completato: false })
-            .select('id').single()
+          const { data: newCorso, error: corsoError } = await supabase.from('studente_corso').insert({ studente_id: user.id, corso_id: corsoSelezionato, anno_inizio: annoInizio, completato: false }).select('id').single()
           if (corsoError) throw corsoError
           if (newCorso) setStudenteCorsoId(newCorso.id)
         }
       }
 
-      // ----------------------------------------------------
-      // SALVATAGGIO DEI TAG CON IL FIX ALLA CATEGORIA
-      // ----------------------------------------------------
-
-      // 1. Recuperiamo una categoria di default per poter salvare i nuovi tag
-      const { data: defaultCat, error: catError } = await supabase
-        .from('categoria')
-        .select('id')
-        .limit(1)
-        .single() // single() assicura che TypeScript sappia che è un oggetto
-
-      if (catError || !defaultCat) {
-        throw new Error("Non è stata trovata nessuna categoria nel database per assegnare i nuovi tag.")
-      }
-
-      // 2. Processa i tag temporanei (quelli creati dall'utente)
+      // 3. TAGS
+      const { data: defaultCat } = await supabase.from('categoria').select('id').limit(1).single()
       const finalTagIds: string[] = []
       
       for (const tagId of selectedTags) {
         if (tagId.startsWith('temp_')) {
           const tagObj = availableInterests.find(t => t.id === tagId)
-          if (tagObj) {
-            // Controlla se nel frattempo qualcun altro lo ha creato
-            const { data: existing } = await supabase
-              .from('interesse')
-              .select('id')
-              .ilike('nome', tagObj.nome)
-              .maybeSingle()
-
+          if (tagObj && defaultCat) {
+            const { data: existing } = await supabase.from('interesse').select('id').ilike('nome', tagObj.nome).maybeSingle()
             if (existing) {
               finalTagIds.push(existing.id)
             } else {
-              // INSERISCE IL NUOVO TAG ASSENGNANDOGLI LA CATEGORIA DI DEFAULT TROVATA
-              const { data: newTag, error: tagErr } = await supabase
-                .from('interesse')
-                .insert({ 
-                  nome: tagObj.nome, 
-                  categoria_id: defaultCat.id 
-                })
-                .select('id')
-                .single()
-              
-              if (newTag && !tagErr) {
-                finalTagIds.push(newTag.id)
-              } else if (tagErr) {
-                console.error("Errore inserimento nuovo interesse:", tagErr)
-              }
+              const { data: newTag, error: tagErr } = await supabase.from('interesse').insert({ nome: tagObj.nome, categoria_id: defaultCat.id }).select('id').single()
+              if (newTag && !tagErr) finalTagIds.push(newTag.id)
             }
           }
         } else {
@@ -331,14 +314,10 @@ export default function ProfilePage() {
         }
       }
 
-      // 3. Salva i collegamenti studente_interesse definitivi
-      const { error: deleteError } = await supabase.from('studente_interesse').delete().eq('studente_id', user.id)
-      if (deleteError) throw deleteError
-
+      await supabase.from('studente_interesse').delete().eq('studente_id', user.id)
       if (finalTagIds.length > 0) {
         const tagInserts = finalTagIds.map(id => ({ studente_id: user.id, interesse_id: id }))
-        const { error: insertError } = await supabase.from('studente_interesse').insert(tagInserts)
-        if (insertError) throw insertError
+        await supabase.from('studente_interesse').insert(tagInserts)
       }
 
       await refreshUser()
@@ -515,7 +494,7 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* SEZIONE BIO */}
+            {/* SEZIONE BIO E CORSO DI STUDI... */}
             <div className="mb-10 bg-blue-50 border-4 border-gray-900 rounded-2xl p-6 relative">
               <span className="absolute -top-5 left-6 bg-white border-4 border-gray-900 px-4 py-1 rounded-xl font-black uppercase tracking-widest text-gray-900 text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                 Chi Sono 💭
@@ -567,9 +546,6 @@ export default function ProfilePage() {
                         <option key={year} value={year}>{year}</option>
                       ))}
                     </select>
-                    <p className="text-xs font-black text-gray-500 uppercase mt-3">
-                      Sei al <strong className="text-red-600 text-base">{new Date().getFullYear() - annoInizio}°</strong> anno
-                    </p>
                   </div>
                 </div>
               ) : (
@@ -595,75 +571,8 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* LINKS & SOCIAL */}
-            <div className="mb-10 bg-green-50 border-4 border-gray-900 rounded-2xl p-6 relative">
-              <span className="absolute -top-5 left-6 bg-white border-4 border-gray-900 px-4 py-1 rounded-xl font-black uppercase tracking-widest text-gray-900 text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                Collegamenti 🔗
-              </span>
-              
-              {isEditing ? (
-                <div className="grid sm:grid-cols-2 gap-6 mt-2">
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl">💼</span>
-                    <input 
-                      type="url" value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} placeholder="LinkedIn URL"
-                      className="w-full pl-12 pr-4 py-3 bg-white rounded-xl border-4 border-gray-900 focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-bold text-gray-900 transition-all" 
-                    />
-                  </div>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl">💻</span>
-                    <input 
-                      type="url" value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} placeholder="GitHub URL"
-                      className="w-full pl-12 pr-4 py-3 bg-white rounded-xl border-4 border-gray-900 focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-bold text-gray-900 transition-all" 
-                    />
-                  </div>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl">🌐</span>
-                    <input 
-                      type="url" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="Sito Web URL"
-                      className="w-full pl-12 pr-4 py-3 bg-white rounded-xl border-4 border-gray-900 focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-bold text-gray-900 transition-all" 
-                    />
-                  </div>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl">🐦</span>
-                    <input 
-                      type="url" value={twitterUrl} onChange={(e) => setTwitterUrl(e.target.value)} placeholder="Twitter/X URL"
-                      className="w-full pl-12 pr-4 py-3 bg-white rounded-xl border-4 border-gray-900 focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-bold text-gray-900 transition-all" 
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-4 mt-2">
-                  {linkedinUrl && (
-                    <a href={linkedinUrl.startsWith('http') ? linkedinUrl : `https://${linkedinUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-3 bg-white border-4 border-gray-900 rounded-xl font-black uppercase text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all">
-                      <span className="text-xl">💼</span> LinkedIn
-                    </a>
-                  )}
-                  {githubUrl && (
-                    <a href={githubUrl.startsWith('http') ? githubUrl : `https://${githubUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-3 bg-white border-4 border-gray-900 rounded-xl font-black uppercase text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all">
-                      <span className="text-xl">💻</span> GitHub
-                    </a>
-                  )}
-                  {websiteUrl && (
-                    <a href={websiteUrl.startsWith('http') ? websiteUrl : `https://${websiteUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-3 bg-white border-4 border-gray-900 rounded-xl font-black uppercase text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all">
-                      <span className="text-xl">🌐</span> Web
-                    </a>
-                  )}
-                  {twitterUrl && (
-                    <a href={twitterUrl.startsWith('http') ? twitterUrl : `https://${twitterUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-3 bg-white border-4 border-gray-900 rounded-xl font-black uppercase text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all">
-                      <span className="text-xl">🐦</span> Twitter
-                    </a>
-                  )}
-                  {!linkedinUrl && !githubUrl && !websiteUrl && !twitterUrl && (
-                    <span className="text-gray-500 font-bold italic">Nessun collegamento inserito.</span>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-10">
-              
-              {/* CURRICULUM */}
+            {/* TAGS / COMPETENZE */}
+            <div className="grid md:grid-cols-2 gap-10 mb-10">
               <div className="bg-red-50 border-4 border-gray-900 rounded-2xl p-6 relative">
                 <span className="absolute -top-5 left-6 bg-white border-4 border-gray-900 px-4 py-1 rounded-xl font-black uppercase tracking-widest text-gray-900 text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                   Curriculum 📄
@@ -701,45 +610,34 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* COMPETENZE / TAGS CON SOTTOINSIEMI E AGGIUNTA LIBERA */}
               <div className="bg-purple-50 border-4 border-gray-900 rounded-2xl p-6 relative">
                 <span className="absolute -top-5 left-6 bg-white border-4 border-gray-900 px-4 py-1 rounded-xl font-black uppercase tracking-widest text-gray-900 text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                   Skill & Passioni ⭐
                 </span>
                 
                 <div className="mt-4 max-h-[400px] overflow-y-auto pr-2">
-                  
                   {isEditing && (
                     <div className="mb-6 bg-white p-4 rounded-xl border-4 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                      <p className="text-xs font-black uppercase tracking-widest text-gray-600 mb-2">Non trovi la tua competenza?</p>
+                      <p className="text-xs font-black uppercase tracking-widest text-gray-600 mb-2">Aggiungi nuovo tag</p>
                       <div className="flex gap-2">
                         <input
                           type="text"
                           value={customTagInput}
                           onChange={(e) => setCustomTagInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleAddCustomTag(e)
-                          }}
-                          placeholder="Scrivila e premi '+'..."
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleAddCustomTag(e) }}
+                          placeholder="Scrivi e premi '+'"
                           className="flex-1 px-3 py-2 border-2 border-gray-900 rounded-lg focus:outline-none font-bold text-gray-900"
                         />
-                        <button
-                          type="button"
-                          onClick={handleAddCustomTag}
-                          className="px-4 py-2 bg-purple-400 text-gray-900 border-2 border-gray-900 rounded-lg font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all"
-                        >
+                        <button type="button" onClick={handleAddCustomTag} className="px-4 py-2 bg-purple-400 text-gray-900 border-2 border-gray-900 rounded-lg font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all">
                           +
                         </button>
                       </div>
                     </div>
                   )}
 
-                  {/* Rendering raggruppato per categorie */}
                   {Object.entries(groupedInterests).map(([categoria, tags]) => {
                     const hasSelectedTags = tags.some(t => selectedTags.includes(t.id))
-                    // Nasconde la categoria in modalità view se non c'è nulla di selezionato
                     if (!isEditing && !hasSelectedTags) return null
-
                     return (
                       <div key={categoria} className="mb-6 last:mb-0">
                         <h4 className="text-xs font-black text-gray-900 uppercase tracking-widest mb-3 border-b-2 border-gray-900 inline-block">
@@ -770,12 +668,99 @@ export default function ProfilePage() {
                       </div>
                     )
                   })}
-                  
                   {selectedTags.length === 0 && !isEditing && (
                     <span className="text-gray-500 font-bold italic">Nessuna competenza selezionata</span>
                   )}
                 </div>
               </div>
+            </div>
+
+            {/* ✅ NUOVA SEZIONE: VETRINA PROGETTI */}
+            <div className="mb-10 bg-orange-50 border-4 border-gray-900 rounded-2xl p-6 relative">
+              <span className="absolute -top-5 left-6 bg-white border-4 border-gray-900 px-4 py-1 rounded-xl font-black uppercase tracking-widest text-gray-900 text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                I Miei Progetti 🚀
+              </span>
+
+              {isEditing ? (
+                <div className="mt-4">
+                  {/* Form Aggiungi Progetto */}
+                  <div className="bg-white p-5 rounded-xl border-4 border-gray-900 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] mb-6">
+                    <p className="font-black uppercase text-gray-900 mb-4 tracking-widest">➕ Nuovo Progetto</p>
+                    <div className="grid sm:grid-cols-2 gap-4 mb-4">
+                      <input 
+                        type="text" placeholder="Titolo Progetto *" 
+                        value={nuovoProgetto.titolo} onChange={e => setNuovoProgetto({...nuovoProgetto, titolo: e.target.value})}
+                        className="px-4 py-3 bg-gray-50 border-2 border-gray-900 rounded-lg font-bold outline-none focus:bg-white"
+                      />
+                      <input 
+                        type="text" placeholder="Tuo Ruolo (es. Frontend Dev) *" 
+                        value={nuovoProgetto.ruolo} onChange={e => setNuovoProgetto({...nuovoProgetto, ruolo: e.target.value})}
+                        className="px-4 py-3 bg-gray-50 border-2 border-gray-900 rounded-lg font-bold outline-none focus:bg-white"
+                      />
+                      <input 
+                        type="url" placeholder="Link (Opzionale)" 
+                        value={nuovoProgetto.link} onChange={e => setNuovoProgetto({...nuovoProgetto, link: e.target.value})}
+                        className="sm:col-span-2 px-4 py-3 bg-gray-50 border-2 border-gray-900 rounded-lg font-bold outline-none focus:bg-white"
+                      />
+                    </div>
+                    <button 
+                      type="button" onClick={handleAddProject}
+                      className="w-full py-3 bg-orange-400 text-gray-900 border-4 border-gray-900 rounded-xl font-black uppercase tracking-widest hover:translate-x-[2px] hover:translate-y-[2px] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all"
+                    >
+                      Aggiungi alla Vetrina
+                    </button>
+                  </div>
+
+                  {/* Lista Progetti in Edit Mode */}
+                  <div className="space-y-4">
+                    {progettiVetrina.map(p => (
+                      <div key={p.id} className={`flex items-center justify-between bg-white p-4 rounded-xl border-4 border-gray-900 transition-all ${!p.visibile ? 'opacity-50 grayscale' : 'shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'}`}>
+                        <div>
+                          <p className="font-black text-lg text-gray-900 uppercase">{p.titolo}</p>
+                          <p className="text-xs font-bold text-gray-600 uppercase tracking-widest">{p.ruolo}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            type="button" onClick={() => handleToggleProjectVisibility(p.id)}
+                            className="p-2 bg-gray-200 border-2 border-gray-900 rounded-lg hover:bg-gray-300 transition-colors"
+                            title={p.visibile ? 'Nascondi' : 'Mostra'}
+                          >
+                            {p.visibile ? '👁️' : '🙈'}
+                          </button>
+                          <button 
+                            type="button" onClick={() => handleRemoveProject(p.id)}
+                            className="p-2 bg-red-400 border-2 border-gray-900 rounded-lg hover:bg-red-500 transition-colors"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <div className="grid sm:grid-cols-2 gap-6">
+                    {progettiVetrina.filter(p => p.visibile).length > 0 ? (
+                      progettiVetrina.filter(p => p.visibile).map(p => (
+                        <div key={p.id} className="bg-white p-5 rounded-2xl border-4 border-gray-900 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-transform">
+                          <p className="font-black text-xl text-gray-900 uppercase leading-none mb-2">{p.titolo}</p>
+                          <p className="text-xs font-bold bg-orange-100 text-orange-900 px-2 py-1 rounded border-2 border-orange-900 inline-block uppercase tracking-widest mb-4">
+                            {p.ruolo}
+                          </p>
+                          {p.link && (
+                            <a href={p.link.startsWith('http') ? p.link : `https://${p.link}`} target="_blank" rel="noopener noreferrer" className="block text-center w-full py-2 bg-gray-900 text-white font-black text-xs uppercase tracking-widest rounded-lg hover:bg-gray-800 transition-colors border-2 border-black">
+                              Visita Progetto ↗
+                            </a>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <span className="text-gray-500 font-bold italic col-span-2">Nessun progetto aggiunto alla vetrina.</span>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* PULSANTONE SALVA */}
