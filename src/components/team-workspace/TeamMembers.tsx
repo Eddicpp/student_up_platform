@@ -39,7 +39,11 @@ export default function TeamMembers({
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set())
   const [memberBadges, setMemberBadges] = useState<Record<string, string[]>>({})
   
-  // ✅ TIMER PER LA HOVER CARD (permette di spostarci il mouse sopra senza farla sparire)
+  // ✅ STATI PER IL PERSONAGGIO CHE SBUCA
+  const [isHoveringCard, setIsHoveringCard] = useState(false)
+  const [peekerPos, setPeekerPos] = useState({ edge: 'top', position: '50%' })
+
+  // Timer per mantenere aperta la card durante l'hover
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const handleMouseEnter = (id: string) => {
@@ -50,7 +54,21 @@ export default function TeamMembers({
   const handleMouseLeave = () => {
     timeoutRef.current = setTimeout(() => {
       setHoveredMember(null)
-    }, 300) // 300ms di tempo per spostare il mouse
+    }, 300) 
+  }
+
+  // ✅ LOGICA PERSONAGGIO: Calcola una posizione casuale sui bordi
+  const handleCardMouseEnter = () => {
+    setIsHoveringCard(true)
+    const edges = ['top', 'bottom', 'left', 'right']
+    const randomEdge = edges[Math.floor(Math.random() * edges.length)]
+    // Posizione percentuale tra 10% e 90% per evitare gli angoli stretti
+    const randomPos = `${Math.floor(Math.random() * 80) + 10}%`
+    setPeekerPos({ edge: randomEdge, position: randomPos })
+  }
+
+  const handleCardMouseLeave = () => {
+    setIsHoveringCard(false)
   }
 
   // Fetch presenza e badge
@@ -145,176 +163,214 @@ export default function TeamMembers({
 
   const cardStyle = "bg-white rounded-2xl border-2 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
 
-  // Dati dell'utente attualmente "in hover"
   const activeMember = members.find(m => m.id === hoveredMember)
   const activeColor = activeMember ? getMemberColor(activeMember.id) : null
   const isActiveOnline = activeMember ? onlineUsers.has(activeMember.id) : false
-  const activeBadges = activeMember ? (memberBadges[activeMember.id] || []) : []
+
+  // Stili calcolati per il personaggio che sbuca
+  const getPeekerStyles = () => {
+    const baseStyle = "absolute text-3xl transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] z-0"
+    
+    // Le posizioni determinano da dove esce e quanto sta nascosto
+    switch (peekerPos.edge) {
+      case 'top':
+        return `${baseStyle} left-[${peekerPos.position}] top-0 -translate-y-full ${isHoveringCard ? 'translate-y-[-70%]' : 'translate-y-0 opacity-0'}`
+      case 'bottom':
+        return `${baseStyle} left-[${peekerPos.position}] bottom-0 translate-y-full ${isHoveringCard ? 'translate-y-[70%]' : 'translate-y-0 opacity-0'}`
+      case 'left':
+        return `${baseStyle} top-[${peekerPos.position}] left-0 -translate-x-full ${isHoveringCard ? 'translate-x-[-70%]' : 'translate-x-0 opacity-0'}`
+      case 'right':
+        return `${baseStyle} top-[${peekerPos.position}] right-0 translate-x-full ${isHoveringCard ? 'translate-x-[70%]' : 'translate-x-0 opacity-0'}`
+      default:
+        return baseStyle
+    }
+  }
 
   return (
-    // ✅ Aggiunto relative per ancorare la card al contenitore principale e non alla riga
-    <div className={`${cardStyle} p-4 sticky top-6 ml-2 lg:ml-6 max-w-sm relative`}>
-      <h2 className="text-lg font-black text-gray-900 mb-4 flex items-center justify-between">
-        <span className="flex items-center gap-2">
-          <span>👥</span> Team
-        </span>
-        <span className="text-xs text-gray-500 font-bold bg-gray-100 px-2 py-1 rounded-lg border border-gray-300">
-          {members.length}
-        </span>
-      </h2>
-
-      <div className="flex items-center gap-2 mb-4 text-xs text-gray-500">
-        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-        <span className="font-medium">{onlineUsers.size} online</span>
+    // Contenitore esterno relativo per far funzionare l'overflow dell'omino
+    <div className="relative">
+      
+      {/* L'osservatore (The Peeker) */}
+      <div 
+        className={getPeekerStyles()}
+        style={{
+          [peekerPos.edge === 'top' || peekerPos.edge === 'bottom' ? 'left' : 'top']: peekerPos.position
+        }}
+      >
+        👀
       </div>
 
-      <div className="space-y-2 max-h-[400px] overflow-y-auto pr-3">
-        {members.map((member) => {
-          const color = getMemberColor(member.id)
-          const isOnline = onlineUsers.has(member.id)
-          const badges = memberBadges[member.id] || []
+      {/* LA CARD PRINCIPALE */}
+      <div 
+        className={`${cardStyle} p-4 pb-6 sticky top-6 ml-2 lg:ml-6 max-w-sm relative z-10`}
+        onMouseEnter={handleCardMouseEnter}
+        onMouseLeave={handleCardMouseLeave}
+      >
+        <h2 className="text-lg font-black text-gray-900 mb-4 flex items-center justify-between">
+          <span className="flex items-center gap-2">
+            <span>👥</span> Team
+          </span>
+          <span className="text-xs text-gray-900 font-black bg-white px-2 py-1 rounded-lg border-2 border-gray-900 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+            {members.length}
+          </span>
+        </h2>
 
-          return (
-            <div
-              key={member.id}
-              className="relative"
-              onMouseEnter={() => handleMouseEnter(member.id)}
-              onMouseLeave={handleMouseLeave}
-            >
-              <div className={`flex items-center gap-2.5 p-2.5 rounded-xl border-2 transition-all cursor-pointer hover:-translate-x-1 ${
-                hoveredMember === member.id 
-                  ? `${color.light} ${color.border}` 
-                  : 'border-gray-200 hover:border-gray-400'
-              }`}>
-                <div className="relative flex-shrink-0">
-                  <img 
-                    src={member.avatar_url || '/default-avatar.png'} 
-                    alt=""
-                    className={`w-9 h-9 rounded-xl object-cover border-2 ${color.border}`}
-                  />
-                  <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
-                    isOnline ? 'bg-green-500' : 'bg-gray-300'
-                  }`}></span>
-                  {member.ruolo_team === 'owner' && (
-                    <span className="absolute -top-1.5 -right-1.5 text-[10px]">👑</span>
-                  )}
-                  {member.ruolo_team === 'admin' && (
-                    <span className="absolute -top-1.5 -right-1.5 text-[10px]">🛡️</span>
-                  )}
-                </div>
+        <div className="flex items-center gap-2 mb-4 text-xs font-black text-gray-900 uppercase tracking-widest bg-green-100 p-2 rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+          <span className="w-3 h-3 bg-green-500 border border-gray-900 rounded-full animate-pulse shadow-sm"></span>
+          <span>{onlineUsers.size} online</span>
+        </div>
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <p className="font-bold text-gray-900 truncate text-xs">
-                      {member.nome} {member.cognome}
-                    </p>
-                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${color.bg}`}></span>
-                  </div>
-                  <p className={`text-[10px] font-medium ${
-                    member.ruolo_team === 'owner' ? 'text-amber-600' :
-                    member.ruolo_team === 'admin' ? 'text-blue-600' :
-                    'text-gray-400'
-                  }`}>
-                    {member.ruolo_team === 'owner' ? 'Owner' :
-                     member.ruolo_team === 'admin' ? 'Admin' : 'Membro'}
-                  </p>
-                </div>
+        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 px-1 pb-1 pt-1">
+          {members.map((member) => {
+            const color = getMemberColor(member.id)
+            const isOnline = onlineUsers.has(member.id)
+            const badges = memberBadges[member.id] || []
 
-                {badges.length > 0 && (
-                  <div className="flex -space-x-1">
-                    {badges.slice(0, 2).map((badge, i) => (
-                      <span key={i} className="text-[10px]" title={(BADGE_TYPES as any)[badge]?.label}>
-                        {(BADGE_TYPES as any)[badge]?.icon || '🏅'}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* ✅ HOVER CARD ESTRATTA: Ora vive fuori dallo scroll, posizionata a sinistra dell'intero pannello */}
-      {activeMember && activeColor && (
-        <div 
-          className={`absolute right-full top-0 mr-4 w-64 bg-white rounded-2xl border-2 border-gray-900 shadow-[-4px_4px_0px_0px_rgba(0,0,0,1)] p-3 z-50 animate-in fade-in zoom-in-95 duration-200`}
-          onMouseEnter={() => { if (timeoutRef.current) clearTimeout(timeoutRef.current) }}
-          onMouseLeave={handleMouseLeave}
-        >
-          <div className={`-mx-3 -mt-3 mb-3 p-3 rounded-t-2xl ${activeColor.light} border-b-2 ${activeColor.border}`}>
-            <div className="flex items-center gap-2.5">
-              <img 
-                src={activeMember.avatar_url || '/default-avatar.png'} 
-                alt=""
-                className={`w-12 h-12 rounded-xl object-cover border-2 ${activeColor.border}`}
-              />
-              <div>
-                <p className="font-black text-gray-900 text-sm leading-tight">{activeMember.nome} {activeMember.cognome}</p>
-                <p className={`text-[10px] font-bold ${activeColor.text} leading-tight mt-0.5`}>
-                  {activeMember.nome_corso || 'Corso ignoto'}
-                </p>
-                <div className="flex items-center gap-1 mt-1">
-                  <span className={`w-1.5 h-1.5 rounded-full ${isActiveOnline ? 'bg-green-500' : 'bg-gray-400'}`}></span>
-                  <span className="text-[9px] font-bold text-gray-600">
-                    {isActiveOnline ? 'Online' : 'Offline'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {activeMember.bio && (
-            <p className="text-[10px] text-gray-700 mb-2 line-clamp-2 font-medium bg-gray-50 p-1.5 rounded-lg border border-gray-200">
-              "{activeMember.bio}"
-            </p>
-          )}
-
-          {activeMember.anno_inizio_corso && (
-            <p className="text-[10px] text-gray-600 font-bold mb-3">
-              🎓 {new Date().getFullYear() - activeMember.anno_inizio_corso + 1}° Anno
-            </p>
-          )}
-
-          <div className="flex flex-col gap-2 mt-2 pt-2 border-t-2 border-gray-100">
-            {activeMember.email && (
-              <button
-                onClick={() => copyEmail(activeMember.email)}
-                className="w-full flex items-center justify-center gap-2 py-2 bg-gray-50 hover:bg-gray-100 text-gray-800 rounded-xl text-[10px] font-bold transition-colors border-2 border-gray-300 hover:border-gray-500"
+            return (
+              <div
+                key={member.id}
+                className="relative"
+                onMouseEnter={() => handleMouseEnter(member.id)}
+                onMouseLeave={handleMouseLeave}
               >
-                {copiedEmail === activeMember.email ? '✅ Email Copiata!' : '📋 Copia email'}
-              </button>
+                <div className={`flex items-center gap-2.5 p-2.5 rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-transform cursor-pointer hover:-translate-y-1 hover:translate-x-1 hover:shadow-none ${
+                  hoveredMember === member.id 
+                    ? 'bg-yellow-100' 
+                    : 'bg-white'
+                }`}>
+                  <div className="relative flex-shrink-0">
+                    <img 
+                      src={member.avatar_url || '/default-avatar.png'} 
+                      alt=""
+                      className={`w-10 h-10 rounded-xl object-cover border-2 border-gray-900`}
+                    />
+                    <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-gray-900 ${
+                      isOnline ? 'bg-green-500' : 'bg-gray-300'
+                    }`}></span>
+                    
+                    {member.ruolo_team === 'owner' && (
+                      <span className="absolute -top-2 -right-2 text-[12px] bg-white rounded-full border border-gray-900 shadow-sm leading-none p-0.5">👑</span>
+                    )}
+                    {member.ruolo_team === 'admin' && (
+                      <span className="absolute -top-2 -right-2 text-[12px] bg-white rounded-full border border-gray-900 shadow-sm leading-none p-0.5">🛡️</span>
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-black text-gray-900 truncate text-xs">
+                        {member.nome} {member.cognome}
+                      </p>
+                    </div>
+                    <p className={`text-[10px] font-black uppercase tracking-widest mt-0.5 ${
+                      member.ruolo_team === 'owner' ? 'text-amber-600' :
+                      member.ruolo_team === 'admin' ? 'text-blue-600' :
+                      'text-gray-500'
+                    }`}>
+                      {member.ruolo_team === 'owner' ? 'Owner' :
+                      member.ruolo_team === 'admin' ? 'Admin' : 'Membro'}
+                    </p>
+                  </div>
+
+                  {badges.length > 0 && (
+                    <div className="flex -space-x-1.5">
+                      {badges.slice(0, 2).map((badge, i) => (
+                        <span key={i} className="text-[12px] drop-shadow-sm bg-white rounded-full p-0.5 border border-gray-300" title={(BADGE_TYPES as any)[badge]?.label}>
+                          {(BADGE_TYPES as any)[badge]?.icon || '🏅'}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Hover Card (Popup a sinistra) */}
+        {activeMember && activeColor && (
+          <div 
+            className={`absolute right-[105%] top-0 mr-4 w-64 bg-white rounded-2xl border-4 border-gray-900 shadow-[-8px_8px_0px_0px_rgba(0,0,0,1)] p-4 z-50 animate-in fade-in zoom-in-95 duration-200`}
+            onMouseEnter={() => { if (timeoutRef.current) clearTimeout(timeoutRef.current) }}
+            onMouseLeave={handleMouseLeave}
+          >
+            <div className={`-mx-4 -mt-4 mb-4 p-4 rounded-t-[14px] border-b-4 border-gray-900 ${activeColor.bgHex ? '' : activeColor.light}`}
+                style={activeColor.bgHex ? { backgroundColor: activeColor.bgHex } : undefined}>
+              <div className="flex items-center gap-3">
+                <img 
+                  src={activeMember.avatar_url || '/default-avatar.png'} 
+                  alt=""
+                  className={`w-14 h-14 rounded-xl object-cover border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`}
+                />
+                <div className="bg-white/90 px-2 py-1 rounded-lg border border-gray-900 shadow-sm backdrop-blur-sm">
+                  <p className="font-black text-gray-900 text-sm leading-tight uppercase">{activeMember.nome} {activeMember.cognome}</p>
+                  <p className={`text-[10px] font-black uppercase tracking-widest text-gray-700 leading-tight mt-1`}>
+                    {activeMember.nome_corso || 'Corso ignoto'}
+                  </p>
+                  <div className="flex items-center gap-1 mt-1.5">
+                    <span className={`w-2 h-2 rounded-full border border-gray-900 ${isActiveOnline ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-900">
+                      {isActiveOnline ? 'Online' : 'Offline'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {activeMember.bio && (
+              <p className="text-[11px] text-gray-900 mb-3 line-clamp-3 font-bold bg-gray-100 p-2.5 rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                "{activeMember.bio}"
+              </p>
             )}
 
-            <div className="flex gap-2">
-              {activeMember.id !== currentUserId && (
-                <Link
-                  href={`/dashboard/messages?userId=${activeMember.id}`}
-                  className="flex-1 flex items-center justify-center gap-1 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-[10px] uppercase font-black tracking-wider transition-colors border-2 border-blue-200"
+            {activeMember.anno_inizio_corso && (
+              <div className="inline-block bg-yellow-300 px-3 py-1.5 rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] mb-4 -rotate-1">
+                <p className="text-[10px] text-gray-900 font-black uppercase tracking-widest">
+                  🎓 {new Date().getFullYear() - activeMember.anno_inizio_corso + 1}° Anno
+                </p>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-2 mt-2 pt-4 border-t-4 border-dashed border-gray-200">
+              {activeMember.email && (
+                <button
+                  onClick={() => copyEmail(activeMember.email)}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
                 >
-                  💬 Chat
-                </Link>
+                  {copiedEmail === activeMember.email ? '✅ Copiata!' : '📋 Copia email'}
+                </button>
               )}
-              
-              <Link
-                href={`/dashboard/user/${activeMember.id}`}
-                className="flex-1 flex items-center justify-center gap-1 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-[10px] uppercase font-black tracking-wider transition-colors border-2 border-gray-900"
-              >
-                👤 Profilo
-              </Link>
+
+              <div className="flex gap-2">
+                {activeMember.id !== currentUserId && (
+                  <Link
+                    href={`/dashboard/messages?userId=${activeMember.id}`}
+                    className="flex-1 flex items-center justify-center gap-1 py-2.5 bg-blue-300 hover:bg-blue-400 text-gray-900 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
+                  >
+                    💬 Chat
+                  </Link>
+                )}
+                
+                <Link
+                  href={`/dashboard/user/${activeMember.id}`}
+                  className="flex-1 flex items-center justify-center gap-1 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-[10px] uppercase font-black tracking-widest transition-all border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
+                >
+                  👤 Profilo
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {!isOwner && (
-        <button
-          onClick={onLeaveTeam}
-          className="w-full mt-4 py-2.5 text-xs font-bold text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors border-2 border-dashed border-gray-300 hover:border-red-400"
-        >
-          🚪 Abbandona team
-        </button>
-      )}
+        {!isOwner && (
+          <button
+            onClick={onLeaveTeam}
+            className="w-full mt-6 py-3 text-xs font-black uppercase tracking-widest text-red-600 bg-white hover:bg-red-50 rounded-xl transition-all border-2 border-gray-900 shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px]"
+          >
+            🚪 Abbandona team
+          </button>
+        )}
+      </div>
     </div>
   )
 }
