@@ -6,11 +6,14 @@ import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/app/context/UserContext'
 import ChatWidget from '@/components/ChatWidget'
-import SuperAvatar from '@/components/SuperAvatar'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
+  
+  // ✅ NUOVO STATO: Traccia se la chat fluttuante è aperta
+  const [isChatWidgetOpen, setIsChatWidgetOpen] = useState(false)
+
   const [notifications, setNotifications] = useState<any[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   
@@ -21,12 +24,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   
   const { user, loading: userLoading } = useUser()
 
+  // ✅ LOGICA DI CHIUSURA RECIPROCA
+  // Quando apro il menu laterale, se la chat è aperta, la chiudo.
+  const handleToggleMenu = () => {
+    const newState = !isMenuOpen;
+    setIsMenuOpen(newState);
+    if (newState && isChatWidgetOpen) {
+      setIsChatWidgetOpen(false);
+    }
+  }
+
+  // Quando la chat fluttuante viene aperta, chiudo il menu laterale (se è aperto).
+  const handleChatWidgetToggle = (isOpen: boolean) => {
+    setIsChatWidgetOpen(isOpen);
+    if (isOpen && isMenuOpen) {
+      setIsMenuOpen(false);
+    }
+  }
+
+
   // Chiudi menu con ESC
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsMenuOpen(false)
         setIsNotificationsOpen(false)
+        setIsChatWidgetOpen(false) // Chiude anche la chat
       }
     }
     window.addEventListener('keydown', handleEsc)
@@ -223,7 +246,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Left: Menu + Logo */}
           <div className="flex items-center gap-4">
             <button 
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              onClick={handleToggleMenu} // ✅ Usa la nuova funzione
               className="p-2 hover:bg-gray-100 rounded-xl text-gray-600 hover:text-gray-900 transition-colors border-2 border-transparent hover:border-gray-300"
               aria-label="Menu"
             >
@@ -402,7 +425,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   className="w-10 h-10 rounded-xl object-cover border-2 border-gray-900"
                 />
                 <div className="flex-1 min-w-0">
-                  {/* ✅ NUOVO BADGE STAFF VISIBILE */}
                   <div className="flex items-center gap-2">
                     <p className="font-bold text-gray-900 text-sm truncate">
                       {user.nome} {user.cognome}
@@ -479,7 +501,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </Link>
             ))}
 
-            {/* Admin Link (INGRANDITO E RESO PIÙ EVIDENTE) */}
+            {/* Admin Link */}
             {user?.is_system_admin && (
               <>
                 <div className="h-0.5 bg-gray-200 my-3" />
@@ -489,7 +511,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   className="flex items-center gap-3 px-4 py-3 rounded-xl font-black text-base uppercase tracking-widest text-amber-900 bg-amber-300 hover:bg-amber-400 transition-all border-4 border-amber-900 shadow-[3px_3px_0px_0px_rgba(120,53,15,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px]"
                 >
                   <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                   Staff Area
@@ -545,8 +567,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </main>
 
-      {/* CHAT WIDGET - Sempre visibile */}
-      <ChatWidget />
+      {/* ✅ CHAT WIDGET - Nascosto su mobile (hidden md:block), riceve prop per comunicazione bidirezionale */}
+      <div className="hidden md:block">
+        <ChatWidget 
+          isOpen={isChatWidgetOpen} 
+          onToggle={handleChatWidgetToggle} 
+        />
+      </div>
     </div>
   )
 }
