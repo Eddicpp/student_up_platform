@@ -335,10 +335,18 @@ export default function TeamCalendar({ bandoId, currentUserId, members }: TeamCa
                   }`}
                 >
                   {day}
-                  {dayEvents.length > 0 && (
+                  
+                  {/* PALLINO EVENTI */}
+                  {dayEvents.length === 1 && (
                     <span 
-                      className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
+                      className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full"
                       style={{ backgroundColor: dayEvents[0].colore }}
+                    />
+                  )}
+                  {dayEvents.length > 1 && (
+                    <span 
+                      className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-transparent"
+                      style={{ border: `2px solid ${dayEvents[0].colore}` }}
                     />
                   )}
                 </button>
