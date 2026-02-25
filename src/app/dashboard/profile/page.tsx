@@ -81,7 +81,7 @@ export default function ProfilePage() {
     }
   }, [cvFile, cvUrl])
 
-  // CARICAMENTO DATI
+  // CARICAMENTO DATI (Versione corretta con tabella PARTECIPAZIONE)
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
@@ -116,33 +116,50 @@ export default function ProfilePage() {
           setHiddenProjects(studente.progetti_nascosti || [])
         }
 
-        // --- FETCH PROGETTI PIATTAFORMA ---
+        // --- FETCH PROGETTI PIATTAFORMA (Tabella PARTECIPAZIONE) ---
+        console.log("🕵️ Cerco partecipazioni per l'utente:", user.id)
+
+        // 1. Progetti creati dall'utente
         const { data: creati } = await supabase
           .from('bando')
           .select('id, titolo, descrizione')
           .eq('studente_id', user.id)
 
-        const { data: candidature } = await (supabase as any)
-          .from('candidatura')
-          .select('bando_id')
+        // 2. Progetti a cui partecipa (Tabella Partecipazione)
+        const { data: partecipazioni, error: errPart } = await (supabase as any)
+          .from('partecipazione')
+          .select('bando_id, stato, ruolo')
           .eq('studente_id', user.id)
-          .eq('stato', 'accettata')
 
-        const acceptedIds = candidature?.map((c: any) => c.bando_id) || []
+        if (errPart) {
+          console.error("❌ Errore lettura tabella partecipazione:", errPart)
+        } else {
+          console.log("✅ Partecipazioni trovate:", partecipazioni)
+        }
+
+        // Filtriamo solo quelle accettate/attive
+        const bandoIds = partecipazioni
+          ?.filter((p: any) => 
+            p.stato?.toLowerCase().includes('accettat') || 
+            p.stato?.toLowerCase() === 'attivo'
+          )
+          .map((p: any) => p.bando_id) || []
         
         let partecipati: any[] = []
-        if (acceptedIds.length > 0) {
+        if (bandoIds.length > 0) {
           const { data: res } = await supabase
             .from('bando')
             .select('id, titolo, descrizione')
-            .in('id', acceptedIds)
+            .in('id', bandoIds)
           if (res) partecipati = res
         }
 
+        // Uniamo i progetti creati e quelli a cui partecipa
         const allProjects = [...(creati || []), ...partecipati].filter((v,i,a)=>a.findIndex(v2=>(v2.id===v.id))===i)
+        
         setMyPlatformProjects(allProjects)
 
-        // --- RESTO DEI DATI ---
+        // --- CARICAMENTO TAG E CORSI (Rimanenti) ---
         const { data: tags } = await supabase.from('interesse').select('*').order('nome', { ascending: true })
         if (tags) setAvailableInterests(tags)
 
@@ -161,8 +178,8 @@ export default function ProfilePage() {
         if (myTags) setSelectedTags(myTags.map((t: any) => t.interesse_id))
 
       } catch (err: any) {
-        console.error("Errore caricamento:", err)
-        setError("Impossibile caricare i dati.")
+        console.error("Errore generale caricamento:", err)
+        setError("Errore nel recupero dei progetti.")
       } finally {
         setLoading(false)
       }
