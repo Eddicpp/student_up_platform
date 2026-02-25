@@ -190,48 +190,48 @@ export default function MemberBadges({ bandoId, currentUserId, members }: Member
         <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
           <span>🏆</span> Badge & Achievements
         </h2>
-        <p className="text-xs text-gray-600 mt-1">Guadagna badge partecipando al team!</p>
+        <p className="text-xs text-gray-800 font-bold mt-1">Guadagna badge partecipando al team!</p>
       </div>
 
       {/* My Stats */}
       {myStats && (
-        <div className="p-4 bg-gray-50 border-b border-gray-200">
-          <p className="text-xs font-bold text-gray-500 uppercase mb-3">Le tue statistiche</p>
+        <div className="p-4 bg-gray-50 border-b-2 border-gray-900">
+          <p className="text-xs font-black text-gray-900 uppercase tracking-widest mb-3">Le tue statistiche</p>
           <div className="grid grid-cols-4 gap-2">
-            <div className="text-center p-2 bg-white rounded-xl border border-gray-200">
+            <div className="text-center p-2 bg-white rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
               <p className="text-xl font-black text-blue-600">{myStats.messaggi_count}</p>
-              <p className="text-[10px] text-gray-500 font-medium">Messaggi</p>
+              <p className="text-[10px] text-gray-900 font-black uppercase">Messaggi</p>
             </div>
-            <div className="text-center p-2 bg-white rounded-xl border border-gray-200">
+            <div className="text-center p-2 bg-white rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
               <p className="text-xl font-black text-pink-600">{myStats.reazioni_date}</p>
-              <p className="text-[10px] text-gray-500 font-medium">Reazioni</p>
+              <p className="text-[10px] text-gray-900 font-black uppercase">Reazioni</p>
             </div>
-            <div className="text-center p-2 bg-white rounded-xl border border-gray-200">
+            <div className="text-center p-2 bg-white rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
               <p className="text-xl font-black text-green-600">{myStats.todo_completati}</p>
-              <p className="text-[10px] text-gray-500 font-medium">Task ✓</p>
+              <p className="text-[10px] text-gray-900 font-black uppercase">Task ✓</p>
             </div>
-            <div className="text-center p-2 bg-white rounded-xl border border-gray-200">
+            <div className="text-center p-2 bg-white rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
               <p className="text-xl font-black text-orange-600">{myStats.giorni_streak}</p>
-              <p className="text-[10px] text-gray-500 font-medium">🔥 Streak</p>
+              <p className="text-[10px] text-gray-900 font-black uppercase">🔥 Streak</p>
             </div>
           </div>
         </div>
       )}
 
       {/* My Badges */}
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-4 border-b-2 border-gray-900">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-bold text-gray-500 uppercase">I tuoi badge ({myBadges.length})</p>
+          <p className="text-xs font-black text-gray-900 uppercase tracking-widest">I tuoi badge ({myBadges.length})</p>
           <button
             onClick={() => setShowAllBadges(!showAllBadges)}
-            className="text-xs text-blue-600 font-bold hover:underline"
+            className="text-xs text-blue-600 font-black hover:underline uppercase tracking-wider"
           >
-            {showAllBadges ? 'Nascondi tutti' : 'Vedi tutti i badge'}
+            {showAllBadges ? 'Nascondi tutti' : 'Vedi tutti'}
           </button>
         </div>
 
         {myBadges.length === 0 ? (
-          <p className="text-sm text-gray-400 italic">Nessun badge ancora. Continua a partecipare!</p>
+          <p className="text-sm text-gray-500 font-bold italic">Nessun badge ancora. Fatti valere!</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {myBadges.map(badge => {
@@ -241,13 +241,13 @@ export default function MemberBadges({ bandoId, currentUserId, members }: Member
               return (
                 <div
                   key={badge.id}
-                  className="px-3 py-2 bg-gradient-to-r from-amber-100 to-yellow-100 rounded-xl border-2 border-amber-400 flex items-center gap-2 shadow-sm"
+                  className="px-3 py-2 bg-amber-300 rounded-xl border-2 border-gray-900 flex items-center gap-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
                   title={badgeInfo.description}
                 >
                   <span className="text-xl">{badgeInfo.icon}</span>
                   <div>
-                    <p className="text-xs font-bold text-gray-900">{badgeInfo.label}</p>
-                    <p className="text-[10px] text-gray-500">
+                    <p className="text-xs font-black text-gray-900">{badgeInfo.label}</p>
+                    <p className="text-[9px] text-gray-800 font-bold">
                       {new Date(badge.earned_at).toLocaleDateString('it-IT')}
                     </p>
                   </div>
@@ -260,8 +260,8 @@ export default function MemberBadges({ bandoId, currentUserId, members }: Member
 
       {/* All Badges (collapsible) */}
       {showAllBadges && (
-        <div className="p-4 bg-gray-50 border-b border-gray-200">
-          <p className="text-xs font-bold text-gray-500 uppercase mb-3">Tutti i badge disponibili</p>
+        <div className="p-4 bg-gray-100 border-b-2 border-gray-900">
+          <p className="text-xs font-black text-gray-900 uppercase tracking-widest mb-3">Tutti i badge sbloccabili</p>
           <div className="grid grid-cols-2 gap-2">
             {allBadgeTypes.map(([type, info]) => {
               const earned = myBadges.some(b => b.badge_type === type)
@@ -269,21 +269,21 @@ export default function MemberBadges({ bandoId, currentUserId, members }: Member
               return (
                 <div
                   key={type}
-                  className={`p-3 rounded-xl border-2 flex items-center gap-2 transition-all ${
+                  className={`p-3 rounded-xl border-2 border-gray-900 flex items-center gap-2 transition-all ${
                     earned
-                      ? 'bg-gradient-to-r from-amber-100 to-yellow-100 border-amber-400'
-                      : 'bg-gray-100 border-gray-300 opacity-60'
+                      ? 'bg-amber-300 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                      : 'bg-white opacity-60'
                   }`}
                   title={info.description}
                 >
                   <span className={`text-2xl ${earned ? '' : 'grayscale'}`}>{info.icon}</span>
                   <div className="flex-1 min-w-0">
-                    <p className={`text-xs font-bold truncate ${earned ? 'text-gray-900' : 'text-gray-500'}`}>
+                    <p className={`text-xs font-black truncate ${earned ? 'text-gray-900' : 'text-gray-500'}`}>
                       {info.label}
                     </p>
-                    <p className="text-[10px] text-gray-500 truncate">{info.description}</p>
+                    <p className="text-[10px] text-gray-600 font-medium truncate">{info.description}</p>
                   </div>
-                  {earned && <span className="text-green-500 text-sm">✓</span>}
+                  {earned && <span className="text-gray-900 font-black text-sm">✓</span>}
                 </div>
               )
             })}
@@ -292,9 +292,11 @@ export default function MemberBadges({ bandoId, currentUserId, members }: Member
       )}
 
       {/* Leaderboard */}
-      <div className="p-4">
-        <p className="text-xs font-bold text-gray-500 uppercase mb-3">🏅 Classifica Team</p>
-        <div className="space-y-2">
+      <div className="p-4 pb-6 px-5">
+        <p className="text-xs font-black text-gray-900 uppercase tracking-widest mb-4">🏅 Classifica Team</p>
+        
+        {/* ✅ Aggiunto spacing per evitare il taglio del bordo durante l'animazione */}
+        <div className="space-y-3 px-1">
           {leaderboard.slice(0, 5).map((member, index) => {
             const color = getMemberColor(member.id)
             const memberBadges = getUserBadges(member.id)
@@ -303,18 +305,16 @@ export default function MemberBadges({ bandoId, currentUserId, members }: Member
             return (
               <div
                 key={member.id}
-                className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
-                  isMe 
-                    ? `${color.light} ${color.border}` 
-                    : 'bg-white border-gray-200 hover:border-gray-400'
+                className={`flex items-center gap-3 p-3 rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-transform hover:-translate-y-1 hover:translate-x-1 hover:shadow-none ${
+                  isMe ? 'bg-yellow-100' : 'bg-white'
                 }`}
               >
-                {/* Rank */}
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm ${
-                  index === 0 ? 'bg-amber-400 text-white' :
-                  index === 1 ? 'bg-gray-400 text-white' :
-                  index === 2 ? 'bg-orange-600 text-white' :
-                  'bg-gray-200 text-gray-600'
+                {/* Rank Badge Cartoon */}
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm border-2 border-gray-900 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] ${
+                  index === 0 ? 'bg-amber-400 text-gray-900' :
+                  index === 1 ? 'bg-gray-300 text-gray-900' :
+                  index === 2 ? 'bg-orange-500 text-white' :
+                  'bg-white text-gray-900'
                 }`}>
                   {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
                 </div>
@@ -323,43 +323,35 @@ export default function MemberBadges({ bandoId, currentUserId, members }: Member
                 <img
                   src={member.avatar_url || '/default-avatar.png'}
                   alt=""
-                  className={`w-10 h-10 rounded-xl object-cover border-2 ${color.border}`}
+                  className={`w-10 h-10 rounded-xl object-cover border-2 border-gray-900 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]`}
                 />
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <p className={`font-bold text-sm truncate ${isMe ? color.text : 'text-gray-900'}`}>
+                  <p className={`font-black text-sm truncate text-gray-900`}>
                     {member.nome} {member.cognome}
-                    {isMe && <span className="text-xs ml-1">(tu)</span>}
+                    {isMe && <span className="text-[10px] ml-1 uppercase tracking-widest text-red-600">(Tu)</span>}
                   </p>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 mt-0.5">
                     {memberBadges.slice(0, 4).map((badge, i) => {
                       const badgeInfo = (BADGE_TYPES as any)[badge.badge_type]
                       return (
-                        <span key={i} className="text-xs" title={badgeInfo?.label}>
+                        <span key={i} className="text-sm drop-shadow-sm" title={badgeInfo?.label}>
                           {badgeInfo?.icon}
                         </span>
                       )
                     })}
                     {memberBadges.length > 4 && (
-                      <span className="text-[10px] text-gray-400">+{memberBadges.length - 4}</span>
+                      <span className="text-[10px] font-black text-gray-600 bg-gray-200 px-1 rounded border border-gray-400">+{memberBadges.length - 4}</span>
                     )}
                   </div>
                 </div>
 
                 {/* Badge count */}
-                <div className="text-center">
-                  <p className={`text-lg font-black ${color.text}`}>{member.badgeCount}</p>
-                  <p className="text-[10px] text-gray-500">badge</p>
+                <div className="text-center px-2">
+                  <p className={`text-xl font-black text-gray-900 leading-none`}>{member.badgeCount}</p>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-gray-500">badge</p>
                 </div>
-
-                {/* Stats preview */}
-                {member.stats && (
-                  <div className="hidden sm:flex items-center gap-2 text-xs text-gray-500">
-                    <span title="Messaggi">💬 {member.stats.messaggi_count}</span>
-                    <span title="Streak">🔥 {member.stats.giorni_streak}</span>
-                  </div>
-                )}
               </div>
             )
           })}
@@ -368,44 +360,58 @@ export default function MemberBadges({ bandoId, currentUserId, members }: Member
         {leaderboard.length > 5 && (
           <button
             onClick={() => setSelectedMember(selectedMember ? null : 'all')}
-            className="w-full mt-3 py-2 text-xs font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+            className="w-full mt-4 py-3 text-xs font-black uppercase tracking-widest text-gray-900 bg-white border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] rounded-xl transition-all"
           >
-            {selectedMember === 'all' ? '↑ Mostra meno' : `↓ Mostra tutti (${leaderboard.length})`}
+            {selectedMember === 'all' ? '↑ Mostra solo la Top 5' : `↓ Mostra tutti i membri (${leaderboard.length})`}
           </button>
         )}
 
-        {selectedMember === 'all' && leaderboard.slice(5).map((member, index) => {
-          const color = getMemberColor(member.id)
-          const memberBadges = getUserBadges(member.id)
-          const isMe = member.id === currentUserId
+        {selectedMember === 'all' && (
+          <div className="space-y-3 px-1 mt-3">
+            {leaderboard.slice(5).map((member, index) => {
+              const memberBadges = getUserBadges(member.id)
+              const isMe = member.id === currentUserId
 
-          return (
-            <div
-              key={member.id}
-              className={`flex items-center gap-3 p-3 rounded-xl border-2 mt-2 ${
-                isMe ? `${color.light} ${color.border}` : 'bg-white border-gray-200'
-              }`}
-            >
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm bg-gray-200 text-gray-600">
-                {index + 6}
-              </div>
-              <img
-                src={member.avatar_url || '/default-avatar.png'}
-                alt=""
-                className={`w-10 h-10 rounded-xl object-cover border-2 ${color.border}`}
-              />
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-sm truncate text-gray-900">
-                  {member.nome} {member.cognome}
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-lg font-black text-gray-600">{member.badgeCount}</p>
-                <p className="text-[10px] text-gray-500">badge</p>
-              </div>
-            </div>
-          )
-        })}
+              return (
+                <div
+                  key={member.id}
+                  className={`flex items-center gap-3 p-3 rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-transform hover:-translate-y-1 hover:translate-x-1 hover:shadow-none ${
+                    isMe ? 'bg-yellow-100' : 'bg-white'
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm bg-gray-100 border-2 border-gray-900 text-gray-900">
+                    {index + 6}
+                  </div>
+                  <img
+                    src={member.avatar_url || '/default-avatar.png'}
+                    alt=""
+                    className="w-10 h-10 rounded-xl object-cover border-2 border-gray-900"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-black text-sm truncate text-gray-900">
+                      {member.nome} {member.cognome}
+                      {isMe && <span className="text-[10px] ml-1 uppercase tracking-widest text-red-600">(Tu)</span>}
+                    </p>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      {memberBadges.slice(0, 3).map((badge, i) => {
+                        const badgeInfo = (BADGE_TYPES as any)[badge.badge_type]
+                        return (
+                          <span key={i} className="text-sm drop-shadow-sm" title={badgeInfo?.label}>
+                            {badgeInfo?.icon}
+                          </span>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <div className="text-center px-2">
+                    <p className="text-xl font-black text-gray-900 leading-none">{member.badgeCount}</p>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-gray-500">badge</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )

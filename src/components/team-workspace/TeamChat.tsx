@@ -58,18 +58,16 @@ export default function TeamChat({
   const [showMentions, setShowMentions] = useState(false)
   const [mentionSearch, setMentionSearch] = useState('')
   const [uploadingFile, setUploadingFile] = useState(false)
-  const [showPinned, setShowPinned] = useState(true) // ✅ Modificato: Aperto di default
+  const [showPinned, setShowPinned] = useState(true)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  // ✅ NUOVA FUNZIONE: Scorrimento al messaggio cliccato
   const scrollToMessage = (msgId: string) => {
     const el = document.getElementById(`message-${msgId}`)
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      // Effetto flash visivo per far capire quale messaggio è stato cliccato
       el.animate([
         { backgroundColor: 'rgba(251, 191, 36, 0.4)' },
         { backgroundColor: 'transparent' }
@@ -406,7 +404,7 @@ export default function TeamChat({
       fetchMessages()
     } catch (err: any) {
       console.error('Upload error:', err)
-      alert('Errore caricamento. Hai creato il bucket "team-files" pubblico su Supabase? Dettaglio: ' + err.message)
+      alert('Errore caricamento. Dettaglio: ' + err.message)
     }
 
     setUploadingFile(false)
@@ -437,7 +435,7 @@ export default function TeamChat({
         if (member && menzioni.includes(member.id)) {
           const color = getMemberColor(member.id)
           return (
-            <span key={i} className={`${color.light} ${color.text} px-1 rounded font-bold`}>
+            <span key={i} className={`${color.light} ${color.text} px-1 rounded font-black border-b-2 ${color.border}`}>
               {part}
             </span>
           )
@@ -473,8 +471,7 @@ export default function TeamChat({
           <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
             <span>💬</span> Chat Team
           </h2>
-          {/* ✅ Scurito il testo del badge */}
-          <span className="text-xs text-gray-700 font-bold bg-white px-2 py-1 rounded-lg border border-gray-400">
+          <span className="text-xs text-gray-900 font-black bg-white px-2 py-1 rounded-lg border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
             {messages.length} messaggi
           </span>
         </div>
@@ -483,39 +480,37 @@ export default function TeamChat({
           {pinnedMessages.length > 0 && (
             <button
               onClick={() => setShowPinned(!showPinned)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${
+              className={`px-4 py-2 rounded-xl text-xs font-black transition-all border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none ${
                 showPinned 
-                  ? 'bg-amber-500 text-white border-amber-600' 
-                  : 'bg-amber-100 text-amber-800 border-amber-400 hover:bg-amber-200'
+                  ? 'bg-amber-400 text-gray-900' 
+                  : 'bg-white text-gray-900 hover:bg-amber-100'
               }`}
             >
-              📌 {pinnedMessages.length}
+              📌 {pinnedMessages.length} Fissati
             </button>
           )}
         </div>
       </div>
 
       {showPinned && pinnedMessages.length > 0 && (
-        <div className="p-3 bg-amber-50 border-b-2 border-amber-300 max-h-32 overflow-y-auto">
-          {/* ✅ Scurito il titolo */}
-          <p className="text-xs font-bold text-amber-800 mb-2">📌 Messaggi Fissati</p>
+        <div className="p-3 bg-amber-50 border-b-2 border-gray-900 max-h-32 overflow-y-auto">
+          <p className="text-xs font-black text-gray-900 mb-2 uppercase tracking-widest">📌 Messaggi Fissati</p>
           {pinnedMessages.map(msg => (
             <div 
               key={msg.id} 
-              onClick={() => scrollToMessage(msg.id)} // ✅ Cliccabile per scorrere
-              className="flex items-center gap-2 text-xs bg-white p-2 rounded-lg border border-amber-300 mb-1 cursor-pointer hover:bg-amber-100 transition-colors"
+              onClick={() => scrollToMessage(msg.id)}
+              className="flex items-center gap-2 text-xs bg-white p-2 rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] mb-2 cursor-pointer hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
             >
-              <img src={msg.studente?.avatar_url || '/default-avatar.png'} className="w-5 h-5 rounded-full" alt="" />
-              <span className="font-bold text-gray-900">{msg.studente?.nome}:</span>
-              {/* ✅ Scurito il testo del messaggio pinnato */}
-              <span className="text-gray-800 font-medium truncate flex-1">{msg.testo}</span>
+              <img src={msg.studente?.avatar_url || '/default-avatar.png'} className="w-6 h-6 rounded-full border border-gray-900" alt="" />
+              <span className="font-black text-gray-900">{msg.studente?.nome}:</span>
+              <span className="text-gray-900 font-bold truncate flex-1">{msg.testo}</span>
               {isAdmin && (
                 <button 
                   onClick={(e) => { 
-                    e.stopPropagation() // ✅ Evita che cliccando la 'X' si scorra la pagina
+                    e.stopPropagation() 
                     togglePin(msg.id, true) 
                   }} 
-                  className="text-red-600 hover:text-red-800 p-1 rounded-md"
+                  className="text-red-600 hover:text-red-800 p-1 font-black text-sm rounded-md"
                 >
                   ✕
                 </button>
@@ -525,14 +520,13 @@ export default function TeamChat({
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-100">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-100 pattern-dots">
         {messages.length === 0 ? (
           <div className="h-full flex items-center justify-center text-center">
-            <div className={`${cardStyle} p-8`}>
+            <div className={`${cardStyle} p-8 bg-white`}>
               <span className="text-5xl block mb-3">💬</span>
-              <p className="text-gray-900 font-bold">Nessun messaggio ancora</p>
-              {/* ✅ Scurito il testo del placeholder */}
-              <p className="text-gray-700 text-sm font-medium">Inizia la conversazione!</p>
+              <p className="text-gray-900 font-black text-lg">Nessun messaggio ancora</p>
+              <p className="text-gray-700 text-sm font-bold">Inizia la conversazione!</p>
             </div>
           </div>
         ) : (
@@ -542,32 +536,28 @@ export default function TeamChat({
             const isPinned = pinnedMessages.some(p => p.id === msg.id)
 
             return (
-              // ✅ Aggiunto ID per permettere lo scorrimento
               <div id={`message-${msg.id}`} key={msg.id} className={`flex gap-3 ${isMe ? 'flex-row-reverse' : ''} group`}>
                 <img 
                   src={msg.studente?.avatar_url || '/default-avatar.png'} 
                   alt=""
-                  className={`w-9 h-9 rounded-xl object-cover flex-shrink-0 border-2 ${color.border}`}
+                  className={`w-10 h-10 rounded-xl object-cover flex-shrink-0 border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`}
                 />
-                <div className={`max-w-[70%] ${isMe ? 'text-right' : ''}`}>
+                <div className={`max-w-[75%] ${isMe ? 'text-right' : ''}`}>
                   <div className={`flex items-center gap-2 mb-1 ${isMe ? 'justify-end' : ''}`}>
-                    <span className={`w-2 h-2 rounded-full ${color.bg}`}></span>
-                    {/* ✅ Scurito il nome mittente */}
-                    <p className="text-xs font-bold text-gray-800">
+                    <p className="text-xs font-black text-gray-900">
                       {msg.studente?.nome} {msg.studente?.cognome}
                     </p>
-                    {/* ✅ Scurito l'orario */}
-                    <p className="text-[10px] text-gray-600 font-medium">
+                    <p className="text-[10px] text-gray-600 font-bold">
                       {new Date(msg.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
                     </p>
                     {isPinned && <span className="text-xs">📌</span>}
                   </div>
 
                   <div 
-                    className={`px-4 py-2.5 rounded-[1.5rem] border-2 text-left relative text-white ${color.bg} ${color.border} ${
+                    className={`px-4 py-3 rounded-2xl border-2 border-gray-900 text-left relative text-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] ${color.bg} ${
                       isMe ? 'rounded-br-sm' : 'rounded-bl-sm'
                     }`}
-                    style={color.bgHex ? { backgroundColor: color.bgHex, borderColor: color.bgHex } : undefined}
+                    style={color.bgHex ? { backgroundColor: color.bgHex } : undefined}
                   >
                     {msg.file_url && (
                       <div className="mb-2">
@@ -575,7 +565,7 @@ export default function TeamChat({
                           <img 
                             src={msg.file_url} 
                             alt={msg.file_nome} 
-                            className="max-w-full rounded-lg border border-white/30 cursor-pointer"
+                            className="max-w-full rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-pointer hover:scale-[1.02] transition-transform"
                             onClick={() => window.open(msg.file_url, '_blank')}
                           />
                         ) : (
@@ -583,32 +573,32 @@ export default function TeamChat({
                             href={msg.file_url} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-black/20 hover:bg-black/30 transition-colors"
+                            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white text-gray-900 font-bold border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
                           >
-                            <span>📄</span>
-                            <span className="text-sm underline">{msg.file_nome}</span>
+                            <span className="text-xl">📄</span>
+                            <span className="text-sm truncate">{msg.file_nome}</span>
                           </a>
                         )}
                       </div>
                     )}
 
-                    <p className="text-sm break-words">
+                    <p className="text-sm font-medium break-words leading-relaxed">
                       {renderMessageText(msg.testo, msg.menzioni)}
                     </p>
 
                     {msg.reazioni && msg.reazioni.length > 0 && (
-                      <div className={`flex flex-wrap gap-1 mt-2 ${isMe ? 'justify-end' : ''}`}>
+                      <div className={`flex flex-wrap gap-1.5 mt-3 ${isMe ? 'justify-end' : ''}`}>
                         {msg.reazioni.map((r, i) => (
                           <button
                             key={i}
                             onClick={() => toggleReaction(msg.id, r.emoji)}
-                            className={`px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 transition-all ${
+                            className={`px-2 py-1 rounded-lg text-xs font-black flex items-center gap-1 transition-all border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none ${
                               r.users.includes(currentUserId)
-                                ? 'bg-black/30 text-white border-2 border-black/50'
-                                : 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
+                                ? 'bg-yellow-300 text-gray-900'
+                                : 'bg-white text-gray-900'
                             }`}
                           >
-                            <span>{r.emoji}</span>
+                            <span className="text-sm">{r.emoji}</span>
                             <span>{r.count}</span>
                           </button>
                         ))}
@@ -616,10 +606,11 @@ export default function TeamChat({
                     )}
                   </div>
 
-                  <div className={`flex gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity relative ${isMe ? 'justify-end' : ''}`}>
+                  {/* Pulsanti Azione Messaggio: Ora Neo-Brutalisti */}
+                  <div className={`flex gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity relative ${isMe ? 'justify-end' : ''}`}>
                     <button
                       onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)}
-                      className="p-1 text-xs hover:bg-gray-200 rounded-lg"
+                      className="p-1.5 text-sm bg-white border-2 border-gray-900 rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-yellow-300 hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
                       title="Reagisci"
                     >
                       😊
@@ -627,7 +618,7 @@ export default function TeamChat({
                     {isAdmin && (
                       <button
                         onClick={() => togglePin(msg.id, isPinned)}
-                        className={`p-1 text-xs hover:bg-gray-200 rounded-lg ${isPinned ? 'text-amber-500' : ''}`}
+                        className={`p-1.5 text-sm bg-white border-2 border-gray-900 rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-amber-300 hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all ${isPinned ? 'bg-amber-300' : ''}`}
                         title={isPinned ? 'Rimuovi pin' : 'Fissa messaggio'}
                       >
                         📌
@@ -635,12 +626,12 @@ export default function TeamChat({
                     )}
 
                     {showEmojiPicker === msg.id && (
-                      <div className={`absolute bottom-full mb-1 ${isMe ? 'right-0' : 'left-0'} bg-white rounded-xl border-2 border-gray-900 shadow-lg p-2 flex gap-1 z-50`}>
+                      <div className={`absolute bottom-full mb-2 ${isMe ? 'right-0' : 'left-0'} bg-white rounded-2xl border-4 border-gray-900 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-2 flex gap-1 z-50`}>
                         {REACTION_EMOJIS.map(emoji => (
                           <button
                             key={emoji}
                             onClick={() => toggleReaction(msg.id, emoji)}
-                            className="p-1.5 hover:bg-gray-100 rounded-lg text-lg transition-transform hover:scale-125"
+                            className="p-2 hover:bg-gray-100 rounded-xl text-xl transition-transform hover:scale-125"
                           >
                             {emoji}
                           </button>
@@ -657,38 +648,36 @@ export default function TeamChat({
       </div>
 
       {typingUsers.length > 0 && (
-        <div className="px-4 py-2 bg-gray-50 border-t border-gray-300">
-          {/* ✅ Scurito il testo di chi sta scrivendo */}
-          <div className="flex items-center gap-2 text-xs text-gray-700 font-medium">
+        <div className="px-4 py-2 bg-yellow-50 border-t-2 border-gray-900">
+          <div className="flex items-center gap-2 text-xs text-gray-900 font-black uppercase tracking-widest">
             <div className="flex space-x-1">
-              {/* ✅ Pallini scuriti */}
-              <span className="w-2 h-2 bg-gray-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-              <span className="w-2 h-2 bg-gray-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-              <span className="w-2 h-2 bg-gray-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+              <span className="w-2 h-2 bg-gray-900 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+              <span className="w-2 h-2 bg-gray-900 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+              <span className="w-2 h-2 bg-gray-900 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
             </div>
-            <span className="italic">{getTypingNames()}</span>
+            <span>{getTypingNames()}</span>
           </div>
         </div>
       )}
 
       <div className="p-4 border-t-2 border-gray-900 bg-white relative">
         {showMentions && filteredMembers.length > 0 && (
-          <div className="absolute bottom-full left-4 right-4 mb-2 bg-white rounded-xl border-2 border-gray-900 shadow-lg max-h-40 overflow-y-auto">
+          <div className="absolute bottom-full left-4 right-4 mb-2 bg-white rounded-xl border-4 border-gray-900 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] max-h-40 overflow-y-auto z-50">
             {filteredMembers.map(member => {
               const color = getMemberColor(member.id)
               return (
                 <button
                   key={member.id}
                   onClick={() => insertMention(member)}
-                  className="w-full flex items-center gap-3 p-3 hover:bg-gray-100 transition-colors text-left"
+                  className="w-full flex items-center gap-3 p-3 hover:bg-yellow-100 transition-colors text-left border-b-2 border-gray-200 last:border-b-0"
                 >
                   <img 
                     src={member.avatar_url || '/default-avatar.png'} 
-                    className={`w-8 h-8 rounded-lg border-2 ${color.border}`}
+                    className={`w-8 h-8 rounded-lg border-2 border-gray-900`}
                     alt=""
                   />
                   <div>
-                    <p className="font-bold text-sm text-gray-900">{member.nome} {member.cognome}</p>
+                    <p className="font-black text-sm text-gray-900">{member.nome} {member.cognome}</p>
                   </div>
                 </button>
               )
@@ -704,16 +693,18 @@ export default function TeamChat({
             onChange={handleFileUpload}
             accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
           />
+          {/* ✅ BOTTONE ALLEGATI CARTOON */}
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadingFile}
-            className="p-3 bg-gray-100 hover:bg-gray-200 rounded-xl border-2 border-gray-400 transition-colors disabled:opacity-50"
+            className="p-3 w-14 flex items-center justify-center bg-blue-300 hover:bg-blue-400 rounded-xl border-2 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all disabled:opacity-50"
             title="Allega file"
           >
-            {uploadingFile ? '⏳' : '📎'}
+            <span className="text-xl">{uploadingFile ? '⏳' : '📎'}</span>
           </button>
 
           <div className="flex-1 relative">
+            {/* ✅ TEXTAREA CARTOON */}
             <textarea
               ref={inputRef}
               value={newMessage}
@@ -725,32 +716,33 @@ export default function TeamChat({
                 }
               }}
               onBlur={clearTyping}
-              /* ✅ Placeholder scurito aggiungendo placeholder:text-gray-600 */
-              placeholder="Scrivi un messaggio... (@nome per menzionare)"
-              className="w-full px-4 py-3 bg-gray-100 text-gray-900 placeholder:text-gray-600 rounded-xl border-2 border-gray-400 focus:border-gray-900 outline-none text-sm resize-none font-medium"
+              placeholder="Scrivi un messaggio... (@ per menzionare)"
+              className="w-full px-4 py-3 bg-white text-gray-900 placeholder:text-gray-500 rounded-xl border-2 border-gray-900 focus:outline-none focus:translate-x-[2px] focus:translate-y-[2px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-sm resize-none font-black transition-all"
               rows={1}
             />
           </div>
 
+          {/* ✅ BOTTONE INVIA CARTOON */}
           <button
             onClick={sendMessage}
             disabled={!newMessage.trim() || sendingMessage}
-            className="px-5 py-3 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all border-2 border-gray-700 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px]"
+            className="px-6 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white rounded-xl font-black text-xl disabled:opacity-50 border-2 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all"
+            title="Invia messaggio"
           >
-            {sendingMessage ? '...' : '→'}
+            {sendingMessage ? '...' : '↗'}
           </button>
         </div>
 
+        {/* ✅ BOTTONE EMAIL TEAM CARTOON */}
         {isAdmin && (
           <button
             onClick={handleEmailTeam}
-            /* ✅ Tasto invia email scurito e reso più visibile */
-            className="mt-3 w-full py-2.5 text-xs font-bold text-gray-700 hover:text-red-700 hover:bg-red-50 rounded-xl transition-colors flex items-center justify-center gap-2 border-2 border-dashed border-gray-400 hover:border-red-400"
+            className="mt-4 w-full py-3 text-xs font-black uppercase tracking-widest text-gray-900 bg-yellow-300 hover:bg-yellow-400 rounded-xl transition-all flex items-center justify-center gap-2 border-2 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px]"
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
               <path d="M20 18h-2V9.25L12 13 6 9.25V18H4V6h1.2l6.8 4.25L18.8 6H20m0-2H4c-1.11 0-2 .89-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2z"/>
             </svg>
-            Apri Gmail per il team
+            Invia Email al Team
           </button>
         )}
       </div>
