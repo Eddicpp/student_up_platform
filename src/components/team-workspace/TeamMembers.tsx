@@ -39,7 +39,7 @@ export default function TeamMembers({
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set())
   const [memberBadges, setMemberBadges] = useState<Record<string, string[]>>({})
   
-  // ✅ STATI PER IL PERSONAGGIO CHE SBUCA
+  // STATI PER IL PERSONAGGIO CHE SBUCA
   const [isHoveringCard, setIsHoveringCard] = useState(false)
   const [peekerPos, setPeekerPos] = useState({ edge: 'top', position: '50%' })
 
@@ -57,10 +57,10 @@ export default function TeamMembers({
     }, 300) 
   }
 
-  // ✅ LOGICA PERSONAGGIO: Calcola una posizione casuale sui bordi
+  // ✅ LOGICA PERSONAGGIO: Rimosso 'left', posizioni possibili solo top, bottom, right
   const handleCardMouseEnter = () => {
     setIsHoveringCard(true)
-    const edges = ['top', 'bottom', 'left', 'right']
+    const edges = ['top', 'bottom', 'right'] // 'left' rimosso
     const randomEdge = edges[Math.floor(Math.random() * edges.length)]
     // Posizione percentuale tra 10% e 90% per evitare gli angoli stretti
     const randomPos = `${Math.floor(Math.random() * 80) + 10}%`
@@ -171,23 +171,20 @@ export default function TeamMembers({
   const getPeekerStyles = () => {
     const baseStyle = "absolute text-3xl transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] z-0"
     
-    // Le posizioni determinano da dove esce e quanto sta nascosto
     switch (peekerPos.edge) {
       case 'top':
         return `${baseStyle} left-[${peekerPos.position}] top-0 -translate-y-full ${isHoveringCard ? 'translate-y-[-70%]' : 'translate-y-0 opacity-0'}`
       case 'bottom':
         return `${baseStyle} left-[${peekerPos.position}] bottom-0 translate-y-full ${isHoveringCard ? 'translate-y-[70%]' : 'translate-y-0 opacity-0'}`
-      case 'left':
-        return `${baseStyle} top-[${peekerPos.position}] left-0 -translate-x-full ${isHoveringCard ? 'translate-x-[-70%]' : 'translate-x-0 opacity-0'}`
       case 'right':
-        return `${baseStyle} top-[${peekerPos.position}] right-0 translate-x-full ${isHoveringCard ? 'translate-x-[70%]' : 'translate-x-0 opacity-0'}`
+        // ✅ Aggiunto rotate-90 quando spunta dalla destra
+        return `${baseStyle} top-[${peekerPos.position}] right-0 translate-x-full rotate-90 ${isHoveringCard ? 'translate-x-[70%]' : 'translate-x-0 opacity-0'}`
       default:
         return baseStyle
     }
   }
 
   return (
-    // Contenitore esterno relativo per far funzionare l'overflow dell'omino
     <div className="relative">
       
       {/* L'osservatore (The Peeker) */}
@@ -268,7 +265,7 @@ export default function TeamMembers({
                       'text-gray-500'
                     }`}>
                       {member.ruolo_team === 'owner' ? 'Owner' :
-                      member.ruolo_team === 'admin' ? 'Admin' : 'Membro'}
+                       member.ruolo_team === 'admin' ? 'Admin' : 'Membro'}
                     </p>
                   </div>
 
@@ -295,7 +292,7 @@ export default function TeamMembers({
             onMouseLeave={handleMouseLeave}
           >
             <div className={`-mx-4 -mt-4 mb-4 p-4 rounded-t-[14px] border-b-4 border-gray-900 ${activeColor.bgHex ? '' : activeColor.light}`}
-                style={activeColor.bgHex ? { backgroundColor: activeColor.bgHex } : undefined}>
+                 style={activeColor.bgHex ? { backgroundColor: activeColor.bgHex } : undefined}>
               <div className="flex items-center gap-3">
                 <img 
                   src={activeMember.avatar_url || '/default-avatar.png'} 
