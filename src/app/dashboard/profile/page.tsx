@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 import { useUser } from '@/app/context/UserContext'
 
@@ -10,15 +11,6 @@ interface Tag {
   id: string
   nome: string
   categoria?: string
-}
-
-// ✅ NUOVA INTERFACCIA PER I PROGETTI
-interface ProgettoVetrina {
-  id: string
-  titolo: string
-  ruolo: string
-  link: string
-  visibile: boolean
 }
 
 export default function ProfilePage() {
@@ -56,13 +48,18 @@ export default function ProfilePage() {
   const [bannerFile, setBannerFile] = useState<File | null>(null)
   const [cvFile, setCvFile] = useState<File | null>(null)
 
-  // --- STATI TAG E PROGETTI ---
+  // --- STATI BANNER CONTROLS ---
+  const [bannerScale, setBannerScale] = useState<number>(1)
+  const [bannerPosY, setBannerPosY] = useState<number>(50)
+
+  // --- STATI TAG ---
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [availableInterests, setAvailableInterests] = useState<Tag[]>([])
   const [customTagInput, setCustomTagInput] = useState('')
 
-  const [progettiVetrina, setProgettiVetrina] = useState<ProgettoVetrina[]>([])
-  const [nuovoProgetto, setNuovoProgetto] = useState({ titolo: '', ruolo: '', link: '' })
+  // --- STATI PROGETTI VETRINA ---
+  const [myPlatformProjects, setMyPlatformProjects] = useState<any[]>([])
+  const [hiddenProjects, setHiddenProjects] = useState<string[]>([])
 
   // --- STATI UI ---
   const [loading, setLoading] = useState(true)
@@ -94,7 +91,7 @@ export default function ProfilePage() {
           return
         }
 
-        const { data: studente, error: fetchError }: any = await supabase
+        const { data: studente }: any = await supabase
           .from('studente')
           .select('*')
           .eq('id', user.id)
@@ -111,32 +108,48 @@ export default function ProfilePage() {
           setGithubUrl(studente.github_url || '')
           setWebsiteUrl(studente.website_url || '')
           setTwitterUrl(studente.twitter_url || '')
-          // Carica progetti vetrina
-          setProgettiVetrina(studente.progetti_vetrina || [])
+          
+          if (studente.banner_settings) {
+            setBannerScale(studente.banner_settings.scale || 1)
+            setBannerPosY(studente.banner_settings.posY || 50)
+          }
+          setHiddenProjects(studente.progetti_nascosti || [])
         }
 
-        const { data: tags } = await supabase
-          .from('interesse')
-          .select('*') 
-          .order('nome', { ascending: true })
+        // --- FETCH PROGETTI PIATTAFORMA ---
+        const { data: creati } = await supabase
+          .from('bando')
+          .select('id, titolo, descrizione')
+          .eq('studente_id', user.id)
+
+        const { data: candidature } = await (supabase as any)
+          .from('candidatura')
+          .select('bando_id')
+          .eq('studente_id', user.id)
+          .eq('stato', 'accettata')
+
+        const acceptedIds = candidature?.map((c: any) => c.bando_id) || []
         
+        let partecipati: any[] = []
+        if (acceptedIds.length > 0) {
+          const { data: res } = await supabase
+            .from('bando')
+            .select('id, titolo, descrizione')
+            .in('id', acceptedIds)
+          if (res) partecipati = res
+        }
+
+        const allProjects = [...(creati || []), ...partecipati].filter((v,i,a)=>a.findIndex(v2=>(v2.id===v.id))===i)
+        setMyPlatformProjects(allProjects)
+
+        // --- RESTO DEI DATI ---
+        const { data: tags } = await supabase.from('interesse').select('*').order('nome', { ascending: true })
         if (tags) setAvailableInterests(tags)
 
-        const { data: corsi } = await supabase
-          .from('corso_di_studi')
-          .select('id, nome, tipo')
-          .order('nome', { ascending: true })
-        
+        const { data: corsi } = await supabase.from('corso_di_studi').select('id, nome, tipo').order('nome', { ascending: true })
         if (corsi) setCorsiDisponibili(corsi)
 
-        const { data: corsoAttuale } = await supabase
-          .from('studente_corso')
-          .select('id, corso_id, anno_inizio')
-          .eq('studente_id', user.id)
-          .eq('completato', false)
-          .order('anno_inizio', { ascending: false })
-          .limit(1)
-          .maybeSingle()
+        const { data: corsoAttuale } = await supabase.from('studente_corso').select('id, corso_id, anno_inizio').eq('studente_id', user.id).eq('completato', false).order('anno_inizio', { ascending: false }).limit(1).maybeSingle()
 
         if (corsoAttuale) {
           setStudenteCorsoId(corsoAttuale.id)
@@ -144,14 +157,8 @@ export default function ProfilePage() {
           setAnnoInizio(corsoAttuale.anno_inizio)
         }
 
-        const { data: myTags } = await supabase
-          .from('studente_interesse')
-          .select('interesse_id')
-          .eq('studente_id', user.id)
-
-        if (myTags) {
-          setSelectedTags(myTags.map((t: any) => t.interesse_id))
-        }
+        const { data: myTags } = await supabase.from('studente_interesse').select('interesse_id').eq('studente_id', user.id)
+        if (myTags) setSelectedTags(myTags.map((t: any) => t.interesse_id))
 
       } catch (err: any) {
         console.error("Errore caricamento:", err)
@@ -173,7 +180,7 @@ export default function ProfilePage() {
         .from(bucket)
         .upload(fileName, file, { cacheControl: '3600', upsert: true })
 
-      if (uploadError) throw new Error(`Errore caricamento nel bucket ${bucket}. Assicurati di aver configurato i permessi.`)
+      if (uploadError) throw new Error(`Errore caricamento nel bucket ${bucket}. Verifica permessi RLS.`)
       
       const { data } = supabase.storage.from(bucket).getPublicUrl(fileName)
       return data.publicUrl
@@ -182,12 +189,10 @@ export default function ProfilePage() {
     }
   }
 
-  // --- GESTIONE TAG E PROGETTI ---
+  // --- GESTIONE TAG ---
   const handleTagToggle = (tagId: string) => {
     if (!isEditing) return
-    setSelectedTags(prev => 
-      prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]
-    )
+    setSelectedTags(prev => prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId])
   }
 
   const handleAddCustomTag = (e?: React.FormEvent) => {
@@ -206,34 +211,17 @@ export default function ProfilePage() {
     setCustomTagInput('')
   }
 
-  // Aggiungi Progetto
-  const handleAddProject = () => {
-    if (!nuovoProgetto.titolo.trim() || !nuovoProgetto.ruolo.trim()) return
-    const newProject: ProgettoVetrina = {
-      id: `proj_${Date.now()}`,
-      titolo: nuovoProgetto.titolo.trim(),
-      ruolo: nuovoProgetto.ruolo.trim(),
-      link: nuovoProgetto.link.trim(),
-      visibile: true
-    }
-    setProgettiVetrina([...progettiVetrina, newProject])
-    setNuovoProgetto({ titolo: '', ruolo: '', link: '' })
-  }
-
-  const handleToggleProjectVisibility = (id: string) => {
-    setProgettiVetrina(prev => prev.map(p => p.id === id ? { ...p, visibile: !p.visibile } : p))
-  }
-
-  const handleRemoveProject = (id: string) => {
-    setProgettiVetrina(prev => prev.filter(p => p.id !== id))
-  }
-
   const groupedInterests = availableInterests.reduce((acc, tag) => {
     const cat = tag.categoria || 'Generali'
     if (!acc[cat]) acc[cat] = []
     acc[cat].push(tag)
     return acc
   }, {} as Record<string, Tag[]>)
+
+  // --- GESTIONE PROGETTI VETRINA ---
+  const toggleProjectVisibility = (id: string) => {
+    setHiddenProjects(prev => prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id])
+  }
 
   const handleRemoveCv = () => {
     setCvFile(null)
@@ -262,7 +250,7 @@ export default function ProfilePage() {
       if (bannerFile) finalBannerUrl = await uploadFile(bannerFile, 'banners')
       if (cvFile) finalCvUrl = await uploadFile(cvFile, 'documents')
 
-      // 1. Aggiorna studente (Inclusi i progetti)
+      // AGGIORNA STUDENTE E SETTINGS
       const { error: updateError } = await supabase
         .from('studente')
         .update({
@@ -274,14 +262,14 @@ export default function ProfilePage() {
           github_url: githubUrl,
           website_url: websiteUrl,
           twitter_url: twitterUrl,
-          progetti_vetrina: progettiVetrina, // Salvataggio progetti
+          progetti_nascosti: hiddenProjects,
+          banner_settings: { scale: bannerScale, posY: bannerPosY },
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id)
 
       if (updateError) throw updateError
 
-      // 2. Corsi
       if (corsoSelezionato) {
         if (studenteCorsoId) {
           const { error: corsoError } = await supabase.from('studente_corso').update({ corso_id: corsoSelezionato, anno_inizio: annoInizio }).eq('id', studenteCorsoId)
@@ -293,8 +281,9 @@ export default function ProfilePage() {
         }
       }
 
-      // 3. TAGS
-      const { data: defaultCat } = await supabase.from('categoria').select('id').limit(1).single()
+      // TAGS
+      const { data: defaultCat, error: catError } = await supabase.from('categoria').select('id').limit(1).single()
+      
       const finalTagIds: string[] = []
       
       for (const tagId of selectedTags) {
@@ -355,51 +344,36 @@ export default function ProfilePage() {
       
       {/* HEADER & CONTROLLI */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
-        <button 
-          onClick={() => router.push('/dashboard')}
-          className="px-5 py-3 bg-white border-4 border-gray-900 rounded-xl font-black text-gray-900 uppercase tracking-widest shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all flex items-center gap-2"
-        >
+        <button onClick={() => router.push('/dashboard')} className="px-5 py-3 bg-white border-4 border-gray-900 rounded-xl font-black text-gray-900 uppercase tracking-widest shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all flex items-center gap-2">
           <span className="text-xl">🔙</span> Dashboard
         </button>
-
         {!isEditing ? (
-          <button 
-            onClick={() => setIsEditing(true)}
-            className="px-5 py-3 bg-yellow-300 border-4 border-gray-900 rounded-xl font-black text-gray-900 uppercase tracking-widest shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all flex items-center gap-2"
-          >
+          <button onClick={() => setIsEditing(true)} className="px-5 py-3 bg-yellow-300 border-4 border-gray-900 rounded-xl font-black text-gray-900 uppercase tracking-widest shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all flex items-center gap-2">
             <span className="text-xl">✏️</span> Modifica Profilo
           </button>
         ) : (
-          <button 
-            onClick={handleCancelEdit}
-            className="px-5 py-3 bg-gray-200 border-4 border-gray-900 rounded-xl font-black text-gray-900 uppercase tracking-widest shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all flex items-center gap-2"
-          >
+          <button onClick={handleCancelEdit} className="px-5 py-3 bg-gray-200 border-4 border-gray-900 rounded-xl font-black text-gray-900 uppercase tracking-widest shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all flex items-center gap-2">
             <span className="text-xl">❌</span> Annulla
           </button>
         )}
       </div>
 
-      {/* ALERT MESSAGGI */}
-      {error && (
-        <div className="mb-8 p-4 bg-red-400 border-4 border-gray-900 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] rounded-2xl font-black text-gray-900 text-lg uppercase flex items-center gap-3 animate-in shake">
-          <span>⚠️</span> {error}
-        </div>
-      )}
-      {success && (
-        <div className="mb-8 p-4 bg-green-400 border-4 border-gray-900 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] rounded-2xl font-black text-gray-900 text-lg uppercase flex items-center gap-3">
-          <span>🎉</span> Profilo aggiornato con successo!
-        </div>
-      )}
+      {error && <div className="mb-8 p-4 bg-red-400 border-4 border-gray-900 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] rounded-2xl font-black text-gray-900 text-lg uppercase flex items-center gap-3 animate-in shake"><span>⚠️</span> {error}</div>}
+      {success && <div className="mb-8 p-4 bg-green-400 border-4 border-gray-900 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] rounded-2xl font-black text-gray-900 text-lg uppercase flex items-center gap-3"><span>🎉</span> Profilo aggiornato con successo!</div>}
 
       <form onSubmit={handleSave}>
         <div className="bg-white rounded-[2rem] border-4 border-gray-900 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] overflow-hidden relative">
           
-          {/* BANNER CARTOON */}
-          <div className="h-48 sm:h-64 bg-gray-200 border-b-4 border-gray-900 relative group overflow-hidden pattern-dots">
+          {/* BANNER CARTOON (CON ZOOM E POSIZIONE) */}
+          <div className="h-48 sm:h-72 bg-gray-200 border-b-4 border-gray-900 relative overflow-hidden pattern-dots group">
             {(bannerFile || bannerUrl) ? (
               <img 
                 src={bannerFile ? URL.createObjectURL(bannerFile) : bannerUrl} 
-                className="w-full h-full object-cover" 
+                className="w-full h-full object-cover transition-transform" 
+                style={{
+                  transform: `scale(${bannerScale})`,
+                  objectPosition: `50% ${bannerPosY}%`
+                }}
                 alt="Banner" 
               />
             ) : (
@@ -408,13 +382,27 @@ export default function ProfilePage() {
               </div>
             )}
             
+            {/* PANNELLO DI CONTROLLO BANNER */}
             {isEditing && (
-              <label className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                <span className="bg-white text-gray-900 px-6 py-3 border-4 border-gray-900 rounded-xl font-black uppercase tracking-widest shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center gap-2">
-                  <span className="text-xl">📸</span> Cambia Copertina
-                </span>
-                <input type="file" className="hidden" accept="image/*" onChange={(e) => setBannerFile(e.target.files?.[0] || null)} />
-              </label>
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-4">
+                <label className="bg-white text-gray-900 px-6 py-3 border-4 border-gray-900 rounded-xl font-black uppercase tracking-widest shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all cursor-pointer flex items-center gap-2">
+                  <span>📸</span> Cambia Immagine
+                  <input type="file" className="hidden" accept="image/*" onChange={(e) => setBannerFile(e.target.files?.[0] || null)} />
+                </label>
+
+                {(bannerFile || bannerUrl) && (
+                  <div className="bg-yellow-300 border-4 border-gray-900 p-4 rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col sm:flex-row gap-4 items-center" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex flex-col w-32">
+                      <label className="text-[10px] font-black uppercase text-gray-900 mb-1">🔍 Zoom</label>
+                      <input type="range" min="1" max="3" step="0.1" value={bannerScale} onChange={(e) => setBannerScale(parseFloat(e.target.value))} className="accent-gray-900 cursor-pointer"/>
+                    </div>
+                    <div className="flex flex-col w-32">
+                      <label className="text-[10px] font-black uppercase text-gray-900 mb-1">↕️ Altezza</label>
+                      <input type="range" min="0" max="100" step="1" value={bannerPosY} onChange={(e) => setBannerPosY(parseInt(e.target.value))} className="accent-gray-900 cursor-pointer"/>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -425,26 +413,18 @@ export default function ProfilePage() {
               <div className="relative flex-shrink-0 mx-auto sm:mx-0">
                 <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-gray-900 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden bg-white">
                   {(avatarFile || avatarUrl) ? (
-                    <img 
-                      src={avatarFile ? URL.createObjectURL(avatarFile) : avatarUrl} 
-                      className="w-full h-full object-cover"
-                      alt="Avatar"
-                    />
+                    <img src={avatarFile ? URL.createObjectURL(avatarFile) : avatarUrl} className="w-full h-full object-cover" alt="Avatar"/>
                   ) : (
                     <div className="w-full h-full bg-red-400 flex items-center justify-center">
-                      <span className="text-5xl font-black text-gray-900 uppercase">
-                        {nome.charAt(0)}{cognome.charAt(0)}
-                      </span>
+                      <span className="text-5xl font-black text-gray-900 uppercase">{nome.charAt(0)}{cognome.charAt(0)}</span>
                     </div>
                   )}
                 </div>
-                
                 {globalUser?.is_system_admin && (
                   <div className="absolute bottom-0 right-0 bg-yellow-300 border-4 border-gray-900 text-gray-900 px-3 py-1 rounded-xl text-xs font-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] uppercase -rotate-6">
                     ⚡ Staff
                   </div>
                 )}
-
                 {isEditing && (
                   <label className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 hover:opacity-100 transition-opacity cursor-pointer rounded-full">
                     <span className="text-white font-black uppercase text-sm">Cambia 📸</span>
@@ -458,23 +438,11 @@ export default function ProfilePage() {
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-black uppercase tracking-widest text-gray-600 mb-2">Nome</label>
-                      <input 
-                        type="text" 
-                        value={nome} 
-                        onChange={(e) => setNome(e.target.value)} 
-                        required 
-                        className="w-full px-4 py-3 bg-white rounded-xl border-4 border-gray-900 focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-black text-gray-900 transition-all text-lg uppercase" 
-                      />
+                      <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} required className="w-full px-4 py-3 bg-white rounded-xl border-4 border-gray-900 focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-black text-gray-900 transition-all text-lg uppercase" />
                     </div>
                     <div>
                       <label className="block text-xs font-black uppercase tracking-widest text-gray-600 mb-2">Cognome</label>
-                      <input 
-                        type="text" 
-                        value={cognome} 
-                        onChange={(e) => setCognome(e.target.value)} 
-                        required
-                        className="w-full px-4 py-3 bg-white rounded-xl border-4 border-gray-900 focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-black text-gray-900 transition-all text-lg uppercase" 
-                      />
+                      <input type="text" value={cognome} onChange={(e) => setCognome(e.target.value)} required className="w-full px-4 py-3 bg-white rounded-xl border-4 border-gray-900 focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-black text-gray-900 transition-all text-lg uppercase" />
                     </div>
                   </div>
                 ) : (
@@ -494,97 +462,77 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* SEZIONE BIO E CORSO DI STUDI... */}
+            {/* SEZIONE BIO */}
             <div className="mb-10 bg-blue-50 border-4 border-gray-900 rounded-2xl p-6 relative">
-              <span className="absolute -top-5 left-6 bg-white border-4 border-gray-900 px-4 py-1 rounded-xl font-black uppercase tracking-widest text-gray-900 text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                Chi Sono 💭
-              </span>
+              <span className="absolute -top-5 left-6 bg-white border-4 border-gray-900 px-4 py-1 rounded-xl font-black uppercase tracking-widest text-gray-900 text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">Chi Sono 💭</span>
               {isEditing ? (
-                <textarea 
-                  rows={4} 
-                  value={bio} 
-                  onChange={(e) => setBio(e.target.value)}
-                  className="w-full px-4 py-4 mt-2 bg-white rounded-xl border-4 border-gray-900 focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-bold text-gray-900 transition-all resize-none text-base"
-                  placeholder="Scrivi qualcosa di figo su di te..." 
-                />
+                <textarea rows={4} value={bio} onChange={(e) => setBio(e.target.value)} className="w-full px-4 py-4 mt-2 bg-white rounded-xl border-4 border-gray-900 focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-bold text-gray-900 transition-all resize-none text-base" placeholder="Scrivi qualcosa di figo su di te..." />
               ) : (
-                <p className="text-gray-900 font-bold text-lg leading-relaxed mt-2">
-                  {bio || <span className="text-gray-500 italic font-medium">Nessuna biografia inserita. È un tipo misterioso.</span>}
-                </p>
+                <p className="text-gray-900 font-bold text-lg leading-relaxed mt-2">{bio || <span className="text-gray-500 italic font-medium">Nessuna biografia inserita. È un tipo misterioso.</span>}</p>
               )}
             </div>
 
-            {/* CORSO DI STUDI */}
-            <div className="mb-10 bg-yellow-50 border-4 border-gray-900 rounded-2xl p-6 relative">
-              <span className="absolute -top-5 left-6 bg-white border-4 border-gray-900 px-4 py-1 rounded-xl font-black uppercase tracking-widest text-gray-900 text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                Studi 📚
-              </span>
-              
-              {isEditing ? (
-                <div className="grid sm:grid-cols-2 gap-6 mt-2">
-                  <div>
-                    <label className="block text-xs font-black uppercase tracking-widest text-gray-600 mb-2">Corso</label>
-                    <select
-                      value={corsoSelezionato || ''}
-                      onChange={(e) => setCorsoSelezionato(e.target.value || null)}
-                      className="w-full px-4 py-3 bg-white rounded-xl border-4 border-gray-900 focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-bold text-gray-900 transition-all cursor-pointer"
-                    >
-                      <option value="">Seleziona un corso...</option>
-                      {corsiDisponibili.map(corso => (
-                        <option key={corso.id} value={corso.id}>{corso.nome} ({corso.tipo})</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-black uppercase tracking-widest text-gray-600 mb-2">Anno di Iscrizione</label>
-                    <select
-                      value={annoInizio}
-                      onChange={(e) => setAnnoInizio(parseInt(e.target.value))}
-                      className="w-full px-4 py-3 bg-white rounded-xl border-4 border-gray-900 focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-bold text-gray-900 transition-all cursor-pointer"
-                    >
-                      {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(year => (
-                        <option key={year} value={year}>{year}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-2 flex items-center gap-4">
-                  {corsoSelezionato ? (
-                    <>
-                      <div className="w-16 h-16 rounded-xl bg-white border-4 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center -rotate-6">
-                        <span className="text-3xl">🎓</span>
-                      </div>
-                      <div>
-                        <p className="font-black text-gray-900 text-xl uppercase tracking-tighter">
-                          {corsiDisponibili.find(c => c.id === corsoSelezionato)?.nome || globalUser?.corso_studi}
-                        </p>
-                        <p className="text-sm font-bold text-gray-600 uppercase tracking-widest mt-1">
-                          {new Date().getFullYear() - annoInizio}° Anno (Iscritto nel {annoInizio})
-                        </p>
-                      </div>
-                    </>
-                  ) : (
-                    <span className="text-gray-500 font-bold italic">Nessun corso selezionato</span>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* TAGS / COMPETENZE */}
+            {/* CORSO E SOCIAL */}
             <div className="grid md:grid-cols-2 gap-10 mb-10">
+              <div className="bg-yellow-50 border-4 border-gray-900 rounded-2xl p-6 relative">
+                <span className="absolute -top-5 left-6 bg-white border-4 border-gray-900 px-4 py-1 rounded-xl font-black uppercase tracking-widest text-gray-900 text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">Studi 📚</span>
+                {isEditing ? (
+                  <div className="grid gap-4 mt-2">
+                    <select value={corsoSelezionato || ''} onChange={(e) => setCorsoSelezionato(e.target.value || null)} className="w-full px-4 py-3 bg-white rounded-xl border-4 border-gray-900 focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-bold text-gray-900 transition-all cursor-pointer">
+                      <option value="">Seleziona un corso...</option>
+                      {corsiDisponibili.map(corso => <option key={corso.id} value={corso.id}>{corso.nome}</option>)}
+                    </select>
+                    <select value={annoInizio} onChange={(e) => setAnnoInizio(parseInt(e.target.value))} className="w-full px-4 py-3 bg-white rounded-xl border-4 border-gray-900 focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-bold text-gray-900 transition-all cursor-pointer">
+                      {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(year => <option key={year} value={year}>{year}</option>)}
+                    </select>
+                  </div>
+                ) : (
+                  <div className="mt-2 flex items-center gap-4">
+                    {corsoSelezionato ? (
+                      <>
+                        <div className="w-16 h-16 rounded-xl bg-white border-4 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center -rotate-6"><span className="text-3xl">🎓</span></div>
+                        <div>
+                          <p className="font-black text-gray-900 text-xl uppercase tracking-tighter">{corsiDisponibili.find(c => c.id === corsoSelezionato)?.nome || globalUser?.corso_studi}</p>
+                          <p className="text-sm font-bold text-gray-600 uppercase tracking-widest mt-1">{new Date().getFullYear() - annoInizio}° Anno (Iscritto nel {annoInizio})</p>
+                        </div>
+                      </>
+                    ) : (
+                      <span className="text-gray-500 font-bold italic">Nessun corso selezionato</span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-green-50 border-4 border-gray-900 rounded-2xl p-6 relative">
+                <span className="absolute -top-5 left-6 bg-white border-4 border-gray-900 px-4 py-1 rounded-xl font-black uppercase tracking-widest text-gray-900 text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">Collegamenti 🔗</span>
+                {isEditing ? (
+                  <div className="grid gap-3 mt-2">
+                    <input type="url" value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} placeholder="LinkedIn URL" className="w-full px-4 py-2 bg-white border-4 border-gray-900 rounded-lg font-bold text-gray-900 outline-none" />
+                    <input type="url" value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} placeholder="GitHub URL" className="w-full px-4 py-2 bg-white border-4 border-gray-900 rounded-lg font-bold text-gray-900 outline-none" />
+                    <input type="url" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="Sito Web URL" className="w-full px-4 py-2 bg-white border-4 border-gray-900 rounded-lg font-bold text-gray-900 outline-none" />
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-4 mt-2">
+                    {linkedinUrl && <a href={linkedinUrl.startsWith('http') ? linkedinUrl : `https://${linkedinUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-3 bg-white border-4 border-gray-900 rounded-xl font-black uppercase text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all"><span className="text-xl">💼</span> LinkedIn</a>}
+                    {githubUrl && <a href={githubUrl.startsWith('http') ? githubUrl : `https://${githubUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-3 bg-white border-4 border-gray-900 rounded-xl font-black uppercase text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all"><span className="text-xl">💻</span> GitHub</a>}
+                    {websiteUrl && <a href={websiteUrl.startsWith('http') ? websiteUrl : `https://${websiteUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-3 bg-white border-4 border-gray-900 rounded-xl font-black uppercase text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all"><span className="text-xl">🌐</span> Web</a>}
+                    {twitterUrl && <a href={twitterUrl.startsWith('http') ? twitterUrl : `https://${twitterUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-3 bg-white border-4 border-gray-900 rounded-xl font-black uppercase text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all"><span className="text-xl">🐦</span> Twitter</a>}
+                    {!linkedinUrl && !githubUrl && !websiteUrl && !twitterUrl && <span className="text-gray-500 font-bold italic">Nessun collegamento inserito.</span>}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-10 mb-10">
+              {/* CURRICULUM */}
               <div className="bg-red-50 border-4 border-gray-900 rounded-2xl p-6 relative">
-                <span className="absolute -top-5 left-6 bg-white border-4 border-gray-900 px-4 py-1 rounded-xl font-black uppercase tracking-widest text-gray-900 text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                  Curriculum 📄
-                </span>
+                <span className="absolute -top-5 left-6 bg-white border-4 border-gray-900 px-4 py-1 rounded-xl font-black uppercase tracking-widest text-gray-900 text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">Curriculum 📄</span>
                 <div className="mt-4">
                   {isEditing ? (
                     <div className="flex flex-col gap-4">
                       <label className="w-full bg-white p-6 rounded-xl border-4 border-dashed border-gray-900 cursor-pointer hover:bg-red-100 transition-colors flex flex-col items-center justify-center text-center">
                         <span className="text-4xl mb-2">📥</span>
-                        <span className="font-black uppercase tracking-widest text-gray-900">
-                          {cvFile ? cvFile.name : (cvUrl ? 'Sostituisci CV' : 'Carica PDF')}
-                        </span>
+                        <span className="font-black uppercase tracking-widest text-gray-900">{cvFile ? cvFile.name : (cvUrl ? 'Sostituisci CV' : 'Carica PDF')}</span>
                         <input type="file" className="hidden" accept=".pdf" onChange={(e) => setCvFile(e.target.files?.[0] || null)} />
                       </label>
                       {(cvFile || cvUrl) && (
@@ -610,54 +558,33 @@ export default function ProfilePage() {
                 </div>
               </div>
 
+              {/* COMPETENZE / TAGS */}
               <div className="bg-purple-50 border-4 border-gray-900 rounded-2xl p-6 relative">
-                <span className="absolute -top-5 left-6 bg-white border-4 border-gray-900 px-4 py-1 rounded-xl font-black uppercase tracking-widest text-gray-900 text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                  Skill & Passioni ⭐
-                </span>
-                
+                <span className="absolute -top-5 left-6 bg-white border-4 border-gray-900 px-4 py-1 rounded-xl font-black uppercase tracking-widest text-gray-900 text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">Skill & Passioni ⭐</span>
                 <div className="mt-4 max-h-[400px] overflow-y-auto pr-2">
                   {isEditing && (
                     <div className="mb-6 bg-white p-4 rounded-xl border-4 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                       <p className="text-xs font-black uppercase tracking-widest text-gray-600 mb-2">Aggiungi nuovo tag</p>
                       <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={customTagInput}
-                          onChange={(e) => setCustomTagInput(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') handleAddCustomTag(e) }}
-                          placeholder="Scrivi e premi '+'"
-                          className="flex-1 px-3 py-2 border-2 border-gray-900 rounded-lg focus:outline-none font-bold text-gray-900"
-                        />
-                        <button type="button" onClick={handleAddCustomTag} className="px-4 py-2 bg-purple-400 text-gray-900 border-2 border-gray-900 rounded-lg font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all">
-                          +
-                        </button>
+                        <input type="text" value={customTagInput} onChange={(e) => setCustomTagInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleAddCustomTag(e) }} placeholder="Scrivi e premi '+'" className="flex-1 px-3 py-2 border-2 border-gray-900 rounded-lg focus:outline-none font-bold text-gray-900" />
+                        <button type="button" onClick={handleAddCustomTag} className="px-4 py-2 bg-purple-400 text-gray-900 border-2 border-gray-900 rounded-lg font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all">+</button>
                       </div>
                     </div>
                   )}
-
                   {Object.entries(groupedInterests).map(([categoria, tags]) => {
                     const hasSelectedTags = tags.some(t => selectedTags.includes(t.id))
                     if (!isEditing && !hasSelectedTags) return null
                     return (
                       <div key={categoria} className="mb-6 last:mb-0">
-                        <h4 className="text-xs font-black text-gray-900 uppercase tracking-widest mb-3 border-b-2 border-gray-900 inline-block">
-                          {categoria}
-                        </h4>
+                        <h4 className="text-xs font-black text-gray-900 uppercase tracking-widest mb-3 border-b-2 border-gray-900 inline-block">{categoria}</h4>
                         <div className="flex flex-wrap gap-3">
                           {tags.map(tag => {
                             const isSelected = selectedTags.includes(tag.id)
                             return (
                               <button
-                                key={tag.id}
-                                type="button"
-                                onClick={() => handleTagToggle(tag.id)}
-                                disabled={!isEditing}
+                                key={tag.id} type="button" onClick={() => handleTagToggle(tag.id)} disabled={!isEditing}
                                 className={`px-4 py-2 rounded-xl font-black uppercase tracking-widest text-sm transition-all border-4 border-gray-900 ${
-                                  isSelected 
-                                    ? 'bg-purple-400 text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] -translate-y-1 rotate-2' 
-                                    : isEditing
-                                      ? 'bg-white text-gray-600 hover:bg-gray-100 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
-                                      : 'hidden'
+                                  isSelected ? 'bg-purple-400 text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] -translate-y-1 rotate-2' : isEditing ? 'bg-white text-gray-600 hover:bg-gray-100 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'hidden'
                                 }`}
                               >
                                 {tag.nome}
@@ -668,99 +595,52 @@ export default function ProfilePage() {
                       </div>
                     )
                   })}
-                  {selectedTags.length === 0 && !isEditing && (
-                    <span className="text-gray-500 font-bold italic">Nessuna competenza selezionata</span>
-                  )}
+                  {selectedTags.length === 0 && !isEditing && <span className="text-gray-500 font-bold italic">Nessuna competenza selezionata</span>}
                 </div>
               </div>
             </div>
 
-            {/* ✅ NUOVA SEZIONE: VETRINA PROGETTI */}
+            {/* VETRINA PROGETTI IN PIATTAFORMA */}
             <div className="mb-10 bg-orange-50 border-4 border-gray-900 rounded-2xl p-6 relative">
               <span className="absolute -top-5 left-6 bg-white border-4 border-gray-900 px-4 py-1 rounded-xl font-black uppercase tracking-widest text-gray-900 text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                I Miei Progetti 🚀
+                I Miei Progetti (Piattaforma) 🚀
               </span>
+              
+              <div className="mt-4">
+                {myPlatformProjects.length === 0 ? (
+                  <p className="text-gray-500 font-bold italic">Non hai ancora partecipato a nessun progetto in piattaforma.</p>
+                ) : (
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {myPlatformProjects.map(proj => {
+                      const isHidden = hiddenProjects.includes(proj.id)
+                      if (!isEditing && isHidden) return null
 
-              {isEditing ? (
-                <div className="mt-4">
-                  {/* Form Aggiungi Progetto */}
-                  <div className="bg-white p-5 rounded-xl border-4 border-gray-900 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] mb-6">
-                    <p className="font-black uppercase text-gray-900 mb-4 tracking-widest">➕ Nuovo Progetto</p>
-                    <div className="grid sm:grid-cols-2 gap-4 mb-4">
-                      <input 
-                        type="text" placeholder="Titolo Progetto *" 
-                        value={nuovoProgetto.titolo} onChange={e => setNuovoProgetto({...nuovoProgetto, titolo: e.target.value})}
-                        className="px-4 py-3 bg-gray-50 border-2 border-gray-900 rounded-lg font-bold outline-none focus:bg-white"
-                      />
-                      <input 
-                        type="text" placeholder="Tuo Ruolo (es. Frontend Dev) *" 
-                        value={nuovoProgetto.ruolo} onChange={e => setNuovoProgetto({...nuovoProgetto, ruolo: e.target.value})}
-                        className="px-4 py-3 bg-gray-50 border-2 border-gray-900 rounded-lg font-bold outline-none focus:bg-white"
-                      />
-                      <input 
-                        type="url" placeholder="Link (Opzionale)" 
-                        value={nuovoProgetto.link} onChange={e => setNuovoProgetto({...nuovoProgetto, link: e.target.value})}
-                        className="sm:col-span-2 px-4 py-3 bg-gray-50 border-2 border-gray-900 rounded-lg font-bold outline-none focus:bg-white"
-                      />
-                    </div>
-                    <button 
-                      type="button" onClick={handleAddProject}
-                      className="w-full py-3 bg-orange-400 text-gray-900 border-4 border-gray-900 rounded-xl font-black uppercase tracking-widest hover:translate-x-[2px] hover:translate-y-[2px] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all"
-                    >
-                      Aggiungi alla Vetrina
-                    </button>
-                  </div>
-
-                  {/* Lista Progetti in Edit Mode */}
-                  <div className="space-y-4">
-                    {progettiVetrina.map(p => (
-                      <div key={p.id} className={`flex items-center justify-between bg-white p-4 rounded-xl border-4 border-gray-900 transition-all ${!p.visibile ? 'opacity-50 grayscale' : 'shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'}`}>
-                        <div>
-                          <p className="font-black text-lg text-gray-900 uppercase">{p.titolo}</p>
-                          <p className="text-xs font-bold text-gray-600 uppercase tracking-widest">{p.ruolo}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button 
-                            type="button" onClick={() => handleToggleProjectVisibility(p.id)}
-                            className="p-2 bg-gray-200 border-2 border-gray-900 rounded-lg hover:bg-gray-300 transition-colors"
-                            title={p.visibile ? 'Nascondi' : 'Mostra'}
-                          >
-                            {p.visibile ? '👁️' : '🙈'}
-                          </button>
-                          <button 
-                            type="button" onClick={() => handleRemoveProject(p.id)}
-                            className="p-2 bg-red-400 border-2 border-gray-900 rounded-lg hover:bg-red-500 transition-colors"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-4">
-                  <div className="grid sm:grid-cols-2 gap-6">
-                    {progettiVetrina.filter(p => p.visibile).length > 0 ? (
-                      progettiVetrina.filter(p => p.visibile).map(p => (
-                        <div key={p.id} className="bg-white p-5 rounded-2xl border-4 border-gray-900 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-transform">
-                          <p className="font-black text-xl text-gray-900 uppercase leading-none mb-2">{p.titolo}</p>
-                          <p className="text-xs font-bold bg-orange-100 text-orange-900 px-2 py-1 rounded border-2 border-orange-900 inline-block uppercase tracking-widest mb-4">
-                            {p.ruolo}
-                          </p>
-                          {p.link && (
-                            <a href={p.link.startsWith('http') ? p.link : `https://${p.link}`} target="_blank" rel="noopener noreferrer" className="block text-center w-full py-2 bg-gray-900 text-white font-black text-xs uppercase tracking-widest rounded-lg hover:bg-gray-800 transition-colors border-2 border-black">
-                              Visita Progetto ↗
-                            </a>
+                      return (
+                        <div key={proj.id} className={`bg-white border-4 border-gray-900 p-5 rounded-2xl flex flex-col justify-between transition-all ${isHidden ? 'opacity-50 grayscale' : 'shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1'}`}>
+                          <div>
+                            <h4 className="font-black text-lg uppercase text-gray-900 leading-tight mb-2 truncate">{proj.titolo}</h4>
+                            <p className="text-xs font-bold text-gray-600 line-clamp-3 mb-4">{proj.descrizione}</p>
+                          </div>
+                          
+                          {isEditing ? (
+                            <button 
+                              type="button" 
+                              onClick={() => toggleProjectVisibility(proj.id)}
+                              className="mt-auto px-3 py-2 border-2 border-gray-900 rounded-xl text-xs font-black uppercase w-full hover:bg-gray-100 transition-colors"
+                            >
+                              {isHidden ? '👁️ Mostra nel Profilo' : '🙈 Nascondi dal Profilo'}
+                            </button>
+                          ) : (
+                            <Link href={`/dashboard/projects/${proj.id}`} className="mt-auto block text-center w-full py-2.5 bg-gray-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 border-2 border-gray-900 transition-colors">
+                              Vedi Progetto ↗
+                            </Link>
                           )}
                         </div>
-                      ))
-                    ) : (
-                      <span className="text-gray-500 font-bold italic col-span-2">Nessun progetto aggiunto alla vetrina.</span>
-                    )}
+                      )
+                    })}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             {/* PULSANTONE SALVA */}
