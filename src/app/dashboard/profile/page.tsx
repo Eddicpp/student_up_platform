@@ -101,9 +101,10 @@ export default function ProfilePage() {
           setTwitterUrl(studente.twitter_url || '')
         }
 
+        // Modificata per provare a prendere la categoria (se non c'è la join, raggrupperà comunque in Generali)
         const { data: tags } = await supabase
           .from('interesse')
-          .select('*') // Prendiamo anche eventuali categorie se presenti
+          .select('*') 
           .order('nome', { ascending: true })
         
         if (tags) setAvailableInterests(tags)
@@ -276,7 +277,22 @@ export default function ProfilePage() {
         }
       }
 
-      // 1. Processa i tag temporanei (quelli creati dall'utente)
+      // ----------------------------------------------------
+      // SALVATAGGIO DEI TAG CON IL FIX ALLA CATEGORIA
+      // ----------------------------------------------------
+
+      // 1. Recuperiamo una categoria di default per poter salvare i nuovi tag
+      const { data: defaultCat, error: catError } = await supabase
+        .from('categoria')
+        .select('id')
+        .limit(1)
+        .single() // single() assicura che TypeScript sappia che è un oggetto
+
+      if (catError || !defaultCat) {
+        throw new Error("Non è stata trovata nessuna categoria nel database per assegnare i nuovi tag.")
+      }
+
+      // 2. Processa i tag temporanei (quelli creati dall'utente)
       const finalTagIds: string[] = []
       
       for (const tagId of selectedTags) {
@@ -293,14 +309,21 @@ export default function ProfilePage() {
             if (existing) {
               finalTagIds.push(existing.id)
             } else {
-              // Inserisce il nuovo tag (Senza la colonna 'categoria' per non rompere il DB se non esiste)
+              // INSERISCE IL NUOVO TAG ASSENGNANDOGLI LA CATEGORIA DI DEFAULT TROVATA
               const { data: newTag, error: tagErr } = await supabase
                 .from('interesse')
-                .insert({ nome: tagObj.nome })
+                .insert({ 
+                  nome: tagObj.nome, 
+                  categoria_id: defaultCat.id 
+                })
                 .select('id')
                 .single()
               
-              if (newTag && !tagErr) finalTagIds.push(newTag.id)
+              if (newTag && !tagErr) {
+                finalTagIds.push(newTag.id)
+              } else if (tagErr) {
+                console.error("Errore inserimento nuovo interesse:", tagErr)
+              }
             }
           }
         } else {
@@ -308,7 +331,7 @@ export default function ProfilePage() {
         }
       }
 
-      // 2. Salva i collegamenti studente_interesse
+      // 3. Salva i collegamenti studente_interesse definitivi
       const { error: deleteError } = await supabase.from('studente_interesse').delete().eq('studente_id', user.id)
       if (deleteError) throw deleteError
 
@@ -678,7 +701,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* COMPETENZE / TAGS - ORA RAGGRUPPATE E CON AGGIUNTA CUSTOM */}
+              {/* COMPETENZE / TAGS CON SOTTOINSIEMI E AGGIUNTA LIBERA */}
               <div className="bg-purple-50 border-4 border-gray-900 rounded-2xl p-6 relative">
                 <span className="absolute -top-5 left-6 bg-white border-4 border-gray-900 px-4 py-1 rounded-xl font-black uppercase tracking-widest text-gray-900 text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                   Skill & Passioni ⭐
@@ -688,7 +711,7 @@ export default function ProfilePage() {
                   
                   {isEditing && (
                     <div className="mb-6 bg-white p-4 rounded-xl border-4 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                      <p className="text-xs font-black uppercase tracking-widest text-gray-600 mb-2">Aggiungi nuovo tag</p>
+                      <p className="text-xs font-black uppercase tracking-widest text-gray-600 mb-2">Non trovi la tua competenza?</p>
                       <div className="flex gap-2">
                         <input
                           type="text"
@@ -697,7 +720,7 @@ export default function ProfilePage() {
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') handleAddCustomTag(e)
                           }}
-                          placeholder="Scrivi una competenza..."
+                          placeholder="Scrivila e premi '+'..."
                           className="flex-1 px-3 py-2 border-2 border-gray-900 rounded-lg focus:outline-none font-bold text-gray-900"
                         />
                         <button
@@ -711,15 +734,15 @@ export default function ProfilePage() {
                     </div>
                   )}
 
-                  {/* Rendering dei tag raggruppati per categoria */}
+                  {/* Rendering raggruppato per categorie */}
                   {Object.entries(groupedInterests).map(([categoria, tags]) => {
-                    // In modalità view, mostra la categoria solo se contiene almeno un tag selezionato
                     const hasSelectedTags = tags.some(t => selectedTags.includes(t.id))
+                    // Nasconde la categoria in modalità view se non c'è nulla di selezionato
                     if (!isEditing && !hasSelectedTags) return null
 
                     return (
                       <div key={categoria} className="mb-6 last:mb-0">
-                        <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-3 border-b-2 border-gray-900 inline-block">
+                        <h4 className="text-xs font-black text-gray-900 uppercase tracking-widest mb-3 border-b-2 border-gray-900 inline-block">
                           {categoria}
                         </h4>
                         <div className="flex flex-wrap gap-3">
