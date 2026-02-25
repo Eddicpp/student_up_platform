@@ -19,6 +19,7 @@ export default function MyApplicationsPage() {
   // STATI MODALI
   const [editingApp, setEditingApp] = useState<any | null>(null)
   const [editMessage, setEditMessage] = useState('')
+  const [editRole, setEditRole] = useState('') // ✅ NUOVO STATO PER IL RUOLO
   const [deletingApp, setDeletingApp] = useState<any | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [actionSuccess, setActionSuccess] = useState<string | null>(null)
@@ -42,18 +43,21 @@ export default function MyApplicationsPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
+      // ✅ AGGIUNTO IL RECUPERO DEL RUOLO E DELLE FIGURE RICERCATE DAL BANDO
       const { data, error: fetchError } = await supabase
         .from('partecipazione')
         .select(`
           id, 
           stato, 
           messaggio, 
+          ruolo,
           created_at,
           bando:bando_id (
             id, 
             titolo, 
             foto_url, 
-            stato
+            stato,
+            figure_ricercate
           )
         `)
         .eq('studente_id', user.id) as any
@@ -78,19 +82,24 @@ export default function MyApplicationsPage() {
     setActionLoading(true)
     
     try {
+      // ✅ AGGIORNIAMO SIA IL MESSAGGIO CHE IL RUOLO
       const { error } = await supabase
         .from('partecipazione')
-        .update({ messaggio: editMessage })
+        .update({ 
+          messaggio: editMessage,
+          ruolo: editRole 
+        })
         .eq('id', editingApp.id)
 
       if (error) throw error
       
       setApplications(prev => prev.map(app => 
-        app.id === editingApp.id ? { ...app, messaggio: editMessage } : app
+        app.id === editingApp.id ? { ...app, messaggio: editMessage, ruolo: editRole } : app
       ))
       
       setEditingApp(null)
       setEditMessage('')
+      setEditRole('')
       setActionSuccess('Candidatura modificata con successo!')
       setTimeout(() => setActionSuccess(null), 3000)
     } catch (err: any) {
@@ -144,30 +153,10 @@ export default function MyApplicationsPage() {
 
   // Config per status
   const statusConfig: Record<string, { icon: string; label: string; badgeClass: string; cardAccent: string }> = {
-    pending: {
-      icon: '⏳',
-      label: 'In Attesa',
-      badgeClass: 'bg-orange-400 text-gray-900',
-      cardAccent: 'border-l-orange-400'
-    },
-    accepted: {
-      icon: '✅',
-      label: 'Accettata',
-      badgeClass: 'bg-green-400 text-gray-900',
-      cardAccent: 'border-l-green-400'
-    },
-    rejected: {
-      icon: '❌',
-      label: 'Rifiutata',
-      badgeClass: 'bg-red-400 text-gray-900',
-      cardAccent: 'border-l-red-400'
-    },
-    abandoned: {
-      icon: '💀',
-      label: 'Abbandonata',
-      badgeClass: 'bg-gray-400 text-gray-900',
-      cardAccent: 'border-l-gray-400'
-    }
+    pending: { icon: '⏳', label: 'In Attesa', badgeClass: 'bg-orange-400 text-gray-900', cardAccent: 'border-l-orange-400' },
+    accepted: { icon: '✅', label: 'Accettata', badgeClass: 'bg-green-400 text-gray-900', cardAccent: 'border-l-green-400' },
+    rejected: { icon: '❌', label: 'Rifiutata', badgeClass: 'bg-red-400 text-gray-900', cardAccent: 'border-l-red-400' },
+    abandoned: { icon: '💀', label: 'Abbandonata', badgeClass: 'bg-gray-400 text-gray-900', cardAccent: 'border-l-gray-400' }
   }
 
   // Config filtri
@@ -217,7 +206,7 @@ export default function MyApplicationsPage() {
             <div className="flex items-center justify-between mb-4 sm:mb-6">
               <h3 className="text-lg sm:text-2xl font-black text-gray-900 uppercase">✏️ Modifica Candidatura</h3>
               <button 
-                onClick={() => { setEditingApp(null); setEditMessage(''); }}
+                onClick={() => { setEditingApp(null); setEditMessage(''); setEditRole(''); }}
                 className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 hover:bg-gray-300 rounded-lg sm:rounded-xl border-2 border-gray-900 flex items-center justify-center font-black text-gray-900 transition-colors"
               >
                 ×
@@ -227,26 +216,46 @@ export default function MyApplicationsPage() {
             <p className="text-xs sm:text-sm font-bold text-gray-600 mb-2 uppercase">Progetto:</p>
             <p className="text-base sm:text-lg font-black text-gray-900 mb-4 sm:mb-6">{editingApp.bando?.titolo}</p>
             
-            <label className="block text-xs sm:text-sm font-black text-gray-900 mb-2 uppercase">📝 Il tuo messaggio</label>
+            {/* ✅ NUOVA TENDINA PER LA SELEZIONE DEL RUOLO */}
+            <label className="block text-xs sm:text-sm font-black text-gray-900 mb-2 uppercase">🎯 Ruolo per cui ti candidi</label>
+            <select
+              value={editRole}
+              onChange={(e) => setEditRole(e.target.value)}
+              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 mb-4 sm:mb-6 bg-gray-50 rounded-lg sm:rounded-xl border-2 sm:border-3 border-gray-900 focus:border-blue-500 focus:ring-0 outline-none font-bold text-gray-900 text-sm sm:text-base shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] focus:shadow-none focus:translate-x-[3px] focus:translate-y-[3px] transition-all cursor-pointer appearance-none"
+            >
+              <option value="">-- Seleziona un ruolo --</option>
+              {/* Estraiamo in automatico le figure ricercate scritte dal creatore del bando */}
+              {editingApp.bando?.figure_ricercate?.map((figura: any, index: number) => {
+                const roleName = figura.tipo === 'strutturata' 
+                  ? (figura.corso_nome ? `Studente di ${figura.corso_nome}` : 'Studente Generico')
+                  : (figura.titolo_libero || 'Altro');
+                return (
+                  <option key={index} value={roleName}>{roleName}</option>
+                )
+              })}
+              <option value="Candidatura Spontanea / Altro">Candidatura Spontanea / Altro</option>
+            </select>
+
+            <label className="block text-xs sm:text-sm font-black text-gray-900 mb-2 uppercase">📝 Messaggio al Team</label>
             <textarea
               value={editMessage}
               onChange={(e) => setEditMessage(e.target.value)}
-              placeholder="Modifica il messaggio della tua candidatura..."
+              placeholder="Perché sei la persona giusta per questo progetto?..."
               rows={4}
               className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 rounded-lg sm:rounded-xl border-2 sm:border-3 border-gray-900 focus:border-blue-500 focus:ring-0 outline-none font-bold text-gray-900 text-sm sm:text-base placeholder:text-gray-400 resize-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] focus:shadow-none focus:translate-x-[3px] focus:translate-y-[3px] transition-all"
             />
             
             <div className="flex gap-3 mt-4 sm:mt-6">
               <button
-                onClick={() => { setEditingApp(null); setEditMessage(''); }}
+                onClick={() => { setEditingApp(null); setEditMessage(''); setEditRole(''); }}
                 className="flex-1 py-2.5 sm:py-3 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg sm:rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider border-2 sm:border-3 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
               >
                 Annulla
               </button>
               <button
                 onClick={handleEditApplication}
-                disabled={actionLoading}
-                className="flex-1 py-2.5 sm:py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg sm:rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider border-2 sm:border-3 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all disabled:opacity-50"
+                disabled={actionLoading || !editRole} // Non salvi se non scegli un ruolo
+                className="flex-1 py-2.5 sm:py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg sm:rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider border-2 sm:border-3 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {actionLoading ? '...' : '💾 Salva'}
               </button>
@@ -307,11 +316,10 @@ export default function MyApplicationsPage() {
         </p>
       </div>
 
-      {/* FILTRI - PILL GROUP COMPATTO */}
+      {/* FILTRI */}
       <div className="mb-6 sm:mb-10">
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
           
-          {/* Filtri Status - Scrollabile su mobile */}
           <div className="overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 sm:pb-0">
             <div className="bg-white border-2 sm:border-3 border-gray-900 rounded-xl sm:rounded-2xl p-1 sm:p-1.5 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] inline-flex gap-0.5 sm:gap-1 min-w-max">
               {filterConfig.map((filter) => (
@@ -319,19 +327,13 @@ export default function MyApplicationsPage() {
                   key={filter.id}
                   onClick={() => setStatusFilter(filter.id as any)} 
                   className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl font-black text-[9px] sm:text-xs uppercase tracking-wider transition-all whitespace-nowrap ${
-                    statusFilter === filter.id 
-                      ? 'bg-gray-900 text-white' 
-                      : 'bg-transparent text-gray-600 hover:bg-gray-100'
+                    statusFilter === filter.id ? 'bg-gray-900 text-white' : 'bg-transparent text-gray-600 hover:bg-gray-100'
                   }`}
                 >
                   <span className="text-xs sm:text-base">{filter.icon}</span>
                   <span className="hidden xs:inline sm:inline">{filter.label}</span>
                   {counts[filter.id as keyof typeof counts] > 0 && (
-                    <span className={`px-1 sm:px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] font-black ${
-                      statusFilter === filter.id 
-                        ? 'bg-red-500 text-white' 
-                        : 'bg-gray-200 text-gray-700'
-                    }`}>
+                    <span className={`px-1 sm:px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] font-black ${statusFilter === filter.id ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-700'}`}>
                       {counts[filter.id as keyof typeof counts]}
                     </span>
                   )}
@@ -340,7 +342,6 @@ export default function MyApplicationsPage() {
             </div>
           </div>
 
-          {/* Ordinamento */}
           <button 
             onClick={() => setDateSort(dateSort === 'desc' ? 'asc' : 'desc')} 
             className="self-start sm:self-auto bg-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-black uppercase text-[10px] sm:text-xs tracking-widest border-2 sm:border-3 border-gray-900 text-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all flex items-center gap-1.5"
@@ -350,7 +351,6 @@ export default function MyApplicationsPage() {
           </button>
         </div>
 
-        {/* Contatore risultati */}
         <div className="mt-3 sm:mt-4">
           <span className="inline-block bg-yellow-300 border-2 border-gray-900 px-3 py-1.5 rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-[10px] sm:text-sm font-black text-gray-900 uppercase">
             {filteredAndSortedApps.length} risultat{filteredAndSortedApps.length === 1 ? 'o' : 'i'}
@@ -413,10 +413,15 @@ export default function MyApplicationsPage() {
                     </span>
                   </div>
 
-                  {/* Titolo */}
-                  <h3 className="text-base sm:text-xl md:text-2xl font-black text-gray-900 uppercase tracking-tight leading-tight mb-2 sm:mb-3">
+                  {/* Titolo e Ruolo */}
+                  <h3 className="text-base sm:text-xl md:text-2xl font-black text-gray-900 uppercase tracking-tight leading-tight mb-1">
                     {bando?.titolo || 'Progetto non trovato'}
                   </h3>
+                  
+                  {/* ✅ MOSTRA IL RUOLO SELEZIONATO */}
+                  <p className="text-[10px] sm:text-xs font-black text-blue-700 bg-blue-100 border-2 border-blue-900 px-2 py-0.5 rounded-md inline-block uppercase tracking-widest mb-3">
+                    🎯 Ruolo: {app.ruolo || 'Non specificato'}
+                  </p>
 
                   {/* Messaggio */}
                   {app.messaggio && (
@@ -428,7 +433,7 @@ export default function MyApplicationsPage() {
                   )}
 
                   {/* Azioni */}
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-2">
                     <Link 
                       href={`/dashboard/projects/${bando?.id}`} 
                       className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded-lg sm:rounded-xl font-black text-[9px] sm:text-xs uppercase tracking-wider border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
@@ -445,13 +450,13 @@ export default function MyApplicationsPage() {
                       </Link>
                     )}
 
-                    {/* Pulsanti Modifica/Elimina - Solo per pending */}
                     {isPending && (
                       <>
                         <button
                           onClick={() => {
                             setEditingApp(app)
                             setEditMessage(app.messaggio || '')
+                            setEditRole(app.ruolo || '') // Pre-popoliamo il ruolo esistente
                           }}
                           className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-blue-400 hover:bg-blue-500 text-gray-900 rounded-lg sm:rounded-xl font-black text-[9px] sm:text-xs uppercase tracking-wider border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
                         >
@@ -466,7 +471,6 @@ export default function MyApplicationsPage() {
                       </>
                     )}
 
-                    {/* Per rejected/abandoned - solo elimina */}
                     {(isRejected || isAbandoned) && (
                       <button
                         onClick={() => setDeletingApp(app)}
