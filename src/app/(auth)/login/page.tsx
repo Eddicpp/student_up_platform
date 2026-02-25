@@ -272,12 +272,11 @@ export default function LoginPage() {
       `}} />
 
       {/* ===============================================
-          SFONDO DOODLE ANIMATO - 80+ ANIMAZIONI
-          Distribuito in griglia per omogeneità
-          =============================================== */}
+         SFONDO DOODLE ANIMATO - 80+ ANIMAZIONI
+         =============================================== */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden select-none">
         
-        {/* ============ RIGA 1 (top: 2-10%) ============ */}
+        {/* ============ RIGA 1 ============ */}
         <div className="absolute top-[3%] left-[3%] text-3xl a-rocket">🚀</div>
         <div className="absolute top-[5%] left-[12%] text-2xl a-twinkle text-white">✨</div>
         <div className="absolute top-[4%] left-[22%] text-4xl a-spin">🪐</div>
@@ -289,7 +288,7 @@ export default function LoginPage() {
         <div className="absolute top-[3%] left-[82%] text-4xl a-gear">⚙️</div>
         <div className="absolute top-[5%] left-[92%] text-2xl a-sparkle text-yellow-300">✨</div>
         
-        {/* ============ RIGA 2 (top: 10-18%) ============ */}
+        {/* ============ RIGA 2 ============ */}
         <div className="absolute top-[12%] left-[5%] text-4xl a-hourglass">⏳</div>
         <div className="absolute top-[14%] left-[15%] text-3xl a-telescope">🔭</div>
         <div className="absolute top-[11%] left-[25%] text-3xl a-camera">📷</div>
@@ -301,7 +300,7 @@ export default function LoginPage() {
         <div className="absolute top-[13%] left-[85%] text-3xl a-wrench">🔧</div>
         <div className="absolute top-[15%] left-[95%] text-2xl a-ufo">🛸</div>
         
-        {/* ============ RIGA 3 (top: 18-26%) ============ */}
+        {/* ============ RIGA 3 ============ */}
         <div className="absolute top-[20%] left-[3%] text-3xl a-guitar">🎸</div>
         <div className="absolute top-[22%] left-[13%] text-4xl a-wiggle">🎭</div>
         <div className="absolute top-[19%] left-[23%] text-3xl a-vinyl">💿</div>
@@ -313,7 +312,7 @@ export default function LoginPage() {
         <div className="absolute top-[21%] left-[83%] text-3xl a-puzzle">🧩</div>
         <div className="absolute top-[23%] left-[93%] text-2xl a-twinkle text-white" style={{animationDelay: '1.5s'}}>✨</div>
         
-        {/* ============ RIGA 4 (top: 26-34%) ============ */}
+        {/* ============ RIGA 4 ============ */}
         <div className="absolute top-[28%] left-[5%] text-3xl a-swing">⚖️</div>
         <div className="absolute top-[30%] left-[15%] text-3xl a-idea">💭</div>
         <div className="absolute top-[27%] left-[25%] text-4xl a-atom">⚛️</div>
@@ -323,45 +322,43 @@ export default function LoginPage() {
         <div className="absolute top-[30%] left-[87%] text-3xl a-bubble">🧪</div>
         <div className="absolute top-[27%] left-[95%] text-2xl a-sparkle text-cyan-300">✨</div>
         
-        {/* ============ RIGA 5 (top: 34-42%) - LATO SINISTRO ============ */}
+        {/* ============ RIGA 5 ============ */}
         <div className="absolute top-[36%] left-[3%] text-4xl a-heartbeat text-red-400">❤️</div>
         <div className="absolute top-[38%] left-[10%] text-3xl a-brain">🧠</div>
         <div className="absolute top-[35%] left-[18%] text-3xl a-syringe">💉</div>
         <div className="absolute top-[40%] left-[5%] text-2xl a-pill">💊</div>
         
-        {/* ============ RIGA 5 - LATO DESTRO ============ */}
-        <div className="absolute top-[36%] left-[82%] text-4xl relative">
-          <span className="a-pulse">💻</span>
+        {/* ✅ LATO DESTRO RIGA 5 (Corretto il bug del laptop) */}
+        <div className="absolute top-[36%] left-[82%] text-4xl">
+          <span className="a-pulse block">💻</span>
           <span className="absolute top-1 left-3 text-xs font-mono text-green-400 a-data">{'</>'}</span>
         </div>
         <div className="absolute top-[38%] left-[92%] text-2xl font-mono text-green-400 a-blink">|</div>
         <div className="absolute top-[40%] left-[88%] text-3xl a-pixel">👾</div>
         
-        {/* ============ RIGA 6 (top: 42-50%) - LATO SINISTRO ============ */}
+        {/* ============ RIGA 6 ============ */}
         <div className="absolute top-[44%] left-[2%] text-3xl a-wave">🌊</div>
         <div className="absolute top-[46%] left-[10%] text-4xl a-anchor">⚓</div>
         <div className="absolute top-[48%] left-[5%] text-3xl a-compass">🧭</div>
         <div className="absolute top-[45%] left-[15%] text-2xl a-twinkle text-white">⭐</div>
         
-        {/* ============ RIGA 6 - LATO DESTRO ============ */}
         <div className="absolute top-[44%] left-[85%] text-3xl a-magnet">🧲</div>
         <div className="absolute top-[46%] left-[92%] text-4xl a-loading">⚙️</div>
         <div className="absolute top-[48%] left-[88%] text-3xl a-wifi">📶</div>
         <div className="absolute top-[45%] left-[95%] text-2xl a-sparkle text-purple-300">✨</div>
         
-        {/* ============ RIGA 7 (top: 50-58%) - LATO SINISTRO ============ */}
+        {/* ============ RIGA 7 ============ */}
         <div className="absolute top-[52%] left-[3%] text-4xl a-sun">☀️</div>
         <div className="absolute top-[54%] left-[12%] text-3xl a-cloud">☁️</div>
         <div className="absolute top-[56%] left-[6%] text-2xl a-rain">💧</div>
         <div className="absolute top-[53%] left-[18%] text-3xl a-flame">🔥</div>
         
-        {/* ============ RIGA 7 - LATO DESTRO ============ */}
         <div className="absolute top-[52%] left-[84%] text-3xl a-briefcase">💼</div>
         <div className="absolute top-[54%] left-[93%] text-4xl a-coin">🪙</div>
         <div className="absolute top-[56%] left-[88%] text-2xl a-arrow-up">📈</div>
         <div className="absolute top-[53%] left-[95%] text-3xl a-chart origin-bottom">📊</div>
         
-        {/* ============ RIGA 8 (top: 58-66%) ============ */}
+        {/* ============ RIGA 8 ============ */}
         <div className="absolute top-[60%] left-[5%] text-3xl a-tree">🌳</div>
         <div className="absolute top-[62%] left-[15%] text-4xl a-flower">🌸</div>
         <div className="absolute top-[64%] left-[8%] text-3xl a-leaf">🍃</div>
@@ -372,7 +369,7 @@ export default function LoginPage() {
         <div className="absolute top-[64%] left-[85%] text-3xl a-drum">🥁</div>
         <div className="absolute top-[61%] left-[93%] text-4xl a-piano">🎹</div>
         
-        {/* ============ RIGA 9 (top: 66-74%) ============ */}
+        {/* ============ RIGA 9 ============ */}
         <div className="absolute top-[68%] left-[3%] text-4xl a-ball-bounce">🏀</div>
         <div className="absolute top-[70%] left-[13%] text-3xl a-ball-roll">⚽</div>
         <div className="absolute top-[72%] left-[6%] text-3xl a-run">🏃</div>
@@ -380,27 +377,34 @@ export default function LoginPage() {
         <div className="absolute top-[71%] left-[30%] text-3xl a-yoga">🧘</div>
         <div className="absolute top-[68%] left-[45%] text-2xl a-heart text-pink-400">💕</div>
         <div className="absolute top-[70%] left-[58%] text-4xl a-ferris">🎡</div>
-        <div className="absolute top-[72%] left-[70%] text-3xl relative">
-          <span>🚁</span>
+        <div className="absolute top-[72%] left-[70%] text-3xl">
+          <span className="block">🚁</span>
           <span className="absolute -top-1 left-2 text-lg a-helicopter">―</span>
         </div>
         <div className="absolute top-[69%] left-[80%] text-3xl a-bug">🐛</div>
-        <div className="absolute top-[71%] left-[90%] text-4xl relative overflow-hidden">
-          <span>☕</span>
-          <span className="absolute -top-3 left-2 text-sm a-idea opacity-60">♨️</span>
+
+        {/* ✅ RIGA 9 - Tazzina caffè (Corretto il bug del vapore troncato) */}
+        <div className="absolute top-[71%] left-[90%] text-4xl">
+          <span className="block">☕</span>
+          <span className="absolute -top-4 left-2 text-sm a-idea opacity-60">♨️</span>
         </div>
         
-        {/* ============ RIGA 10 (top: 74-82%) ============ */}
-        <div className="absolute top-[76%] left-[5%] text-4xl relative overflow-hidden">
-          <span>🏆</span>
-          <div className="absolute top-0 left-0 w-3 h-full bg-white/40 skew-x-12" style={{animation: 'shine 3s infinite'}}></div>
+        {/* ============ RIGA 10 ============ */}
+        {/* ✅ RIGA 10 - TROFEO (Corretto il bug della linea bianca!) */}
+        <div className="absolute top-[76%] left-[5%] w-12 h-12 overflow-hidden flex items-center justify-center rounded-xl">
+          <span className="text-4xl relative z-10">🏆</span>
+          <div className="absolute top-0 left-0 w-3 h-full bg-white/40 skew-x-12 z-20 pointer-events-none" style={{animation: 'shine 3s infinite'}}></div>
         </div>
+
         <div className="absolute top-[78%] left-[15%] text-3xl a-swing" style={{transformOrigin: 'top'}}>🏅</div>
         <div className="absolute top-[80%] left-[8%] text-3xl a-wiggle">🚩</div>
-        <div className="absolute top-[77%] left-[25%] text-4xl relative">
-          <span>🎯</span>
+
+        {/* ✅ RIGA 10 - BERSAGLIO (Corretto bug spaziatura) */}
+        <div className="absolute top-[77%] left-[25%] text-4xl">
+          <span className="block">🎯</span>
           <span className="absolute -left-2 top-1 text-2xl" style={{animation: 'arrow-up 2s infinite'}}>🏹</span>
         </div>
+
         <div className="absolute top-[79%] left-[38%] text-3xl a-slide-x">🚜</div>
         <div className="absolute top-[76%] left-[50%] text-3xl a-bounce">🍇</div>
         <div className="absolute top-[78%] left-[60%] text-4xl a-wiggle">🍷</div>
@@ -408,7 +412,7 @@ export default function LoginPage() {
         <div className="absolute top-[77%] left-[82%] text-3xl font-mono text-green-400 a-pulse">{"{ }"}</div>
         <div className="absolute top-[79%] left-[92%] text-2xl a-sparkle text-yellow-300">✨</div>
         
-        {/* ============ RIGA 11 (top: 82-90%) ============ */}
+        {/* ============ RIGA 11 ============ */}
         <div className="absolute top-[84%] left-[3%] text-3xl a-music" style={{animationDelay: '0.5s'}}>♬</div>
         <div className="absolute top-[86%] left-[12%] text-4xl a-pop">🎨</div>
         <div className="absolute top-[88%] left-[5%] text-3xl a-float">📚</div>
@@ -420,7 +424,7 @@ export default function LoginPage() {
         <div className="absolute top-[85%] left-[78%] text-3xl a-slide-y">👤</div>
         <div className="absolute top-[87%] left-[88%] text-3xl a-confetti" style={{animationDelay: '1s'}}>🎉</div>
         
-        {/* ============ RIGA 12 (top: 90-98%) ============ */}
+        {/* ============ RIGA 12 ============ */}
         <div className="absolute top-[92%] left-[5%] text-2xl a-twinkle text-white" style={{animationDelay: '0.3s'}}>✨</div>
         <div className="absolute top-[94%] left-[15%] text-3xl a-bounce">🎓</div>
         <div className="absolute top-[93%] left-[28%] text-2xl a-spin-rev font-bold text-white/50">+</div>
@@ -432,7 +436,6 @@ export default function LoginPage() {
         <div className="absolute top-[92%] left-[95%] text-2xl a-twinkle text-white" style={{animationDelay: '2s'}}>⭐</div>
 
         {/* ============ ELEMENTI EXTRA SPARSI ============ */}
-        {/* Connessioni neurali */}
         <div className="absolute top-[33%] left-[8%] flex items-center gap-0.5 opacity-70">
           <div className="w-2 h-2 bg-purple-400 rounded-full a-pulse"></div>
           <div className="w-4 h-0.5 bg-white/40"></div>
@@ -445,7 +448,6 @@ export default function LoginPage() {
           <div className="w-2 h-2 bg-yellow-400 rounded-full a-pulse" style={{animationDelay: '0.5s'}}></div>
         </div>
         
-        {/* Grafici animati */}
         <div className="absolute top-[82%] left-[62%] flex items-end gap-0.5 h-6 opacity-80">
           <div className="w-1.5 bg-green-400 a-chart" style={{height: '40%', animationDelay: '0s'}}></div>
           <div className="w-1.5 bg-green-400 a-chart" style={{height: '70%', animationDelay: '0.2s'}}></div>
@@ -453,7 +455,6 @@ export default function LoginPage() {
           <div className="w-1.5 bg-green-400 a-chart" style={{height: '90%', animationDelay: '0.6s'}}></div>
         </div>
         
-        {/* Cerchi ripple extra */}
         <div className="absolute top-[25%] left-[50%] w-3 h-3 border border-white/30 rounded-full a-ripple"></div>
         <div className="absolute top-[75%] left-[35%] w-4 h-4 border border-white/20 rounded-full a-ripple" style={{animationDelay: '1s'}}></div>
 
