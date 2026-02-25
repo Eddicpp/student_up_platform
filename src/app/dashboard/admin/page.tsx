@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/app/context/UserContext'
 import { useRouter } from 'next/navigation'
-import SuperAvatar from '@/components/SuperAvatar'
 import Link from 'next/link'
 
 export default function AdminPanel() {
@@ -63,7 +62,6 @@ export default function AdminPanel() {
   useEffect(() => {
     if (user?.is_system_admin) fetchData()
   }, [user])
-
 
   // FUNZIONE SEGRETA: Registra le azioni nel database
   const registraLog = async (azione: string, bersaglio: string, dettagli: string = '') => {
@@ -187,11 +185,7 @@ export default function AdminPanel() {
       
       {/* HEADER & RICERCA CARTOON */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 bg-amber-400 p-8 rounded-3xl border-4 border-gray-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden">
-        {/* Decorazione */}
-        <div className="absolute top-[-20px] right-[-20px] text-9xl opacity-20 pointer-events-none rotate-12">
-          🛠️
-        </div>
-
+        <div className="absolute top-[-20px] right-[-20px] text-9xl opacity-20 pointer-events-none rotate-12">🛠️</div>
         <div className="relative z-10">
           <h1 className="text-4xl md:text-5xl font-black uppercase italic tracking-tighter text-gray-900 leading-none">
             Pannello <span className="text-white drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]">Staff</span>
@@ -219,32 +213,24 @@ export default function AdminPanel() {
         <button 
           onClick={() => setActiveTab('utenti')}
           className={`flex-1 sm:flex-none px-6 py-4 rounded-xl font-black text-sm md:text-base uppercase tracking-widest transition-all border-4 border-gray-900 flex items-center justify-center gap-2 ${
-            activeTab === 'utenti' 
-              ? 'bg-blue-400 text-gray-900 shadow-none translate-x-[4px] translate-y-[4px]' 
-              : 'bg-white text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+            activeTab === 'utenti' ? 'bg-blue-400 text-gray-900 shadow-none translate-x-[4px] translate-y-[4px]' : 'bg-white text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
           }`}
         >
           <span className="text-xl">👤</span> Utenti ({users.length})
         </button>
-        
         <button 
           onClick={() => setActiveTab('progetti')}
           className={`flex-1 sm:flex-none px-6 py-4 rounded-xl font-black text-sm md:text-base uppercase tracking-widest transition-all border-4 border-gray-900 flex items-center justify-center gap-2 ${
-            activeTab === 'progetti' 
-              ? 'bg-red-400 text-gray-900 shadow-none translate-x-[4px] translate-y-[4px]' 
-              : 'bg-white text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+            activeTab === 'progetti' ? 'bg-red-400 text-gray-900 shadow-none translate-x-[4px] translate-y-[4px]' : 'bg-white text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
           }`}
         >
           <span className="text-xl">📁</span> Progetti ({projects.length})
         </button>
-        
         {user?.is_owner && (
           <button 
             onClick={() => setActiveTab('logs')}
             className={`flex-1 sm:flex-none px-6 py-4 rounded-xl font-black text-sm md:text-base uppercase tracking-widest transition-all border-4 border-gray-900 flex items-center justify-center gap-2 ${
-              activeTab === 'logs' 
-                ? 'bg-gray-900 text-white shadow-none translate-x-[4px] translate-y-[4px]' 
-                : 'bg-white text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+              activeTab === 'logs' ? 'bg-gray-900 text-white shadow-none translate-x-[4px] translate-y-[4px]' : 'bg-white text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
             }`}
           >
             <span className="text-xl">🕵️‍♂️</span> Log ({logs.length})
@@ -259,63 +245,58 @@ export default function AdminPanel() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-900 border-b-4 border-gray-900 text-[11px] font-black uppercase tracking-widest text-white">
-                  <th className="p-5 whitespace-nowrap">Utente</th>
-                  <th className="p-5 whitespace-nowrap">Email</th>
-                  <th className="p-5 whitespace-nowrap">Ruolo</th>
-                  <th className="p-5 whitespace-nowrap">Stato</th>
-                  <th className="p-5 text-right whitespace-nowrap">Azioni</th>
+                  <th className="p-4 whitespace-nowrap">Utente</th>
+                  <th className="p-4 whitespace-nowrap">Email</th>
+                  <th className="p-4 whitespace-nowrap">Ruolo</th>
+                  <th className="p-4 whitespace-nowrap">Stato</th>
+                  <th className="p-4 text-right whitespace-nowrap">Azioni</th>
                 </tr>
               </thead>
               <tbody className="divide-y-4 divide-gray-900">
                 {filteredUsers.map((u) => (
                   <tr key={u.id} className="hover:bg-blue-50 transition-colors">
-                    <td className="p-5">
-                      <div className="flex items-center gap-4">
-                        <div className="border-2 border-gray-900 rounded-xl overflow-hidden shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex-shrink-0">
-                           <SuperAvatar src={u.avatar_url} nome={u.nome} cognome={u.cognome} isStaff={u.is_system_admin || u.is_owner} size="sm" />
-                        </div>
-                        <div>
-                          <p className="font-black text-gray-900 uppercase text-sm leading-tight">{u.nome} {u.cognome}</p>
-                        </div>
+                    {/* ✅ ALLINEAMENTO VERTICALE E IMMAGINE ROTONDA */}
+                    <td className="p-4 align-middle">
+                      <div className="flex items-center gap-3">
+                        <img 
+                          src={u.avatar_url || '/default-avatar.png'} 
+                          alt="Avatar" 
+                          className="w-10 h-10 rounded-full object-cover border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex-shrink-0" 
+                        />
+                        <span className="font-black text-gray-900 uppercase text-sm leading-none m-0 pt-1">
+                          {u.nome} {u.cognome}
+                        </span>
                       </div>
                     </td>
-                    <td className="p-5">
-                      <span className="text-xs font-bold text-gray-700 bg-white border-2 border-gray-900 px-3 py-1.5 rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] inline-block">
+                    <td className="p-4 align-middle">
+                      <span className="text-xs font-bold text-gray-700 bg-white border-2 border-gray-900 px-3 py-1.5 rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] inline-block m-0">
                         {u.email}
                       </span>
                     </td>
-                    <td className="p-5">
-                      {u.is_owner ? (
-                        <span className="inline-flex items-center gap-1 bg-yellow-300 text-gray-900 border-2 border-gray-900 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] whitespace-nowrap">
-                          👑 OWNER
-                        </span>
-                      ) : u.is_system_admin ? (
-                        <span className="inline-flex items-center gap-1 bg-black text-white border-2 border-black text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] whitespace-nowrap">
-                          🛡️ STAFF
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center bg-gray-100 text-gray-600 border-2 border-gray-400 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest whitespace-nowrap">
-                          STUDENTE
-                        </span>
-                      )}
+                    <td className="p-4 align-middle">
+                      <div className="flex items-center m-0">
+                        {u.is_owner ? (
+                          <span className="inline-flex items-center gap-1 bg-yellow-300 text-gray-900 border-2 border-gray-900 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] whitespace-nowrap">👑 OWNER</span>
+                        ) : u.is_system_admin ? (
+                          <span className="inline-flex items-center gap-1 bg-black text-white border-2 border-black text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] whitespace-nowrap">🛡️ STAFF</span>
+                        ) : (
+                          <span className="inline-flex items-center bg-gray-100 text-gray-600 border-2 border-gray-400 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest whitespace-nowrap">STUDENTE</span>
+                        )}
+                      </div>
                     </td>
-                    <td className="p-5">
-                      {u.stato_account === 'bannato' ? (
-                         <span className="inline-flex items-center gap-1 bg-red-500 text-white border-2 border-gray-900 font-black text-[10px] uppercase px-3 py-1.5 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] whitespace-nowrap">
-                           🚫 Bannato
-                         </span>
-                      ) : u.stato_account === 'in_pausa' ? (
-                         <span className="inline-flex items-center gap-1 bg-orange-400 text-gray-900 border-2 border-gray-900 font-black text-[10px] uppercase px-3 py-1.5 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] whitespace-nowrap">
-                           ⏸ Pausa
-                         </span>
-                      ) : (
-                         <span className="inline-flex items-center gap-1 bg-green-400 text-gray-900 border-2 border-gray-900 font-black text-[10px] uppercase px-3 py-1.5 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] whitespace-nowrap">
-                           ✅ Attivo
-                         </span>
-                      )}
+                    <td className="p-4 align-middle">
+                      <div className="flex items-center m-0">
+                        {u.stato_account === 'bannato' ? (
+                           <span className="inline-flex items-center gap-1 bg-red-500 text-white border-2 border-gray-900 font-black text-[10px] uppercase px-3 py-1.5 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] whitespace-nowrap">🚫 Bannato</span>
+                        ) : u.stato_account === 'in_pausa' ? (
+                           <span className="inline-flex items-center gap-1 bg-orange-400 text-gray-900 border-2 border-gray-900 font-black text-[10px] uppercase px-3 py-1.5 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] whitespace-nowrap">⏸ Pausa</span>
+                        ) : (
+                           <span className="inline-flex items-center gap-1 bg-green-400 text-gray-900 border-2 border-gray-900 font-black text-[10px] uppercase px-3 py-1.5 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] whitespace-nowrap">✅ Attivo</span>
+                        )}
+                      </div>
                     </td>
-                    <td className="p-5">
-                      <div className="flex items-center justify-end gap-2 flex-wrap min-w-[180px]">
+                    <td className="p-4 align-middle">
+                      <div className="flex items-center justify-end gap-2 flex-wrap min-w-[180px] m-0">
                         <Link 
                           href={`/dashboard/user/${u.id}`} 
                           className="px-3 py-2 rounded-xl font-black text-[10px] uppercase bg-white border-2 border-gray-900 text-gray-900 hover:bg-gray-100 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
@@ -348,7 +329,7 @@ export default function AdminPanel() {
                                  </select>
                                  <button 
                                    onClick={() => applyPause(u)} 
-                                   className="px-2 py-1.5 rounded-lg bg-orange-400 border-2 border-gray-900 text-gray-900 font-black text-[10px] uppercase hover:bg-orange-500 transition-colors"
+                                   className="px-2 py-1 rounded-lg bg-orange-400 border-2 border-gray-900 text-gray-900 font-black text-[10px] uppercase hover:bg-orange-500 transition-colors m-0"
                                  >
                                    ⏸
                                  </button>
@@ -415,64 +396,70 @@ export default function AdminPanel() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-red-500 border-b-4 border-gray-900 text-[11px] font-black uppercase tracking-widest text-white">
-                    <th className="p-5 whitespace-nowrap">Progetto</th>
-                    <th className="p-5 whitespace-nowrap">Creatore</th>
-                    <th className="p-5 whitespace-nowrap">Stato Visibilità</th>
-                    <th className="p-5 text-right whitespace-nowrap">Azioni</th>
+                    <th className="p-4 whitespace-nowrap">Progetto</th>
+                    <th className="p-4 whitespace-nowrap">Creatore</th>
+                    <th className="p-4 whitespace-nowrap">Stato Visibilità</th>
+                    <th className="p-4 text-right whitespace-nowrap">Azioni</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y-4 divide-gray-900">
                   {filteredProjects.map((p) => (
                     <tr key={p.id} className="hover:bg-red-50 transition-colors">
-                      <td className="p-5">
-                        <p className="font-black text-gray-900 uppercase text-base leading-tight mb-1">{p.titolo}</p>
-                        <p className="text-[10px] text-gray-600 font-bold uppercase line-clamp-1 bg-gray-100 p-1.5 rounded-lg border-2 border-gray-300 inline-block">
-                          {p.descrizione}
-                        </p>
+                      <td className="p-4 align-middle">
+                        <div className="flex flex-col justify-center m-0">
+                          <p className="font-black text-gray-900 uppercase text-base leading-none mb-1.5">{p.titolo}</p>
+                          <p className="text-[10px] text-gray-600 font-bold uppercase line-clamp-1 bg-gray-100 px-2 py-1 rounded-lg border-2 border-gray-300 inline-block w-fit m-0">
+                            {p.descrizione}
+                          </p>
+                        </div>
                       </td>
-                      <td className="p-5">
+                      <td className="p-4 align-middle">
                         {p.autore ? (
-                          <div className="flex flex-col gap-2">
-                             <div className="flex items-center gap-3">
-                               <div className="border-2 border-gray-900 rounded-lg overflow-hidden flex-shrink-0">
-                                 <SuperAvatar src={p.autore.avatar_url} nome={p.autore.nome} cognome={p.autore.cognome} isStaff={p.autore.is_system_admin || p.autore.is_owner} size="sm" />
-                               </div>
-                               <span className="text-xs font-black text-gray-900 uppercase">{p.autore.nome} {p.autore.cognome}</span>
-                             </div>
-                             <div>
-                               {p.autore.is_owner ? (
-                                 <span className="inline-flex items-center gap-1 bg-yellow-300 border-2 border-gray-900 text-gray-900 text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-widest">👑 OWNER</span>
-                               ) : p.autore.is_system_admin ? (
-                                 <span className="inline-flex items-center gap-1 bg-black text-white border-2 border-black text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-widest">🛡️ STAFF</span>
-                               ) : null}
-                             </div>
+                          <div className="flex items-center gap-3 m-0">
+                            <img 
+                              src={p.autore.avatar_url || '/default-avatar.png'} 
+                              alt="Avatar" 
+                              className="w-10 h-10 rounded-full object-cover border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex-shrink-0" 
+                            />
+                            <div className="flex flex-col justify-center">
+                              <span className="text-xs font-black text-gray-900 uppercase leading-none mb-1.5 mt-1">{p.autore.nome} {p.autore.cognome}</span>
+                              <div className="m-0 leading-none">
+                                {p.autore.is_owner ? (
+                                  <span className="inline-flex items-center gap-1 bg-yellow-300 border-2 border-gray-900 text-gray-900 text-[9px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest">👑 OWNER</span>
+                                ) : p.autore.is_system_admin ? (
+                                  <span className="inline-flex items-center gap-1 bg-black text-white border-2 border-black text-[9px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest">🛡️ STAFF</span>
+                                ) : null}
+                              </div>
+                            </div>
                           </div>
                         ) : (
-                          <span className="text-xs font-black text-gray-400 uppercase bg-gray-100 px-2 py-1 rounded-lg border-2 border-gray-300">N/A</span>
+                          <span className="text-xs font-black text-gray-400 uppercase bg-gray-100 px-2 py-1 rounded-lg border-2 border-gray-300 m-0">N/A</span>
                         )}
                       </td>
-                      <td className="p-5">
-                        {p.nascosto_admin ? (
-                          <span className="bg-orange-400 text-gray-900 border-2 border-gray-900 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] whitespace-nowrap">
-                            ⏸ IN PAUSA
-                          </span>
-                        ) : (
-                          <span className="bg-green-400 text-gray-900 border-2 border-gray-900 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] whitespace-nowrap">
-                            ✅ PUBBLICO
-                          </span>
-                        )}
+                      <td className="p-4 align-middle">
+                        <div className="flex items-center m-0">
+                          {p.nascosto_admin ? (
+                            <span className="bg-orange-400 text-gray-900 border-2 border-gray-900 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] whitespace-nowrap m-0">
+                              ⏸ IN PAUSA
+                            </span>
+                          ) : (
+                            <span className="bg-green-400 text-gray-900 border-2 border-gray-900 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] whitespace-nowrap m-0">
+                              ✅ PUBBLICO
+                            </span>
+                          )}
+                        </div>
                       </td>
-                      <td className="p-5">
-                        <div className="flex items-center justify-end gap-2 flex-nowrap">
+                      <td className="p-4 align-middle">
+                        <div className="flex items-center justify-end gap-2 flex-nowrap m-0">
                           <button 
                             onClick={() => toggleProjectPause(p)}
-                            className="px-4 py-2.5 rounded-xl font-black text-[10px] uppercase bg-white border-2 border-gray-900 text-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-orange-300 hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all whitespace-nowrap"
+                            className="px-4 py-2 rounded-xl font-black text-[10px] uppercase bg-white border-2 border-gray-900 text-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-orange-300 hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all whitespace-nowrap m-0"
                           >
                             {p.nascosto_admin ? '▶ Riattiva' : '⏸ Pausa'}
                           </button>
                           <button 
                             onClick={() => deleteProject(p)}
-                            className="px-4 py-2.5 rounded-xl font-black text-[10px] uppercase bg-red-500 border-2 border-gray-900 text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all whitespace-nowrap"
+                            className="px-4 py-2 rounded-xl font-black text-[10px] uppercase bg-red-500 border-2 border-gray-900 text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all whitespace-nowrap m-0"
                           >
                             🗑️ Elimina
                           </button>
@@ -494,7 +481,7 @@ export default function AdminPanel() {
       {activeTab === 'logs' && user?.is_owner && (
         <div className="bg-white rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden border-4 border-gray-900 animate-in fade-in slide-in-from-bottom-4">
           <div className="bg-gray-900 px-6 py-4 border-b-4 border-gray-900 flex items-center justify-between">
-            <p className="text-white font-black text-xs uppercase tracking-widest">
+            <p className="text-white font-black text-xs uppercase tracking-widest m-0">
               🕵️ Registro Attività Staff
             </p>
           </div>
@@ -502,49 +489,55 @@ export default function AdminPanel() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-100 border-b-4 border-gray-900 text-[11px] font-black uppercase tracking-widest text-gray-600">
-                  <th className="p-5 whitespace-nowrap">Data & Ora</th>
-                  <th className="p-5 whitespace-nowrap">Chi ha agito</th>
-                  <th className="p-5 whitespace-nowrap">Azione Eseguita</th>
-                  <th className="p-5 whitespace-nowrap">Bersaglio</th>
+                  <th className="p-4 whitespace-nowrap">Data & Ora</th>
+                  <th className="p-4 whitespace-nowrap">Chi ha agito</th>
+                  <th className="p-4 whitespace-nowrap">Azione Eseguita</th>
+                  <th className="p-4 whitespace-nowrap">Bersaglio</th>
                 </tr>
               </thead>
               <tbody className="divide-y-4 divide-gray-900">
                 {filteredLogs.map((log) => (
                   <tr key={log.id} className="hover:bg-amber-50 transition-colors">
-                    <td className="p-5 whitespace-nowrap">
-                      <p className="text-xs font-black text-gray-900 bg-white border-2 border-gray-900 px-2 py-1 rounded-lg inline-block shadow-sm">
-                        {new Date(log.created_at).toLocaleDateString('it-IT')}
-                      </p>
-                      <p className="text-[10px] font-bold text-gray-500 mt-1 uppercase tracking-wider">
-                        {new Date(log.created_at).toLocaleTimeString('it-IT')}
-                      </p>
+                    <td className="p-4 align-middle whitespace-nowrap">
+                      <div className="flex flex-col justify-center m-0">
+                        <p className="text-xs font-black text-gray-900 bg-white border-2 border-gray-900 px-2 py-1 rounded-lg inline-block shadow-sm m-0 w-fit">
+                          {new Date(log.created_at).toLocaleDateString('it-IT')}
+                        </p>
+                        <p className="text-[10px] font-bold text-gray-500 mt-1 uppercase tracking-wider m-0">
+                          {new Date(log.created_at).toLocaleTimeString('it-IT')}
+                        </p>
+                      </div>
                     </td>
-                    <td className="p-5">
+                    <td className="p-4 align-middle">
                       {log.studente ? (
-                        <div className="flex items-center gap-3">
-                          <div className="border-2 border-gray-900 rounded-lg overflow-hidden flex-shrink-0">
-                            <SuperAvatar src={log.studente.avatar_url} nome={log.studente.nome} cognome={log.studente.cognome} isStaff={true} size="sm" />
-                          </div>
-                          <span className="text-xs font-black text-gray-900 uppercase">{log.studente.nome} {log.studente.cognome}</span>
+                        <div className="flex items-center gap-3 m-0">
+                          <img 
+                            src={log.studente.avatar_url || '/default-avatar.png'} 
+                            alt="Avatar" 
+                            className="w-10 h-10 rounded-full object-cover border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex-shrink-0" 
+                          />
+                          <span className="text-xs font-black text-gray-900 uppercase m-0 pt-1">{log.studente.nome} {log.studente.cognome}</span>
                         </div>
                       ) : (
-                        <span className="text-xs font-black text-gray-400 uppercase bg-gray-100 px-2 py-1 rounded-lg border-2 border-gray-300">🤖 Sistema</span>
+                        <span className="text-xs font-black text-gray-400 uppercase bg-gray-100 px-2 py-1 rounded-lg border-2 border-gray-300 m-0">🤖 Sistema</span>
                       )}
                     </td>
-                    <td className="p-5">
-                      <span className={`inline-block text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${
-                        log.azione.includes('ELIMINA') || log.azione.includes('BAN') ? 'bg-red-400 text-gray-900' :
-                        log.azione.includes('SOSPENSIONE') || log.azione.includes('PAUSA') ? 'bg-orange-400 text-gray-900' :
-                        'bg-white text-gray-900'
-                      }`}>
-                        {log.azione}
-                      </span>
-                      {log.dettagli && (
-                        <p className="text-[10px] text-gray-600 font-bold mt-2 uppercase tracking-wide break-words max-w-xs">{log.dettagli}</p>
-                      )}
+                    <td className="p-4 align-middle">
+                      <div className="flex flex-col justify-center m-0">
+                        <span className={`inline-block text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] w-fit m-0 ${
+                          log.azione.includes('ELIMINA') || log.azione.includes('BAN') ? 'bg-red-400 text-gray-900' :
+                          log.azione.includes('SOSPENSIONE') || log.azione.includes('PAUSA') ? 'bg-orange-400 text-gray-900' :
+                          'bg-white text-gray-900'
+                        }`}>
+                          {log.azione}
+                        </span>
+                        {log.dettagli && (
+                          <p className="text-[10px] text-gray-600 font-bold mt-1.5 uppercase tracking-wide break-words max-w-xs m-0">{log.dettagli}</p>
+                        )}
+                      </div>
                     </td>
-                    <td className="p-5">
-                      <span className="text-sm font-black text-gray-900 uppercase">{log.bersaglio}</span>
+                    <td className="p-4 align-middle">
+                      <span className="text-sm font-black text-gray-900 uppercase m-0 flex items-center h-full">{log.bersaglio}</span>
                     </td>
                   </tr>
                 ))}
