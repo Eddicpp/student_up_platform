@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -11,7 +11,10 @@ export default function OnboardingPage() {
   const [nome, setNome] = useState('')
   const [cognome, setCognome] = useState('')
   
-  const [corso, setCorso] = useState('')
+  // STATI PER IL CORSO MODIFICATI
+  const [listaCorsi, setListaCorsi] = useState<any[]>([])
+  const [corsoSelezionato, setCorsoSelezionato] = useState('')
+  const [corsoAltro, setCorsoAltro] = useState('')
   const [sesso, setSesso] = useState<SessoType>('non_specificato')
   const [dataNascita, setDataNascita] = useState('')
   
@@ -24,6 +27,16 @@ export default function OnboardingPage() {
   
   const router = useRouter()
   const supabase = createClient()
+
+  // FETCH CORSI ALL'AVVIO
+  useEffect(() => {
+    const fetchCorsi = async () => {
+      // CORREZIONE: Usiamo 'corso_di_studi' al posto di 'corso'
+      const { data } = await supabase.from('corso_di_studi').select('*').order('nome', { ascending: true })
+      if (data) setListaCorsi(data)
+    }
+    fetchCorsi()
+  }, [supabase])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -38,8 +51,20 @@ export default function OnboardingPage() {
       return
     }
 
+    // CONTROLLI EXTRA
+    if (!corsoSelezionato) {
+      setError("Seleziona un corso di laurea.")
+      setLoading(false)
+      return
+    }
+    if (corsoSelezionato === 'altro' && !corsoAltro.trim()) {
+      setError("Specifica il nome del corso di laurea.")
+      setLoading(false)
+      return
+    }
+
     try {
-      // 1. Aggiornamento nella tabella 'studente' (Ora include Nome e Cognome)
+      // 1. Aggiornamento nella tabella 'studente'
       const { error: studentError } = await supabase
         .from('studente')
         .update({
@@ -52,20 +77,21 @@ export default function OnboardingPage() {
   
       if (studentError) throw studentError
 
-      // 2. Ricerca dell'ID del corso
-      const { data: corsoDati } = await supabase
-        .from('corso_di_studi')
-        .select('id')
-        .ilike('nome', `%${corso}%`) 
-        .maybeSingle()
-
-      if (corsoDati) {
-        // 3. Salvataggio nella tabella 'studente_corso'
+      // 2. SALVATAGGIO CORSO O RICHIESTA
+      if (corsoSelezionato === 'altro') {
+        // CORREZIONE: (supabase as any) bypassa il blocco di TypeScript per la nuova tabella
+        const { error: richiestaError } = await (supabase as any)
+          .from('richiesta_nuovo_corso')
+          .insert({ nome_corso: corsoAltro.trim(), studente_id: user.id })
+          
+        if (richiestaError) throw richiestaError;
+        alert("Richiesta per il nuovo corso inviata agli Admin! Verrai assegnato appena approvato. 🚀");
+      } else {
         const { error: corsoInsertError } = await supabase
           .from('studente_corso')
           .upsert({
             studente_id: user.id,
-            corso_id: corsoDati.id,
+            corso_id: corsoSelezionato, 
             anno_inizio: parseInt(annoInizio),
             anno_fine: annoFine ? parseInt(annoFine) : null,
             voto: voto ? parseInt(voto) : null,
@@ -536,12 +562,40 @@ export default function OnboardingPage() {
           </div>
 
           {/* CORSO DI LAUREA */}
-          <div className="pt-2 border-t-4 border-dashed border-gray-200 space-y-4 sm:space-y-6">
+          <div className="pt-4 border-t-4 border-dashed border-gray-200 space-y-4 sm:space-y-6">
             <div>
                <label className={labelClass}>Corso di Laurea *</label>
-               <input type="text" placeholder="es. Informatica" className={inputClass}
-                 value={corso} onChange={(e) => setCorso(e.target.value)} required />
+               <select 
+                 value={corsoSelezionato} 
+                 onChange={(e) => setCorsoSelezionato(e.target.value)} 
+                 className={`${inputClass} cursor-pointer appearance-none bg-white`}
+                 required
+               >
+                 <option value="" disabled>Scegli il tuo corso...</option>
+                 {listaCorsi.map(c => (
+                   <option key={c.id} value={c.id}>{c.nome}</option>
+                 ))}
+                 <option value="altro" className="font-black text-blue-600">✨ Altro (Non in lista)</option>
+               </select>
             </div>
+
+            {/* SE L'UTENTE SCEGLIE ALTRO, MOSTRA QUESTO */}
+            {corsoSelezionato === 'altro' && (
+              <div className="animate-in fade-in zoom-in-95 duration-200">
+                <label className={labelClass}>Nome del Corso (da approvare)</label>
+                <input 
+                  type="text" 
+                  placeholder="Es: Laurea in Astrofisica" 
+                  className={`${inputClass} border-blue-500 focus:border-blue-700 bg-blue-50`}
+                  value={corsoAltro} 
+                  onChange={(e) => setCorsoAltro(e.target.value)} 
+                  required
+                />
+                <p className="text-[10px] text-gray-500 font-bold mt-2 italic">
+                  *Il tuo corso verrà inviato agli Admin per l'approvazione e aggiunto al database.
+                </p>
+              </div>
+            )}
             
             {/* ANNI DI STUDIO */}
             <div className="flex flex-col sm:flex-row gap-4">
