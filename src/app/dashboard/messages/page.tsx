@@ -323,7 +323,8 @@ function ChatWorkspace() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Cerca contatto..."
-                className="w-full pl-10 pr-4 py-2.5 bg-white rounded-xl border-2 border-gray-300 focus:border-gray-900 outline-none text-sm font-medium"
+                // Aggiunta la classe text-gray-900 qui sotto
+                className="w-full pl-10 pr-4 py-2.5 bg-white rounded-xl border-2 border-gray-300 focus:border-gray-900 outline-none text-sm font-medium text-gray-900"
               />
             </div>
           </div>
