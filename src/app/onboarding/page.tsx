@@ -64,25 +64,31 @@ export default function OnboardingPage() {
     }
 
     try {
-      // 1. Aggiornamento nella tabella 'studente'
+      // 1. Usiamo UPSERT invece di UPDATE
+      // Questo crea la riga se manca, o la aggiorna se esiste già.
+      // Risolve l'errore di Foreign Key per le tabelle collegate.
       const { error: studentError } = await supabase
         .from('studente')
-        .update({
+        .upsert({
+          id: user.id,
+          email: user.email!, // Il '!' dice a TS: "Tranquillo, l'email c'è"
           nome: nome.trim(),
           cognome: cognome.trim(),
           data_nascita: dataNascita || null,
           sesso: sesso
-        })
-        .eq('id', user.id)
+        } as any, { onConflict: 'id' })
   
       if (studentError) throw studentError
 
-      // 2. SALVATAGGIO CORSO O RICHIESTA
+      // 2. Ora che siamo SICURI che lo studente esiste nel DB, 
+      // possiamo inserire la richiesta del corso senza errori di Foreign Key
       if (corsoSelezionato === 'altro') {
-        // CORREZIONE: (supabase as any) bypassa il blocco di TypeScript per la nuova tabella
         const { error: richiestaError } = await (supabase as any)
           .from('richiesta_nuovo_corso')
-          .insert({ nome_corso: corsoAltro.trim(), studente_id: user.id })
+          .insert({ 
+            nome_corso: corsoAltro.trim(), 
+            studente_id: user.id 
+          })
           
         if (richiestaError) throw richiestaError;
         alert("Richiesta per il nuovo corso inviata agli Admin! Verrai assegnato appena approvato. 🚀");
