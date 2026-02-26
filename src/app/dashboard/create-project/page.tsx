@@ -335,7 +335,7 @@ export default function CreateProjectPage() {
           )}
           
           <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
-            <span className={`px-2 py-0.5 sm:px-3 sm:py-1 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-black border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${
+            <span className={`px-2 py-0.5 sm:px-3 py-1 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-black border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${
               isInProgress ? 'bg-blue-400 text-gray-900' : 'bg-green-400 text-gray-900'
             }`}>
               {isInProgress ? '🔄 In Corso' : '🟢 Aperto'}
@@ -521,7 +521,7 @@ export default function CreateProjectPage() {
                         </>
                       ) : (
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-yellow-300 border-2 sm:border-3 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center mb-2 sm:mb-3">
+                          <div className="w-12 h-12 sm:w-16 h-16 rounded-xl sm:rounded-2xl bg-yellow-300 border-2 sm:border-3 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center mb-2 sm:mb-3">
                             <span className="text-2xl sm:text-3xl">📸</span>
                           </div>
                           <p className="text-xs sm:text-sm font-black text-gray-900">Clicca o trascina</p>
@@ -531,7 +531,7 @@ export default function CreateProjectPage() {
                     </div>
                     {coverPreview && (
                       <p className="text-[10px] sm:text-xs text-gray-700 mt-2 flex items-center gap-2 font-bold">
-                        <span className="w-3 h-3 sm:w-4 sm:h-4 rounded-full border-2 border-gray-900" style={{ backgroundColor: `rgb(${dominantColor})` }} />
+                        <span className="w-3 h-3 sm:w-4 h-4 rounded-full border-2 border-gray-900" style={{ backgroundColor: `rgb(${dominantColor})` }} />
                         Colore tema estratto ✨
                       </p>
                     )}
@@ -568,7 +568,7 @@ export default function CreateProjectPage() {
                     <label className="flex items-start gap-2 sm:gap-3 cursor-pointer">
                       <input 
                         type="checkbox" 
-                        className="w-5 h-5 sm:w-6 sm:h-6 accent-blue-600 rounded cursor-pointer mt-0.5 border-2 border-gray-900" 
+                        className="w-5 h-5 sm:w-6 h-6 accent-blue-600 rounded cursor-pointer mt-0.5 border-2 border-gray-900" 
                         checked={isInProgress} 
                         onChange={(e) => setIsInProgress(e.target.checked)} 
                       />
@@ -617,7 +617,7 @@ export default function CreateProjectPage() {
                   className="w-full py-2.5 sm:py-3 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base transition-all flex items-center justify-center gap-2 border-2 sm:border-3 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px]"
                 >
                   Continua: Competenze
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 sm:w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
@@ -674,7 +674,7 @@ export default function CreateProjectPage() {
                               {cat.tags.filter(t => selectedTags.includes(t.id)).length}/{cat.tags.length}
                             </span>
                             <svg 
-                              className={`w-4 h-4 sm:w-5 sm:h-5 text-gray-900 transition-transform ${expandedCategories.includes(cat.id) ? 'rotate-180' : ''}`} 
+                              className={`w-4 h-4 sm:w-5 h-5 text-gray-900 transition-transform ${expandedCategories.includes(cat.id) ? 'rotate-180' : ''}`} 
                               fill="none" stroke="currentColor" viewBox="0 0 24 24"
                             >
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
@@ -729,7 +729,7 @@ export default function CreateProjectPage() {
               </div>
             )}
 
-            {/* SEZIONE: Figure Ricercate */}
+            {/* SEZIONE: Figure Ricercate (MODIFICATA PER LEGGIBILITÀ) */}
             {activeSection === 'figure' && (
               <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
                 <div className="bg-white rounded-2xl sm:rounded-3xl border-3 sm:border-4 border-gray-900 p-4 sm:p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
@@ -739,22 +739,24 @@ export default function CreateProjectPage() {
                   <p className="text-[10px] sm:text-sm text-gray-700 mb-4 sm:mb-6 font-bold">Definisci i profili che stai cercando</p>
 
                   {/* Lista figure */}
-                  <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
+                  <div className="space-y-4 sm:space-y-6 mb-4 sm:mb-6">
                     {figureRicercate.map((figura, idx) => (
-                      <div key={figura.id} className="border-2 sm:border-3 border-gray-900 rounded-xl sm:rounded-2xl p-3 sm:p-4 relative bg-gray-50">
+                      <div key={figura.id} className="border-2 sm:border-3 border-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 relative bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                        {/* Tasto Rimuovi */}
                         <button
                           type="button"
                           onClick={() => removeFigura(figura.id)}
-                          className="absolute top-2 right-2 sm:top-3 sm:right-3 w-6 h-6 sm:w-8 sm:h-8 bg-red-400 hover:bg-red-500 rounded-lg border-2 border-gray-900 flex items-center justify-center font-black text-gray-900 text-sm sm:text-base transition-colors"
+                          className="absolute top-3 right-3 sm:top-4 sm:right-4 w-8 h-8 sm:w-10 sm:h-10 bg-red-400 hover:bg-red-500 rounded-lg border-2 border-gray-900 flex items-center justify-center font-black text-gray-900 text-lg sm:text-xl transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
+                          title="Rimuovi figura"
                         >
                           ×
                         </button>
 
-                        <div className="flex items-center gap-2 mb-3 sm:mb-4">
-                          <span className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-300 text-gray-900 rounded-lg sm:rounded-xl border-2 border-gray-900 flex items-center justify-center text-xs sm:text-sm font-black">
+                        <div className="flex items-center gap-3 mb-4 sm:mb-6">
+                          <span className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-300 text-gray-900 rounded-lg sm:rounded-xl border-2 border-gray-900 flex items-center justify-center text-sm sm:text-base font-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                             {idx + 1}
                           </span>
-                          <span className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-black border-2 border-gray-900 ${
+                          <span className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-black border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${
                             figura.tipo === 'strutturata' 
                               ? 'bg-green-300 text-gray-900' 
                               : 'bg-purple-300 text-gray-900'
@@ -764,16 +766,16 @@ export default function CreateProjectPage() {
                         </div>
 
                         {figura.tipo === 'strutturata' ? (
-                          <div className="space-y-3 sm:space-y-4">
-                            <div className="grid sm:grid-cols-3 gap-2 sm:gap-4">
+                          <div className="space-y-4 sm:space-y-6">
+                            <div className="grid sm:grid-cols-3 gap-3 sm:gap-5">
                               <div>
-                                <label className="block text-[10px] sm:text-xs font-black text-gray-900 mb-1 sm:mb-1.5">🎓 Corso</label>
+                                <label className="block text-xs sm:text-sm font-black text-gray-900 mb-2">🎓 Corso di Studi</label>
                                 <select
                                   value={figura.corso_id || ''}
                                   onChange={(e) => updateFigura(figura.id, { corso_id: e.target.value || null })}
-                                  className="w-full px-2 sm:px-3 py-1.5 sm:py-2 bg-white rounded-lg border-2 border-gray-900 text-xs sm:text-sm font-bold focus:border-blue-500 outline-none"
+                                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 rounded-xl border-2 border-gray-900 text-sm sm:text-base font-bold focus:border-blue-500 outline-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
                                 >
-                                  <option value="">Qualsiasi</option>
+                                  <option value="">Qualsiasi corso</option>
                                   {corsiDisponibili.map(corso => (
                                     <option key={corso.id} value={corso.id}>
                                       {corso.nome}
@@ -783,13 +785,13 @@ export default function CreateProjectPage() {
                               </div>
 
                               <div>
-                                <label className="block text-[10px] sm:text-xs font-black text-gray-900 mb-1 sm:mb-1.5">📅 Anno</label>
+                                <label className="block text-xs sm:text-sm font-black text-gray-900 mb-2">📅 Anno</label>
                                 <select
                                   value={figura.anno_preferito || ''}
                                   onChange={(e) => updateFigura(figura.id, { anno_preferito: e.target.value ? parseInt(e.target.value) : null })}
-                                  className="w-full px-2 sm:px-3 py-1.5 sm:py-2 bg-white rounded-lg border-2 border-gray-900 text-xs sm:text-sm font-bold focus:border-blue-500 outline-none"
+                                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 rounded-xl border-2 border-gray-900 text-sm sm:text-base font-bold focus:border-blue-500 outline-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
                                 >
-                                  <option value="">Qualsiasi</option>
+                                  <option value="">Qualsiasi anno</option>
                                   <option value="1">1° Anno</option>
                                   <option value="2">2° Anno</option>
                                   <option value="3">3° Anno</option>
@@ -799,31 +801,34 @@ export default function CreateProjectPage() {
                               </div>
 
                               <div>
-                                <label className="block text-[10px] sm:text-xs font-black text-gray-900 mb-1 sm:mb-1.5">🔢 Quanti</label>
+                                <label className="block text-xs sm:text-sm font-black text-gray-900 mb-2">🔢 Quantità</label>
                                 <select
                                   value={figura.quantita}
                                   onChange={(e) => updateFigura(figura.id, { quantita: parseInt(e.target.value) })}
-                                  className="w-full px-2 sm:px-3 py-1.5 sm:py-2 bg-white rounded-lg border-2 border-gray-900 text-xs sm:text-sm font-bold focus:border-blue-500 outline-none"
+                                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 rounded-xl border-2 border-gray-900 text-sm sm:text-base font-bold focus:border-blue-500 outline-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
                                 >
-                                  {[1,2,3,4,5].map(n => (
-                                    <option key={n} value={n}>{n}</option>
+                                  {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                                    <option key={n} value={n}>{n} {n === 1 ? 'persona' : 'persone'}</option>
                                   ))}
                                 </select>
                               </div>
                             </div>
 
                             <div>
-                              <label className="block text-[10px] sm:text-xs font-black text-gray-900 mb-1.5 sm:mb-2">💪 Competenze</label>
-                              <div className="flex flex-wrap gap-1 sm:gap-1.5 max-h-24 sm:max-h-32 overflow-y-auto p-2 sm:p-3 bg-white rounded-lg border-2 border-gray-900">
-                                {tags.slice(0, 20).map(tag => (
+                              <label className="block text-xs sm:text-sm font-black text-gray-900 mb-2 flex items-center justify-between">
+                                <span>💪 Competenze ricercate</span>
+                                <span className="text-[10px] sm:text-xs font-bold text-gray-500 bg-gray-200 px-2 py-1 rounded-lg border border-gray-400">Scorri per vederle tutte</span>
+                              </label>
+                              <div className="flex flex-wrap gap-2 sm:gap-2.5 max-h-40 sm:max-h-48 overflow-y-auto p-3 sm:p-4 bg-gray-50 rounded-xl border-2 border-gray-900 shadow-inner">
+                                {tags.map(tag => (
                                   <button
                                     key={tag.id}
                                     type="button"
                                     onClick={() => toggleFiguraCompetenza(figura.id, tag.id)}
-                                    className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-[9px] sm:text-xs font-bold transition-all border sm:border-2 border-gray-900 ${
+                                    className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all border-2 border-gray-900 ${
                                       figura.competenze.includes(tag.id)
-                                        ? 'bg-blue-400 text-gray-900'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        ? 'bg-blue-400 text-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] translate-x-[-2px] translate-y-[-2px]'
+                                        : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                                     }`}
                                   >
                                     {tag.nome}
@@ -833,39 +838,39 @@ export default function CreateProjectPage() {
                             </div>
                           </div>
                         ) : (
-                          <div className="space-y-3 sm:space-y-4">
-                            <div className="grid sm:grid-cols-2 gap-2 sm:gap-4">
+                          <div className="space-y-4 sm:space-y-6">
+                            <div className="grid sm:grid-cols-2 gap-3 sm:gap-5">
                               <div>
-                                <label className="block text-[10px] sm:text-xs font-black text-gray-900 mb-1 sm:mb-1.5">📌 Titolo *</label>
+                                <label className="block text-xs sm:text-sm font-black text-gray-900 mb-2">📌 Ruolo (Es. Graphic Designer) *</label>
                                 <input
                                   type="text"
-                                  placeholder="Es: Video Editor..."
+                                  placeholder="Inserisci il ruolo..."
                                   value={figura.titolo_libero}
                                   onChange={(e) => updateFigura(figura.id, { titolo_libero: e.target.value })}
-                                  className="w-full px-2 sm:px-3 py-1.5 sm:py-2 bg-white rounded-lg border-2 border-gray-900 text-xs sm:text-sm font-bold placeholder:text-gray-400 focus:border-purple-500 outline-none"
+                                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 rounded-xl border-2 border-gray-900 text-sm sm:text-base font-bold placeholder:text-gray-400 focus:border-purple-500 outline-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
                                 />
                               </div>
                               <div>
-                                <label className="block text-[10px] sm:text-xs font-black text-gray-900 mb-1 sm:mb-1.5">🔢 Quanti</label>
+                                <label className="block text-xs sm:text-sm font-black text-gray-900 mb-2">🔢 Quantità</label>
                                 <select
                                   value={figura.quantita}
                                   onChange={(e) => updateFigura(figura.id, { quantita: parseInt(e.target.value) })}
-                                  className="w-full px-2 sm:px-3 py-1.5 sm:py-2 bg-white rounded-lg border-2 border-gray-900 text-xs sm:text-sm font-bold focus:border-purple-500 outline-none"
+                                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 rounded-xl border-2 border-gray-900 text-sm sm:text-base font-bold focus:border-purple-500 outline-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
                                 >
-                                  {[1,2,3,4,5].map(n => (
-                                    <option key={n} value={n}>{n}</option>
+                                  {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                                    <option key={n} value={n}>{n} {n === 1 ? 'persona' : 'persone'}</option>
                                   ))}
                                 </select>
                               </div>
                             </div>
                             <div>
-                              <label className="block text-[10px] sm:text-xs font-black text-gray-900 mb-1 sm:mb-1.5">📝 Descrizione</label>
+                              <label className="block text-xs sm:text-sm font-black text-gray-900 mb-2">📝 Descrizione del ruolo</label>
                               <textarea
-                                placeholder="Cosa dovrebbe fare questa figura..."
-                                rows={2}
+                                placeholder="Descrivi nel dettaglio cosa dovrà fare questa persona e quali skill le servono..."
+                                rows={3}
                                 value={figura.descrizione_libera}
                                 onChange={(e) => updateFigura(figura.id, { descrizione_libera: e.target.value })}
-                                className="w-full px-2 sm:px-3 py-1.5 sm:py-2 bg-white rounded-lg border-2 border-gray-900 text-xs sm:text-sm font-bold placeholder:text-gray-400 focus:border-purple-500 outline-none resize-none"
+                                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 rounded-xl border-2 border-gray-900 text-sm sm:text-base font-bold placeholder:text-gray-400 focus:border-purple-500 outline-none resize-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
                               />
                             </div>
                           </div>
@@ -874,31 +879,33 @@ export default function CreateProjectPage() {
                     ))}
                   </div>
 
-                  {/* Aggiungi figura */}
-                  <div className="flex gap-2 sm:gap-3">
+                  {/* Pulsanti per aggiungere figure */}
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                     <button
                       type="button"
                       onClick={addFiguraStrutturata}
-                      className="flex-1 py-2.5 sm:py-3 border-2 sm:border-3 border-dashed border-green-500 hover:border-green-600 hover:bg-green-100 text-green-700 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-1 sm:gap-2"
+                      className="flex-1 py-3 sm:py-4 bg-green-100 hover:bg-green-200 border-2 border-dashed border-gray-900 text-gray-900 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base transition-all flex items-center justify-center gap-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
                     >
-                      <span className="text-base sm:text-lg">+</span>
-                      <span className="hidden sm:inline">Strutturata</span>
-                      <span className="sm:hidden">📋</span>
+                      <span className="text-xl">➕</span>
+                      <span>Aggiungi Studente Specifico</span>
                     </button>
                     <button
                       type="button"
                       onClick={addFiguraLibera}
-                      className="flex-1 py-2.5 sm:py-3 border-2 sm:border-3 border-dashed border-purple-500 hover:border-purple-600 hover:bg-purple-100 text-purple-700 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-1 sm:gap-2"
+                      className="flex-1 py-3 sm:py-4 bg-purple-100 hover:bg-purple-200 border-2 border-dashed border-gray-900 text-gray-900 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base transition-all flex items-center justify-center gap-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
                     >
-                      <span className="text-base sm:text-lg">+</span>
-                      <span className="hidden sm:inline">Personalizzata</span>
-                      <span className="sm:hidden">✍️</span>
+                      <span className="text-xl">➕</span>
+                      <span>Aggiungi Ruolo Libero</span>
                     </button>
                   </div>
 
-                  <p className="text-[9px] sm:text-xs text-gray-600 mt-3 sm:mt-4 text-center font-bold bg-gray-100 p-2 rounded-lg">
-                    💡 "Strutturata" per studenti specifici, "Personalizzata" per figure non standard
-                  </p>
+                  <div className="mt-4 p-3 sm:p-4 bg-yellow-100 border-2 border-gray-900 rounded-xl flex items-start gap-3">
+                    <span className="text-xl">💡</span>
+                    <p className="text-xs sm:text-sm text-gray-800 font-bold leading-relaxed">
+                      Scegli <span className="underline decoration-2 decoration-green-500">Studente Specifico</span> se cerchi qualcuno da un corso in particolare (es. Ingegneria). 
+                      Scegli <span className="underline decoration-2 decoration-purple-500">Ruolo Libero</span> se cerchi competenze generiche a prescindere dal corso (es. Video Editor).
+                    </p>
+                  </div>
                 </div>
 
                 {/* Mobile Preview - Solo su telefono, prima dei pulsanti finali */}
