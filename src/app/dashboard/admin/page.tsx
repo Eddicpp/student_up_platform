@@ -123,30 +123,44 @@ export default function AdminPanel() {
   }
 
   // --- AZIONI PROGETTI ---
+  
+  // Metti in pausa o riattiva un progetto (cambiando lo stato in 'pausa' o 'aperto')
   const toggleProjectPause = async (project: any) => {
+    const nuovoStato = project.stato === 'pausa' ? 'aperto' : 'pausa';
+    
     const { error } = await supabase
       .from('bando')
-      .update({ nascosto_admin: !project.nascosto_admin } as any)
+      .update({ stato: nuovoStato } as any)
       .eq('id', project.id)
 
     if (!error) {
-      await registraLog(project.nascosto_admin ? 'RIATTIVAZIONE PROGETTO' : 'SOSPENSIONE PROGETTO', project.titolo)
-      fetchData()
-    } else alert("Errore: " + error.message)
+      await registraLog(nuovoStato === 'aperto' ? 'RIATTIVAZIONE PROGETTO' : 'SOSPENSIONE PROGETTO', project.titolo)
+      // Aggiorna la lista progetti localmente per feedback istantaneo
+      setProjects(projects.map(p => p.id === project.id ? { ...p, stato: nuovoStato } : p))
+    } else {
+      alert("Errore durante la modifica dello stato: " + error.message)
+    }
   }
 
+  // Elimina un progetto
   const deleteProject = async (project: any) => {
-    if (!confirm("⚠️ SEI SICURO? Questa azione cancellerà il progetto per sempre.")) return
+    if (!confirm(`⚠️ SEI SICURO? Questa azione cancellerà il progetto "${project.titolo}" per sempre e in modo irreversibile.`)) return
 
-    const { error } = await supabase
-      .from('bando')
-      .delete()
-      .eq('id', project.id)
+    try {
+      const { error } = await supabase
+        .from('bando')
+        .delete()
+        .eq('id', project.id)
 
-    if (!error) {
+      if (error) throw error;
+
       await registraLog('ELIMINAZIONE PROGETTO', project.titolo, `Id Progetto: ${project.id}`)
-      fetchData()
-    } else alert("Errore durante l'eliminazione: " + error.message)
+      // Rimuovi visivamente il progetto dalla lista
+      setProjects(projects.filter(p => p.id !== project.id))
+      
+    } catch (error: any) {
+      alert("Errore durante l'eliminazione. Assicurati di avere i permessi RLS corretti.\nDettaglio: " + error.message)
+    }
   }
 
   // FILTRI RICERCA
@@ -255,7 +269,7 @@ export default function AdminPanel() {
               <tbody className="divide-y-4 divide-gray-900">
                 {filteredUsers.map((u) => (
                   <tr key={u.id} className="hover:bg-blue-50 transition-colors">
-                    {/* ✅ ALLINEAMENTO VERTICALE E IMMAGINE ROTONDA */}
+                    {/* ALLINEAMENTO VERTICALE E IMMAGINE ROTONDA */}
                     <td className="p-4 align-middle">
                       <div className="flex items-center gap-3">
                         <img 
@@ -438,9 +452,13 @@ export default function AdminPanel() {
                       </td>
                       <td className="p-4 align-middle">
                         <div className="flex items-center m-0">
-                          {p.nascosto_admin ? (
+                          {p.stato === 'pausa' ? (
                             <span className="bg-orange-400 text-gray-900 border-2 border-gray-900 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] whitespace-nowrap m-0">
                               ⏸ IN PAUSA
+                            </span>
+                          ) : p.stato === 'chiuso' ? (
+                             <span className="bg-gray-700 text-white border-2 border-gray-900 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] whitespace-nowrap m-0">
+                              🔒 CHIUSO
                             </span>
                           ) : (
                             <span className="bg-green-400 text-gray-900 border-2 border-gray-900 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] whitespace-nowrap m-0">
@@ -455,7 +473,7 @@ export default function AdminPanel() {
                             onClick={() => toggleProjectPause(p)}
                             className="px-4 py-2 rounded-xl font-black text-[10px] uppercase bg-white border-2 border-gray-900 text-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-orange-300 hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all whitespace-nowrap m-0"
                           >
-                            {p.nascosto_admin ? '▶ Riattiva' : '⏸ Pausa'}
+                            {p.stato === 'pausa' ? '▶ Riattiva' : '⏸ Pausa'}
                           </button>
                           <button 
                             onClick={() => deleteProject(p)}
