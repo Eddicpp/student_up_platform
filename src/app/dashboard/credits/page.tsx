@@ -78,7 +78,7 @@ export default function CreditsPage() {
 
       </div>
 
-      {/* STILE CSS EXTRA PER LE ANIMAZIONI */}
+      {/* STILE CSS EXTRA PER LE ANIMAZIONI dc*/}
       <style jsx global>{`
         @keyframes spin-slow {
           from { transform: rotate(0deg); }
