@@ -185,19 +185,19 @@ export default function PrivateChatModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
       
-      {/* Modal */}
-      <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh] animate-in fade-in zoom-in-95 duration-200">
+      {/* Modal Cartoon */}
+      <div className="relative w-full max-w-lg bg-white rounded-2xl sm:rounded-[2rem] border-4 border-gray-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col h-[85vh] sm:h-auto sm:max-h-[85vh] animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
         
         {/* Header */}
-        <div className="flex items-center gap-4 p-4 border-b border-gray-100 bg-white">
-          <div className="w-10 h-10 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+        <div className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5 border-b-4 border-gray-900 bg-yellow-300 z-10 shadow-sm">
+          <div className="w-12 h-12 rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] overflow-hidden bg-white flex-shrink-0">
             {otherUser.avatar_url ? (
               <img 
                 src={otherUser.avatar_url} 
@@ -205,48 +205,46 @@ export default function PrivateChatModal({
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400 font-bold">
+              <div className="w-full h-full flex items-center justify-center bg-blue-300 text-gray-900 font-black text-xl uppercase">
                 {otherUser.nome?.[0]}{otherUser.cognome?.[0]}
               </div>
             )}
           </div>
+          
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-gray-900 truncate">
+            <p className="font-black text-gray-900 text-lg uppercase truncate leading-tight">
               {otherUser.nome} {otherUser.cognome}
             </p>
-            <p className="text-xs text-gray-500 truncate">
+            <p className="text-[10px] sm:text-xs font-bold text-gray-700 truncate uppercase tracking-widest bg-white inline-block px-2 py-0.5 rounded border border-gray-900 mt-1">
               📁 {bandoTitolo}
             </p>
           </div>
+          
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-xl text-gray-500 hover:text-gray-700 transition-colors"
+            className="p-2.5 bg-red-400 hover:bg-red-500 border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all text-gray-900"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 min-h-[300px]">
+        {/* Messages Area */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-gray-50 pattern-dots relative">
           {loading ? (
             <div className="h-full flex items-center justify-center">
-              <div className="w-8 h-8 border-3 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
+              <div className="text-4xl animate-bounce">⏳</div>
             </div>
           ) : messages.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-center">
-              <div>
-                <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                  <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                </div>
-                <p className="text-gray-600 font-medium">Inizia la conversazione!</p>
-                <p className="text-gray-400 text-sm mt-1">
-                  Chiedi informazioni sul progetto
-                </p>
+            <div className="h-full flex flex-col items-center justify-center text-center">
+              <div className="w-20 h-20 bg-white border-4 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rounded-3xl flex items-center justify-center mb-4 -rotate-6">
+                <span className="text-4xl">💬</span>
               </div>
+              <p className="text-gray-900 font-black uppercase text-xl">Inizia la chat!</p>
+              <p className="text-gray-600 font-bold text-sm mt-1 max-w-[200px]">
+                Scrivi il tuo primo messaggio per presentarti.
+              </p>
             </div>
           ) : (
             <>
@@ -257,16 +255,16 @@ export default function PrivateChatModal({
                 return (
                   <div 
                     key={msg.id} 
-                    className={`flex gap-2 ${isMe ? 'flex-row-reverse' : ''}`}
+                    className={`flex gap-2 sm:gap-3 ${isMe ? 'flex-row-reverse' : ''}`}
                   >
-                    {/* Avatar */}
-                    <div className={`w-8 flex-shrink-0 ${showAvatar ? '' : 'invisible'}`}>
+                    {/* Avatar del mittente (solo per i messaggi ricevuti) */}
+                    <div className={`w-8 sm:w-10 flex-shrink-0 ${showAvatar ? '' : 'invisible'}`}>
                       {!isMe && (
-                        <div className="w-8 h-8 rounded-lg overflow-hidden bg-gray-200">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] overflow-hidden bg-white">
                           {otherUser.avatar_url ? (
                             <img src={otherUser.avatar_url} alt="" className="w-full h-full object-cover" />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs font-bold">
+                            <div className="w-full h-full flex items-center justify-center bg-blue-300 text-gray-900 text-xs sm:text-sm font-black uppercase">
                               {otherUser.nome?.[0]}
                             </div>
                           )}
@@ -274,19 +272,21 @@ export default function PrivateChatModal({
                       )}
                     </div>
                     
-                    {/* Message bubble */}
+                    {/* Fumetto (Message bubble) */}
                     <div className={`max-w-[75%] ${isMe ? 'text-right' : ''}`}>
-                      <div className={`px-4 py-2.5 rounded-2xl inline-block text-left ${
+                      <div className={`px-4 py-2.5 sm:py-3 rounded-2xl border-2 sm:border-3 border-gray-900 inline-block text-left shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${
                         isMe 
-                          ? 'bg-blue-600 text-white rounded-br-md' 
-                          : 'bg-white border border-gray-200 text-gray-900 rounded-bl-md'
+                          ? 'bg-blue-400 text-gray-900 rounded-br-sm' 
+                          : 'bg-white text-gray-900 rounded-bl-sm'
                       }`}>
-                        <p className="text-sm whitespace-pre-wrap break-words">{msg.testo}</p>
+                        <p className="text-sm sm:text-base font-bold whitespace-pre-wrap break-words leading-snug">
+                          {msg.testo}
+                        </p>
                       </div>
-                      <p className={`text-[10px] text-gray-400 mt-1 px-1 ${isMe ? 'text-right' : ''}`}>
+                      <p className={`text-[9px] sm:text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1.5 px-1 ${isMe ? 'text-right' : ''}`}>
                         {formatTime(msg.created_at)}
                         {isMe && msg.letto && (
-                          <span className="ml-1 text-blue-500">✓✓</span>
+                          <span className="ml-1 text-green-600">✓✓</span>
                         )}
                       </p>
                     </div>
@@ -298,29 +298,27 @@ export default function PrivateChatModal({
           )}
         </div>
 
-        {/* Input */}
-        <div className="p-4 border-t border-gray-100 bg-white">
-          <div className="flex gap-2">
+        {/* Input Area */}
+        <div className="p-3 sm:p-5 border-t-4 border-gray-900 bg-white z-10">
+          <div className="flex gap-2 sm:gap-3">
             <input
               ref={inputRef}
               type="text"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Scrivi un messaggio..."
-              className="flex-1 px-4 py-2.5 bg-gray-100 rounded-xl border-0 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+              placeholder="Scrivi qui..."
+              className="flex-1 px-3 sm:px-4 py-3 bg-gray-50 border-3 border-gray-900 rounded-xl focus:bg-white focus:outline-none focus:translate-x-[2px] focus:translate-y-[2px] focus:shadow-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] text-gray-900 font-bold text-sm sm:text-base placeholder:text-gray-500 placeholder:italic transition-all"
             />
             <button
               onClick={sendMessage}
               disabled={!newMessage.trim() || sending}
-              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              className="px-4 sm:px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-black text-xl sm:text-2xl border-3 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center"
             >
               {sending ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span className="animate-spin text-lg">⏳</span>
               ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
+                <span>🚀</span>
               )}
             </button>
           </div>

@@ -82,119 +82,139 @@ export default function PublicProfilePage() {
   if (loading) return (
     <div className="min-h-[60vh] flex items-center justify-center">
       <div className="text-center">
-        <div className="w-12 h-12 border-4 border-gray-300 border-t-red-600 rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-gray-500 font-medium">Caricamento profilo...</p>
+        <div className="text-5xl sm:text-6xl animate-bounce mb-4">🚀</div>
+        <p className="text-gray-900 font-black uppercase tracking-widest text-sm sm:text-lg">Caricamento profilo...</p>
       </div>
     </div>
   )
 
   if (error || !profileData) return (
-    <div className="text-center pt-20">
-      <h1 className="text-4xl font-black text-gray-300">⚠️ {error}</h1>
-      <button onClick={() => router.back()} className="mt-6 font-bold text-red-800 hover:underline uppercase text-sm">
+    <div className="text-center pt-20 px-4">
+      <div className="text-6xl mb-6 -rotate-6">🤷‍♂️</div>
+      <h1 className="text-3xl sm:text-4xl font-black text-gray-900 uppercase tracking-tighter mb-6">⚠️ {error}</h1>
+      <button 
+        onClick={() => router.back()} 
+        className="px-6 py-3 bg-white border-4 border-gray-900 rounded-xl font-black uppercase tracking-widest shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
+      >
         ← Torna indietro
       </button>
     </div>
   )
 
   return (
-    <div className="max-w-5xl mx-auto pb-20 pt-10">
+    <div className="max-w-5xl mx-auto pb-20 pt-6 sm:pt-10 px-4 sm:px-6">
       
       {/* Header con navigazione */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 sm:mb-8">
         <button 
           onClick={() => router.back()}
-          className="flex items-center gap-2 text-gray-500 hover:text-gray-900 font-medium text-sm transition-colors group"
+          className="inline-flex items-center gap-2 bg-white px-4 py-2 border-2 sm:border-3 border-gray-900 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-widest text-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
         >
-          <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Indietro
+          <span className="text-sm sm:text-base">🔙</span> Indietro
         </button>
       </div>
 
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-2xl sm:rounded-[2rem] border-[3px] sm:border-4 border-gray-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] sm:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
         
-        {/* Banner */}
-        <div className="h-48 sm:h-56 bg-gradient-to-br from-gray-100 to-gray-200 relative">
+        {/* Banner Cartoon */}
+        <div className="h-40 sm:h-56 bg-gray-200 border-b-[3px] sm:border-b-4 border-gray-900 relative overflow-hidden pattern-dots">
           {profileData.banner_url ? (
             <img 
               src={profileData.banner_url} 
               className="w-full h-full object-cover" 
               alt="Banner" 
+              style={profileData.banner_settings ? {
+                transform: `scale(${profileData.banner_settings.scale || 1})`,
+                objectPosition: `50% ${profileData.banner_settings.posY || 50}%`
+              } : {}}
             />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center">
-              <span className="text-white/10 font-black text-6xl italic">STUDENT<span className="text-red-600/20">UP</span></span>
+            <div className="w-full h-full bg-blue-400 flex items-center justify-center">
+              <span className="text-white font-black text-4xl sm:text-6xl italic drop-shadow-[4px_4px_0px_rgba(0,0,0,1)]">STUDENT<span className="text-yellow-300">UP</span></span>
             </div>
           )}
         </div>
 
         {/* Contenuto */}
-        <div className="px-6 sm:px-10 pb-10">
+        <div className="px-4 sm:px-10 pb-8 sm:pb-10">
           
           {/* Avatar e info base (LAYOUT ORIZZONTALE) */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end -mt-16 sm:-mt-12 mb-8 gap-4">
+          <div className="flex flex-col sm:flex-row justify-between items-center sm:items-end -mt-12 sm:-mt-16 mb-8 gap-4 sm:gap-6 text-center sm:text-left">
             
-            <div className="flex items-end gap-6 z-10">
-              {/* ✅ IL TUO SUPER AVATAR: Misura media, layout orizzontale */}
-              <SuperAvatar 
-                src={profileData.avatar_url}
-                nome={profileData.nome}
-                cognome={profileData.cognome}
-                isStaff={profileData.is_system_admin}
-                size="md"
-              />
+            <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 sm:gap-6 z-10">
+              {/* Avatar Cartoon */}
+              <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-[3px] sm:border-4 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden bg-white flex-shrink-0 relative">
+                {profileData.avatar_url ? (
+                  <img src={profileData.avatar_url} className="w-full h-full object-cover" alt="Avatar"/>
+                ) : (
+                  <div className="w-full h-full bg-red-400 flex items-center justify-center">
+                    <span className="text-3xl sm:text-5xl font-black text-gray-900 uppercase">{profileData.nome?.charAt(0)}{profileData.cognome?.charAt(0)}</span>
+                  </div>
+                )}
+                
+                {/* Badge Staff (Se applicabile) */}
+                {profileData.is_system_admin && (
+                  <div className="absolute bottom-0 right-0 bg-yellow-300 border-2 border-gray-900 text-gray-900 px-2 py-0.5 rounded-lg text-[8px] sm:text-[10px] font-black uppercase -rotate-12">
+                    Staff
+                  </div>
+                )}
+              </div>
               
               <div className="pb-2">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-none">
-                  {profileData.nome} {profileData.cognome}
+                <h1 className="text-3xl sm:text-4xl font-black text-gray-900 uppercase italic tracking-tighter leading-none mb-1 sm:mb-2">
+                  {profileData.nome} <span className="text-red-600">{profileData.cognome}</span>
                 </h1>
                 {profileData.corso_studi && (
-                  <p className="text-gray-500 mt-2 text-sm font-medium">
-                    {profileData.corso_studi} • {profileData.anno_corso}° Anno
-                  </p>
+                  <div className="inline-block bg-gray-100 border-2 border-gray-900 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg">
+                    <p className="text-gray-900 font-bold text-[10px] sm:text-sm uppercase tracking-widest">
+                      🎓 {profileData.corso_studi} • {profileData.anno_corso}° Anno
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* Pulsanti Azione Rapida */}
-            <div className="flex gap-3 mt-4 sm:mt-0 pt-2">
+            {/* Pulsante Contatta */}
+            <div className="w-full sm:w-auto pt-2 sm:pt-0 sm:pb-2">
               <a 
                 href={`mailto:${profileData.email}`}
-                className="flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-xl font-medium text-sm hover:bg-gray-800 transition-colors shadow-md"
+                className="flex items-center justify-center gap-2 bg-yellow-300 text-gray-900 border-[3px] border-gray-900 px-6 py-3 rounded-xl font-black uppercase tracking-widest shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all w-full sm:w-auto"
               >
-                ✉️ Contatta
+                <span className="text-xl">✉️</span> Contatta
               </a>
             </div>
 
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-6 sm:gap-8">
             
             {/* Colonna Sinistra (Bio & Tags) */}
-            <div className="md:col-span-2 space-y-8">
+            <div className="md:col-span-2 space-y-6 sm:space-y-8">
               
               {/* Bio */}
-              <div>
-                <label className="block text-xs font-black tracking-widest uppercase text-gray-400 mb-3">Biografia</label>
-                <p className="text-gray-600 leading-relaxed bg-gray-50 p-6 rounded-2xl border border-gray-100">
-                  {profileData.bio || <span className="text-gray-400 italic">Nessuna biografia inserita.</span>}
+              <div className="bg-blue-50 border-[3px] sm:border-4 border-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 relative mt-4">
+                <span className="absolute -top-3.5 sm:-top-5 left-4 sm:left-6 bg-white border-2 sm:border-4 border-gray-900 px-3 py-0.5 sm:px-4 sm:py-1 rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-gray-900 text-[10px] sm:text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                  Chi Sono 💭
+                </span>
+                <p className="text-gray-900 font-bold text-sm sm:text-lg leading-relaxed mt-2">
+                  {profileData.bio || <span className="text-gray-500 italic">Nessuna biografia inserita. È un tipo misterioso.</span>}
                 </p>
               </div>
 
               {/* Tags / Competenze */}
-              <div>
-                <label className="block text-xs font-black tracking-widest uppercase text-gray-400 mb-3">Competenze & Interessi</label>
-                <div className="flex flex-wrap gap-2">
+              <div className="bg-purple-50 border-[3px] sm:border-4 border-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 relative mt-4">
+                <span className="absolute -top-3.5 sm:-top-5 left-4 sm:left-6 bg-white border-2 sm:border-4 border-gray-900 px-3 py-0.5 sm:px-4 sm:py-1 rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-gray-900 text-[10px] sm:text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                  Competenze 🚀
+                </span>
+                <div className="flex flex-wrap gap-2 sm:gap-3 mt-2">
                   {tags.length > 0 ? (
                     tags.map((tag, i) => (
-                      <span key={i} className="px-4 py-2 bg-red-50 text-red-700 border border-red-100 rounded-xl text-xs font-bold uppercase tracking-wider">
+                      <span key={i} className="px-3 sm:px-4 py-1.5 sm:py-2 bg-white text-gray-900 border-2 sm:border-3 border-gray-900 rounded-lg sm:rounded-xl text-[10px] sm:text-sm font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-transform">
                         {tag}
                       </span>
                     ))
                   ) : (
-                    <span className="text-gray-400 italic text-sm">Nessuna competenza inserita</span>
+                    <span className="text-gray-500 font-bold italic text-sm">Nessuna competenza inserita</span>
                   )}
                 </div>
               </div>
@@ -202,55 +222,60 @@ export default function PublicProfilePage() {
             </div>
 
             {/* Colonna Destra (Social & CV) */}
-            <div className="space-y-8">
+            <div className="space-y-6 sm:space-y-8">
               
               {/* Social Links */}
-              <div>
-                <label className="block text-xs font-black tracking-widest uppercase text-gray-400 mb-3">Contatti</label>
-                <div className="flex flex-col gap-3">
+              <div className="bg-green-50 border-[3px] sm:border-4 border-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 relative mt-4 md:mt-0">
+                <span className="absolute -top-3.5 sm:-top-5 left-4 sm:left-6 bg-white border-2 sm:border-4 border-gray-900 px-3 py-0.5 sm:px-4 sm:py-1 rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-gray-900 text-[10px] sm:text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                  Contatti 🔗
+                </span>
+                <div className="flex flex-col gap-3 mt-2">
                   {profileData.linkedin_url && (
-                    <a href={profileData.linkedin_url.startsWith('http') ? profileData.linkedin_url : `https://${profileData.linkedin_url}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 font-medium text-sm transition-colors border border-gray-100">
-                      <span className="text-[#0A66C2]">🔗</span> LinkedIn
+                    <a href={profileData.linkedin_url.startsWith('http') ? profileData.linkedin_url : `https://${profileData.linkedin_url}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-3 bg-white border-2 sm:border-3 border-gray-900 rounded-xl font-black uppercase text-[10px] sm:text-xs text-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all">
+                      <span className="text-lg sm:text-xl">💼</span> LinkedIn
                     </a>
                   )}
                   {profileData.github_url && (
-                    <a href={profileData.github_url.startsWith('http') ? profileData.github_url : `https://${profileData.github_url}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 font-medium text-sm transition-colors border border-gray-100">
-                      <span className="text-gray-900">💻</span> GitHub
+                    <a href={profileData.github_url.startsWith('http') ? profileData.github_url : `https://${profileData.github_url}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-3 bg-white border-2 sm:border-3 border-gray-900 rounded-xl font-black uppercase text-[10px] sm:text-xs text-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all">
+                      <span className="text-lg sm:text-xl">💻</span> GitHub
                     </a>
                   )}
                   {profileData.website_url && (
-                    <a href={profileData.website_url.startsWith('http') ? profileData.website_url : `https://${profileData.website_url}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 font-medium text-sm transition-colors border border-gray-100">
-                      <span className="text-red-500">🌍</span> Sito Web
+                    <a href={profileData.website_url.startsWith('http') ? profileData.website_url : `https://${profileData.website_url}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-3 bg-white border-2 sm:border-3 border-gray-900 rounded-xl font-black uppercase text-[10px] sm:text-xs text-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all">
+                      <span className="text-lg sm:text-xl">🌍</span> Sito Web
                     </a>
                   )}
                   {profileData.twitter_url && (
-                    <a href={profileData.twitter_url.startsWith('http') ? profileData.twitter_url : `https://${profileData.twitter_url}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 font-medium text-sm transition-colors border border-gray-100">
-                      <span className="text-black">✖️</span> Twitter / X
+                    <a href={profileData.twitter_url.startsWith('http') ? profileData.twitter_url : `https://${profileData.twitter_url}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-3 bg-white border-2 sm:border-3 border-gray-900 rounded-xl font-black uppercase text-[10px] sm:text-xs text-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all">
+                      <span className="text-lg sm:text-xl">🐦</span> Twitter / X
                     </a>
                   )}
                   {!profileData.linkedin_url && !profileData.github_url && !profileData.website_url && !profileData.twitter_url && (
-                    <span className="text-gray-400 italic text-sm">Nessun link disponibile</span>
+                    <span className="text-gray-500 font-bold italic text-sm text-center py-2">Nessun link disponibile</span>
                   )}
                 </div>
               </div>
 
               {/* CV Section */}
-              <div>
-                <label className="block text-xs font-black tracking-widest uppercase text-gray-400 mb-3">Curriculum</label>
-                {profileData.cv_url ? (
-                  <a
-                    href={profileData.cv_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 w-full p-4 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 font-bold text-sm transition-colors border border-red-200"
-                  >
-                    📄 Apri PDF
-                  </a>
-                ) : (
-                  <div className="p-4 rounded-xl bg-gray-50 border border-gray-100 text-center">
-                    <span className="text-gray-400 italic text-sm">Nessun CV caricato</span>
-                  </div>
-                )}
+              <div className="bg-red-50 border-[3px] sm:border-4 border-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 relative mt-4 md:mt-0">
+                <span className="absolute -top-3.5 sm:-top-5 left-4 sm:left-6 bg-white border-2 sm:border-4 border-gray-900 px-3 py-0.5 sm:px-4 sm:py-1 rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-gray-900 text-[10px] sm:text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                  Curriculum 📄
+                </span>
+                <div className="mt-2 text-center">
+                  {profileData.cv_url ? (
+                    <a
+                      href={profileData.cv_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex flex-col items-center justify-center gap-2 group w-full py-4 bg-white border-2 sm:border-3 border-gray-900 rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
+                    >
+                      <span className="text-3xl sm:text-4xl group-hover:scale-110 transition-transform">📋</span>
+                      <span className="font-black uppercase tracking-widest text-gray-900 text-xs sm:text-sm">Apri PDF</span>
+                    </a>
+                  ) : (
+                    <span className="text-gray-500 font-bold italic text-sm block py-4">Nessun CV caricato</span>
+                  )}
+                </div>
               </div>
 
             </div>
