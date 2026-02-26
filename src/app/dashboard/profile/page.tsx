@@ -119,7 +119,8 @@ export default function ProfilePage() {
         const { data: creati } = await supabase
         .from('bando')
         .select('id, titolo, descrizione')
-        .eq('autore_id', user.id) // <--- Cambiato in autore_id
+        // Usiamo il nome esatto della colonna dal tuo DB
+        .eq('creatore_studente_id', user.id)
 
         const { data: partecipazioni, error: errPart } = await (supabase as any)
           .from('partecipazione')
@@ -148,8 +149,10 @@ export default function ProfilePage() {
         const { data: tags } = await supabase.from('interesse').select('*').order('nome', { ascending: true })
         if (tags) setAvailableInterests(tags)
 
-        const { data: corsi } = await supabase.from('corso_di_studi').select('id, nome, tipo').order('nome', { ascending: true })
-        if (corsi) setCorsiDisponibili(corsi)
+        const { data: corsi } = await supabase
+        .from('corso_di_studi')
+        .select('id, nome') 
+        .order('nome', { ascending: true })
 
         const { data: corsoAttuale } = await supabase.from('studente_corso').select('id, corso_id, anno_inizio').eq('studente_id', user.id).eq('completato', false).order('anno_inizio', { ascending: false }).limit(1).maybeSingle()
 
