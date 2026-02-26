@@ -280,7 +280,7 @@ export default function TeamWorkspacePage() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
         
         <div className="absolute top-3 left-3 sm:top-6 sm:left-6">
-          <button onClick={() => router.push('/dashboard/my_teams')} className="flex items-center gap-1.5 sm:gap-2 bg-white text-gray-900 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-black uppercase tracking-widest text-[10px] sm:text-xs border-2 sm:border-3 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
+          <button onClick={() => router.push('/dashboard/my-projects')} className="flex items-center gap-1.5 sm:gap-2 bg-white text-gray-900 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-black uppercase tracking-widest text-[10px] sm:text-xs border-2 sm:border-3 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
             <span className="text-sm sm:text-base">🔙</span> <span className="hidden sm:inline">I miei team</span>
           </button>
         </div>
