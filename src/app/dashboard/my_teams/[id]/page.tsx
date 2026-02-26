@@ -254,7 +254,7 @@ export default function TeamWorkspacePage() {
           <p className="text-gray-900 font-black uppercase tracking-tight text-lg mb-2">Errore</p>
           <p className="text-red-600 font-bold text-sm mb-6">{error}</p>
           <button 
-            onClick={() => router.push('/dashboard/my_projects')}
+            onClick={() => router.push('/dashboard/my-projects')}
             className="w-full py-3 bg-gray-900 text-white rounded-xl font-black uppercase tracking-widest border-2 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
           >
             Torna ai Miei Team
