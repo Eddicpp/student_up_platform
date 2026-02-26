@@ -43,6 +43,9 @@ export default function TeamWorkspacePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
+  // NUOVO STATO: Gestione Modale Info Progetto
+  const [showProjectInfo, setShowProjectInfo] = useState(false)
+  
   // Active tab for tools
   const [activeTab, setActiveTab] = useState<'chat' | 'todo' | 'polls' | 'notes' | 'calendar'>('chat')
 
@@ -99,28 +102,14 @@ export default function TeamWorkspacePage() {
     setLoading(true)
 
     try {
-      // Recuperiamo l'utente base da Auth
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (!authUser) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
         router.push('/login')
         return
       }
+      setCurrentUser(user)
 
-      // 1. RECUPERO INFO PROFILO (Puntiamo a is_owner)
-      // Usiamo (supabase as any) per evitare l'errore di cache dei tipi di TypeScript
-      const { data: studenteData, error: profileError } = await (supabase as any)
-        .from('studente')
-        .select('is_owner')
-        .eq('id', authUser.id)
-        .single()
-      
-      // Verifichiamo se l'utente è l'Admin globale della piattaforma
-      const isPlatformAdmin = studenteData?.is_owner || false;
-      
-      // Aggiorniamo lo stato locale includendo l'info is_owner
-      setCurrentUser({ ...authUser, is_owner: isPlatformAdmin });
-
-      // 2. Fetch project
+      // Fetch project
       const { data: bandoData, error: bandoError } = await supabase
         .from('bando')
         .select(`
@@ -132,23 +121,15 @@ export default function TeamWorkspacePage() {
 
       if (bandoError) throw bandoError
 
-      // --- BLOCCO SICUREZZA: PROGETTO IN PAUSA ---
-      // Usiamo 'as string' per far accettare a TypeScript il valore 'pausa'
-      if ((bandoData?.stato as string) === 'pausa' && !isPlatformAdmin) {
-        router.replace(`/dashboard/projects/${bandoId}/paused`) 
-        return
-      }
-      // -------------------------------------------
-
-      const checkIsOwner = bandoData.creatore_studente_id === authUser.id
+      const checkIsOwner = bandoData.creatore_studente_id === user.id
       
-      // Controllo se l'utente ha diritto di stare qui (Creatore, Membro o Admin globale)
-      if (!checkIsOwner && !isPlatformAdmin) {
+      // Check if user is member
+      if (!checkIsOwner) {
         const { data: myParticipation } = await supabase
           .from('partecipazione')
           .select('stato')
           .eq('bando_id', bandoId)
-          .eq('studente_id', authUser.id)
+          .eq('studente_id', user.id)
           .single()
 
         if (!myParticipation || myParticipation.stato !== 'accepted') {
@@ -182,10 +163,14 @@ export default function TeamWorkspacePage() {
       const { data: membersData } = await supabase
         .from('partecipazione')
         .select(`
-          id, ruolo, 
+          id, 
+          ruolo, 
           studente:studente_id (
             id, nome, cognome, avatar_url, email, bio,
-            studente_corso ( anno_inizio, corso:corso_id ( nome ) )
+            studente_corso (
+              anno_inizio,
+              corso:corso_id ( nome )
+            )
           )
         `)
         .eq('bando_id', bandoId)
@@ -209,9 +194,9 @@ export default function TeamWorkspacePage() {
 
       setTeamMembers(formattedMembers)
 
-      // Check if Admin (Proprietario bando, Admin del team o Admin globale della piattaforma)
-      const userMemberData = formattedMembers.find(m => m.id === authUser.id)
-      if (checkIsOwner || userMemberData?.ruolo_team === 'admin' || isPlatformAdmin) {
+      // Check if admin
+      const userMemberData = formattedMembers.find(m => m.id === user?.id)
+      if (checkIsOwner || userMemberData?.ruolo_team === 'admin') {
         setIsAdmin(true)
       }
 
@@ -272,7 +257,7 @@ export default function TeamWorkspacePage() {
           <p className="text-gray-900 font-black uppercase tracking-tight text-lg mb-2">Errore</p>
           <p className="text-red-600 font-bold text-sm mb-6">{error}</p>
           <button 
-            onClick={() => router.push('/dashboard/my_teams')}
+            onClick={() => router.push('/dashboard/my_projects')}
             className="w-full py-3 bg-gray-900 text-white rounded-xl font-black uppercase tracking-widest border-2 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
           >
             Torna ai Miei Team
@@ -283,7 +268,7 @@ export default function TeamWorkspacePage() {
   }
 
   return (
-    <div className="min-h-screen pb-20 transition-colors duration-700" style={{ backgroundColor: `rgba(${dominantColor}, 0.15)` }}>
+    <div className="min-h-screen pb-20 transition-colors duration-700 relative" style={{ backgroundColor: `rgba(${dominantColor}, 0.15)` }}>
       
       {/* Banner Header */}
       <div className="relative h-48 sm:h-64 lg:h-72 overflow-hidden border-b-[3px] sm:border-b-4 border-gray-900 pattern-dots">
@@ -311,12 +296,8 @@ export default function TeamWorkspacePage() {
         <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 lg:p-8">
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-wrap items-center gap-2 mb-2 sm:mb-3">
-              <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[9px] sm:text-xs font-black uppercase tracking-widest border-2 ${
-                (project?.stato as string) === 'pausa' ? 'bg-orange-500 text-white border-gray-900' :
-                project?.stato === 'chiuso' ? 'bg-gray-700 text-white border-gray-900' : 
-                'bg-green-400 text-gray-900 border-gray-900'
-              }`}>
-                {(project?.stato as string) === 'pausa' ? '⏸ IN PAUSA' : project?.stato === 'chiuso' ? '🔒 Chiuso' : '🟢 Aperto'}
+              <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[9px] sm:text-xs font-black uppercase tracking-widest border-2 ${project?.stato === 'chiuso' ? 'bg-gray-700 text-white border-gray-900' : 'bg-green-400 text-gray-900 border-gray-900'}`}>
+                {project?.stato === 'chiuso' ? '🔒 Chiuso' : '🟢 Aperto'}
               </span>
               <span className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[9px] sm:text-xs font-black uppercase tracking-widest bg-white text-gray-900 border-2 border-gray-900">
                 Workspace
@@ -336,9 +317,9 @@ export default function TeamWorkspacePage() {
           {/* Main content - 2/3 */}
           <div className="lg:col-span-2 flex flex-col gap-5 sm:gap-6 lg:gap-8 relative z-10">
             
-            {/* Tools Tabs - RIMPICCIOLITI */}
+            {/* Tools Tabs */}
             <div className="order-1 lg:order-1 relative z-20">
-              <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-4 pt-1 -mx-3 px-3 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] snap-x">
+              <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-4 pt-1 -mx-3 px-3 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] snap-x">
                 {[
                   { id: 'chat' as const, label: 'Chat', icon: '💬' },
                   { id: 'todo' as const, label: 'To-Do', icon: '✅' },
@@ -349,13 +330,13 @@ export default function TeamWorkspacePage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-1 sm:gap-1.5 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl font-black text-[9px] sm:text-xs uppercase tracking-wider whitespace-nowrap transition-all border-2 snap-start shrink-0 ${
+                    className={`flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-sm uppercase tracking-widest whitespace-nowrap transition-all border-[3px] snap-start shrink-0 ${
                       activeTab === tab.id
                         ? 'bg-gray-900 text-white border-gray-900 translate-x-[2px] translate-y-[2px] shadow-none'
-                        : 'bg-white text-gray-900 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50'
+                        : 'bg-white text-gray-900 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50'
                     }`}
                   >
-                    <span className="text-sm sm:text-base">{tab.icon}</span>
+                    <span className="text-base sm:text-lg">{tab.icon}</span>
                     {tab.label}
                   </button>
                 ))}
@@ -418,9 +399,62 @@ export default function TeamWorkspacePage() {
               isOwner={isOwner}
               onLeaveTeam={handleLeaveTeam}
             />
+
+            {/* NUOVO TASTO INFO PROGETTO */}
+            <button
+              onClick={() => setShowProjectInfo(true)}
+              className="w-full bg-blue-300 hover:bg-blue-400 text-gray-900 font-black uppercase tracking-widest py-3 sm:py-4 px-4 rounded-2xl border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all flex items-center justify-center gap-2"
+            >
+              <span className="text-xl sm:text-2xl">ℹ️</span> 
+              <span>Info Progetto</span>
+            </button>
           </div>
+
         </div>
       </div>
+
+      {/* --- MODALE INFO PROGETTO --- */}
+      {showProjectInfo && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl border-4 border-gray-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-w-2xl w-full max-h-[90vh] overflow-y-auto relative animate-in zoom-in-95 duration-200 custom-scrollbar">
+            
+            <button 
+              onClick={() => setShowProjectInfo(false)}
+              className="absolute top-4 right-4 w-10 h-10 bg-red-400 border-2 border-gray-900 rounded-xl flex items-center justify-center font-black text-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-red-500 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all z-10"
+            >
+              ✕
+            </button>
+            
+            {project?.foto_url && (
+              <div className="w-full h-48 sm:h-64 border-b-4 border-gray-900 relative">
+                <img src={project.foto_url} alt="Cover" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+              </div>
+            )}
+            
+            <div className="p-6 sm:p-8">
+              <div className="inline-block bg-yellow-300 px-3 py-1.5 rounded-lg border-2 border-gray-900 font-black text-[10px] uppercase tracking-widest mb-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                {project?.stato === 'chiuso' ? '🔒 Candidature Chiuse' : '🟢 Candidature Aperte'}
+              </div>
+              
+              <h2 className="text-2xl sm:text-4xl font-black text-gray-900 mb-6 uppercase leading-tight line-clamp-3">
+                {project?.titolo}
+              </h2>
+              
+              <div className="bg-gray-50 border-2 border-gray-900 rounded-2xl p-5 sm:p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden">
+                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <span>📝</span> Descrizione Completa
+                </h3>
+                <p className="text-gray-800 font-bold whitespace-pre-wrap leading-relaxed text-sm sm:text-base">
+                  {project?.descrizione || 'Nessuna descrizione disponibile per questo progetto.'}
+                </p>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
