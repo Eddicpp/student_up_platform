@@ -117,9 +117,9 @@ export default function ProfilePage() {
         }
 
         const { data: creati } = await supabase
-          .from('bando')
-          .select('id, titolo, descrizione')
-          .eq('studente_id', user.id)
+        .from('bando')
+        .select('id, titolo, descrizione')
+        .eq('autore_id', user.id) // <--- Cambiato in autore_id
 
         const { data: partecipazioni, error: errPart } = await (supabase as any)
           .from('partecipazione')
