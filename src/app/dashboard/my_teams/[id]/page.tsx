@@ -238,7 +238,7 @@ export default function TeamWorkspacePage() {
   const allMembers: TeamMember[] = leader ? [leader, ...teamMembers] : teamMembers
 
   // Cartoon styles
-  const cardStyle = "bg-white rounded-2xl border-2 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+  const cardStyle = "bg-white rounded-2xl border-[3px] sm:border-4 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
 
   if (loading) {
     return (
@@ -246,9 +246,9 @@ export default function TeamWorkspacePage() {
         className="min-h-screen flex items-center justify-center"
         style={{ backgroundColor: `rgba(${dominantColor}, 0.1)` }}
       >
-        <div className={`${cardStyle} p-8 text-center`}>
-          <div className="w-12 h-12 border-4 border-gray-300 border-t-gray-900 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-900 font-bold">Caricamento workspace...</p>
+        <div className={`${cardStyle} p-6 sm:p-8 text-center bg-white`}>
+          <div className="text-4xl sm:text-5xl animate-bounce mb-3 sm:mb-4">🚀</div>
+          <p className="text-gray-900 font-black uppercase tracking-widest text-sm sm:text-base">Caricamento workspace...</p>
         </div>
       </div>
     )
@@ -256,13 +256,14 @@ export default function TeamWorkspacePage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className={`${cardStyle} p-8 text-center`}>
-          <span className="text-4xl block mb-3">❌</span>
-          <p className="text-red-600 font-bold">{error}</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+        <div className={`${cardStyle} p-6 sm:p-8 text-center bg-white w-full max-w-sm`}>
+          <span className="text-4xl sm:text-5xl block mb-3 sm:mb-4">❌</span>
+          <p className="text-gray-900 font-black uppercase tracking-tight text-lg mb-2">Errore</p>
+          <p className="text-red-600 font-bold text-sm mb-6">{error}</p>
           <button 
             onClick={() => router.push('/dashboard/my_teams')}
-            className="mt-4 px-4 py-2 bg-gray-900 text-white rounded-xl font-bold hover:bg-gray-800"
+            className="w-full py-3 bg-gray-900 text-white rounded-xl font-black uppercase tracking-widest border-2 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
           >
             Torna ai Miei Team
           </button>
@@ -277,12 +278,12 @@ export default function TeamWorkspacePage() {
       style={{ backgroundColor: `rgba(${dominantColor}, 0.15)` }}
     >
       {/* Banner Header */}
-      <div className="relative h-56 sm:h-72 overflow-hidden border-b-4 border-gray-900">
+      <div className="relative h-48 sm:h-64 lg:h-72 overflow-hidden border-b-[3px] sm:border-b-4 border-gray-900 pattern-dots">
         {project?.foto_url ? (
           <img 
             src={project.foto_url} 
             alt={project.titolo}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover mix-blend-overlay opacity-60"
           />
         ) : (
           <div 
@@ -292,56 +293,49 @@ export default function TeamWorkspacePage() {
         )}
         
         {/* Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
         
         {/* Back button */}
-        <div className="absolute top-4 left-4 sm:top-6 sm:left-6">
+        <div className="absolute top-3 left-3 sm:top-6 sm:left-6">
           <button 
-            onClick={() => router.push('/dashboard/my-projects')}
-            className="flex items-center gap-2 bg-white text-gray-900 px-4 py-2 rounded-xl font-bold text-sm border-2 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
+            onClick={() => router.push('/dashboard/my_teams')}
+            className="flex items-center gap-1.5 sm:gap-2 bg-white text-gray-900 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-black uppercase tracking-widest text-[10px] sm:text-xs border-2 sm:border-3 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            I miei team
+            <span className="text-sm sm:text-base">🔙</span> <span className="hidden sm:inline">I miei team</span>
           </button>
         </div>
 
         {/* Admin settings button */}
         {isAdmin && (
-          <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
+          <div className="absolute top-3 right-3 sm:top-6 sm:right-6">
             <Link
               href={`/dashboard/projects/${bandoId}/manage`}
-              className="flex items-center gap-2 bg-white text-gray-900 px-4 py-2 rounded-xl font-bold text-sm border-2 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
+              className="flex items-center gap-1.5 sm:gap-2 bg-yellow-300 text-gray-900 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-black uppercase tracking-widest text-[10px] sm:text-xs border-2 sm:border-3 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              Gestione
+              <span className="text-sm sm:text-base">⚙️</span> <span className="hidden sm:inline">Gestione</span>
             </Link>
           </div>
         )}
 
         {/* Project info */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
+        <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 lg:p-8">
           <div className="max-w-6xl mx-auto">
-            <div className="flex items-center gap-2 mb-3">
-              <span className={`px-3 py-1.5 rounded-xl text-xs font-black border-2 ${
+            <div className="flex flex-wrap items-center gap-2 mb-2 sm:mb-3">
+              <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[9px] sm:text-xs font-black uppercase tracking-widest border-2 ${
                 project?.stato === 'chiuso' 
-                  ? 'bg-gray-700 text-white border-gray-500' 
-                  : 'bg-green-500 text-white border-green-600'
+                  ? 'bg-gray-700 text-white border-gray-900' 
+                  : 'bg-green-400 text-gray-900 border-gray-900'
               }`}>
                 {project?.stato === 'chiuso' ? '🔒 Chiuso' : '🟢 Aperto'}
               </span>
-              <span className="px-3 py-1.5 rounded-xl text-xs font-black bg-white/20 backdrop-blur-sm text-white border-2 border-white/30">
+              <span className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[9px] sm:text-xs font-black uppercase tracking-widest bg-white text-gray-900 border-2 border-gray-900">
                 Workspace
               </span>
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-2 drop-shadow-lg">
+            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white mb-1 sm:mb-2 drop-shadow-[2px_2px_0px_rgba(0,0,0,1)] leading-tight line-clamp-2">
               {project?.titolo}
             </h1>
-            <p className="text-white/90 text-sm sm:text-base max-w-2xl line-clamp-2 font-medium">
+            <p className="text-gray-200 text-xs sm:text-sm max-w-2xl line-clamp-1 font-bold">
               {project?.descrizione}
             </p>
           </div>
@@ -349,39 +343,109 @@ export default function TeamWorkspacePage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-8">
-        <div className="grid lg:grid-cols-3 gap-6">
+      <div className="max-w-6xl mx-auto px-3 sm:px-6 mt-4 sm:mt-8">
+        <div className="flex flex-col lg:grid lg:grid-cols-3 gap-5 sm:gap-6 lg:gap-8">
           
           {/* Main content - 2/3 */}
-          <div className="lg:col-span-2 space-y-6">
+          {/* Utilizziamo flex-col e order per invertire l'ordine su mobile: prima chat, poi link */}
+          <div className="lg:col-span-2 flex flex-col gap-5 sm:gap-6 lg:gap-8">
             
-            {/* Project Links - Moved away from banner */}
-            <div className={cardStyle + " p-5"}>
-              <h2 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2">
+            {/* Tools Tabs (Top su mobile, Top su PC) */}
+            <div className="order-1 lg:order-1">
+              <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-4 pt-1 -mx-3 px-3 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] snap-x">
+                {[
+                  { id: 'chat' as const, label: 'Chat', icon: '💬' },
+                  { id: 'todo' as const, label: 'To-Do', icon: '✅' },
+                  { id: 'polls' as const, label: 'Sondaggi', icon: '📊' },
+                  { id: 'notes' as const, label: 'Note', icon: '📝' },
+                  { id: 'calendar' as const, label: 'Calendario', icon: '📅' },
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-sm uppercase tracking-widest whitespace-nowrap transition-all border-[3px] snap-start shrink-0 ${
+                      activeTab === tab.id
+                        ? 'bg-gray-900 text-white border-gray-900 translate-x-[2px] translate-y-[2px] shadow-none'
+                        : 'bg-white text-gray-900 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="text-base sm:text-lg">{tab.icon}</span>
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Active Tool (Middle su mobile, Middle su PC) */}
+            <div className="order-2 lg:order-2">
+              {activeTab === 'chat' && (
+                <TeamChat 
+                  bandoId={bandoId}
+                  currentUserId={currentUser?.id}
+                  members={allMembers}
+                  projectTitle={project?.titolo || ''}
+                  isAdmin={isAdmin}
+                />
+              )}
+
+              {activeTab === 'todo' && (
+                <TeamTodoList 
+                  bandoId={bandoId}
+                  currentUserId={currentUser?.id}
+                  members={allMembers}
+                />
+              )}
+
+              {activeTab === 'polls' && (
+                <TeamPolls 
+                  bandoId={bandoId}
+                  currentUserId={currentUser?.id}
+                  members={allMembers}
+                />
+              )}
+
+              {activeTab === 'notes' && (
+                <TeamNotes 
+                  bandoId={bandoId}
+                  currentUserId={currentUser?.id}
+                  members={allMembers}
+                />
+              )}
+
+              {activeTab === 'calendar' && (
+                <TeamCalendar 
+                  bandoId={bandoId}
+                  currentUserId={currentUser?.id}
+                  members={allMembers}
+                />
+              )}
+            </div>
+
+            {/* Project Links (Bottom su mobile, Top su PC originariamente ma li teniamo sotto per non interrompere l'UX) */}
+            <div className={`order-3 lg:order-3 ${cardStyle} p-4 sm:p-6 bg-white`}>
+              <h2 className="text-base sm:text-lg font-black text-gray-900 mb-4 flex items-center gap-2 uppercase tracking-tight">
                 <span>🔗</span> Link di Progetto
               </h2>
-              <div className="grid sm:grid-cols-2 gap-4">
+              <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3 sm:gap-4">
                 {project?.github_url ? (
                   <a 
                     href={project.github_url} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-4 bg-gray-900 hover:bg-gray-800 text-white rounded-xl transition-all border-2 border-gray-700 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px]"
+                    className="flex items-center gap-3 p-3 sm:p-4 bg-gray-900 text-white rounded-xl transition-all border-2 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px]"
                   >
-                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
                     </svg>
-                    <div>
-                      <p className="font-black">GitHub</p>
-                      <p className="text-xs text-gray-400">Repository</p>
+                    <div className="min-w-0">
+                      <p className="font-black text-sm sm:text-base uppercase">GitHub</p>
+                      <p className="text-[10px] sm:text-xs text-gray-400 font-bold truncate">Repository</p>
                     </div>
                   </a>
                 ) : (
-                  <div className="flex items-center gap-3 p-4 bg-gray-100 text-gray-400 rounded-xl border-2 border-dashed border-gray-300">
-                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                    </svg>
-                    <span className="font-bold">Nessun link GitHub</span>
+                  <div className="flex items-center gap-3 p-3 sm:p-4 bg-gray-100 text-gray-400 rounded-xl border-[3px] border-dashed border-gray-300">
+                    <span className="text-xl sm:text-2xl">💻</span>
+                    <span className="font-bold text-xs sm:text-sm">Nessun link GitHub</span>
                   </div>
                 )}
 
@@ -390,97 +454,27 @@ export default function TeamWorkspacePage() {
                     href={project.drive_url} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all border-2 border-blue-700 shadow-[3px_3px_0px_0px_rgba(30,64,175,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px]"
+                    className="flex items-center gap-3 p-3 sm:p-4 bg-blue-500 text-white rounded-xl transition-all border-2 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px]"
                   >
-                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M4.433 22l-1.45-2.512L11.11 5.75h2.78l8.127 13.738L20.567 22H4.433zm11.593-4.5L12 9.262 7.974 17.5h8.052zM12 2L2.273 19.5l1.45 2.512L12 7.512l8.277 14.5 1.45-2.512L12 2z"/>
-                    </svg>
-                    <div>
-                      <p className="font-black">Google Drive</p>
-                      <p className="text-xs text-blue-200">Documenti</p>
+                    <span className="text-2xl sm:text-3xl bg-white rounded p-1 shadow-sm">📁</span>
+                    <div className="min-w-0">
+                      <p className="font-black text-sm sm:text-base uppercase text-gray-900">Google Drive</p>
+                      <p className="text-[10px] sm:text-xs text-blue-900 font-bold truncate">Documenti Condivisi</p>
                     </div>
                   </a>
                 ) : (
-                  <div className="flex items-center gap-3 p-4 bg-gray-100 text-gray-400 rounded-xl border-2 border-dashed border-gray-300">
-                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M4.433 22l-1.45-2.512L11.11 5.75h2.78l8.127 13.738L20.567 22H4.433zm11.593-4.5L12 9.262 7.974 17.5h8.052zM12 2L2.273 19.5l1.45 2.512L12 7.512l8.277 14.5 1.45-2.512L12 2z"/>
-                    </svg>
-                    <span className="font-bold">Nessun link Drive</span>
+                  <div className="flex items-center gap-3 p-3 sm:p-4 bg-gray-100 text-gray-400 rounded-xl border-[3px] border-dashed border-gray-300">
+                    <span className="text-xl sm:text-2xl">📁</span>
+                    <span className="font-bold text-xs sm:text-sm">Nessun link Drive</span>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Tools Tabs */}
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              {[
-                { id: 'chat' as const, label: 'Chat', icon: '💬' },
-                { id: 'todo' as const, label: 'To-Do', icon: '✅' },
-                { id: 'polls' as const, label: 'Sondaggi', icon: '📊' },
-                { id: 'notes' as const, label: 'Note', icon: '📝' },
-                { id: 'calendar' as const, label: 'Calendario', icon: '📅' },
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all border-2 ${
-                    activeTab === tab.id
-                      ? 'bg-gray-900 text-white border-gray-700 shadow-none'
-                      : 'bg-white text-gray-600 border-gray-300 hover:border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
-                  }`}
-                >
-                  <span>{tab.icon}</span>
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Active Tool */}
-            {activeTab === 'chat' && (
-              <TeamChat 
-                bandoId={bandoId}
-                currentUserId={currentUser?.id}
-                members={allMembers}
-                projectTitle={project?.titolo || ''}
-                isAdmin={isAdmin}
-              />
-            )}
-
-            {activeTab === 'todo' && (
-              <TeamTodoList 
-                bandoId={bandoId}
-                currentUserId={currentUser?.id}
-                members={allMembers}
-              />
-            )}
-
-            {activeTab === 'polls' && (
-              <TeamPolls 
-                bandoId={bandoId}
-                currentUserId={currentUser?.id}
-                members={allMembers}
-              />
-            )}
-
-            {activeTab === 'notes' && (
-              <TeamNotes 
-                bandoId={bandoId}
-                currentUserId={currentUser?.id}
-                members={allMembers}
-              />
-            )}
-
-            {activeTab === 'calendar' && (
-              <TeamCalendar 
-                bandoId={bandoId}
-                currentUserId={currentUser?.id}
-                members={allMembers}
-              />
-            )}
           </div>
 
           {/* Sidebar - Team Members */}
-          <div className="space-y-6">
+          <div className="space-y-6 lg:order-last order-4 mt-2 sm:mt-0">
             <TeamMembers 
               members={allMembers}
               currentUserId={currentUser?.id}
