@@ -317,7 +317,7 @@ export default function TeamWorkspacePage() {
           {/* Main content - 2/3 */}
           <div className="lg:col-span-2 flex flex-col gap-5 sm:gap-6 lg:gap-8 relative z-10">
             
-            {/* Tools Tabs */}
+            {/* Tools Tabs - RIPRISTINATI ORIGINALI */}
             <div className="order-1 lg:order-1 relative z-20">
               <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-4 pt-1 -mx-3 px-3 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] snap-x">
                 {[
@@ -391,7 +391,7 @@ export default function TeamWorkspacePage() {
           </div>
 
           {/* Sidebar - Team Members */}
-          <div className="space-y-6 lg:order-last order-4 mt-2 sm:mt-0 relative z-10">
+          <div className="space-y-4 lg:space-y-6 lg:order-last order-4 mt-2 sm:mt-0 relative z-10">
             <TeamMembers 
               members={allMembers}
               currentUserId={currentUser?.id}
@@ -400,16 +400,23 @@ export default function TeamWorkspacePage() {
               onLeaveTeam={handleLeaveTeam}
             />
 
-            {/* NUOVO TASTO INFO PROGETTO */}
+            {/* NUOVO TASTO INFO PROGETTO - RIMPICCIOLITO */}
             <button
               onClick={() => setShowProjectInfo(true)}
-              className="w-full bg-blue-300 hover:bg-blue-400 text-gray-900 font-black uppercase tracking-widest py-3 sm:py-4 px-4 rounded-2xl border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all flex items-center justify-center gap-2"
+              className="w-full bg-white hover:bg-blue-50 text-gray-900 flex items-center justify-between p-3 rounded-2xl border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all group"
             >
-              <span className="text-xl sm:text-2xl">ℹ️</span> 
-              <span>Info Progetto</span>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-xl border-2 border-gray-900 flex items-center justify-center text-lg group-hover:scale-110 transition-transform">
+                  ℹ️
+                </div>
+                <div className="text-left">
+                  <p className="font-black text-sm uppercase leading-tight text-gray-900">Info Progetto</p>
+                  <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">Dettagli & Regole</p>
+                </div>
+              </div>
+              <span className="text-gray-400 font-bold">→</span>
             </button>
           </div>
-
         </div>
       </div>
 
