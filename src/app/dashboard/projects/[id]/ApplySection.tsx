@@ -57,38 +57,51 @@ export default function ApplySection({
   }
 
   const handleApply = async () => {
-    if (messaggio.length < 20) {
-      setErrore("Il messaggio deve contenere almeno 20 caratteri ✍️")
-      return
-    }
-    if (!ruolo) {
-      setErrore("Seleziona il ruolo per cui ti candidi 🎯")
-      return
-    }
-
-    setLoading(true)
-    setErrore(null)
-    
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (user) {
-      const messaggioCompleto = `[RUOLO]: ${ruolo}\n\n${messaggio}${link ? `\n\n[LINK]: ${link}` : ''}`
-
-      const { error } = await supabase.from('partecipazione').insert({
-        bando_id: bandoId,
-        studente_id: user.id,
-        messaggio: messaggioCompleto,
-        stato: 'pending'
-      })
-      
-      if (!error) {
-        setInviato(true)
-      } else {
-        setErrore("Errore durante l'invio. Riprova. ❌")
-      }
-    }
-    setLoading(false)
+  if (messaggio.length < 20) {
+    setErrore("Il messaggio deve contenere almeno 20 caratteri ✍️")
+    return
   }
+  if (!ruolo) {
+    setErrore("Seleziona il ruolo per cui ti candidi 🎯")
+    return
+  }
+
+  setLoading(true)
+  setErrore(null)
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (user) {
+    const messaggioCompleto = `[RUOLO]: ${ruolo}\n\n${messaggio}${link ? `\n\n[LINK]: ${link}` : ''}`
+
+    // 1. Aggiungiamo 'data' e '.select()' alla query
+    const { data, error } = await supabase.from('partecipazione').insert({
+      bando_id: bandoId,
+      studente_id: user.id,
+      messaggio: messaggioCompleto,
+      stato: 'pending'
+    }).select()
+    
+    if (error) {
+      // 2. Log ultra-dettagliato nella console (F12)
+      console.error("🚨 DETTAGLI ERRORE SUPABASE:", {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      })
+      // 3. Mostriamo l'errore tecnico direttamente nella UI per fare debug
+      setErrore(`Errore ${error.code}: ${error.message} ❌`)
+    } else {
+      console.log("✅ Candidatura salvata con successo:", data)
+      setInviato(true)
+    }
+  } else {
+    setErrore("Devi essere loggato per inviare una candidatura 🔒")
+  }
+  
+  setLoading(false)
+}
 
   // Mappa stati per i banner post-candidatura
   const statoConfig: Record<string, { label: string; icon: string; bg: string; text: string }> = {
