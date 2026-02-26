@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<any[]>([])
@@ -126,31 +125,38 @@ export default function NotificationsPage() {
     return date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
   }
 
-  // Icona per tipo notifica
+  // Icona e stile cartoon per tipo notifica
   const getNotificationStyle = (tipo: string) => {
     switch (tipo) {
       case 'candidatura_ricevuta': 
-        return { icon: '📩', bg: 'bg-blue-100', color: 'text-blue-600' }
+        return { icon: '📩', bg: 'bg-blue-400', text: 'text-gray-900' }
       case 'candidatura_accettata': 
-        return { icon: '✅', bg: 'bg-green-100', color: 'text-green-600' }
+        return { icon: '✅', bg: 'bg-green-400', text: 'text-gray-900' }
       case 'candidatura_rifiutata': 
-        return { icon: '❌', bg: 'bg-red-100', color: 'text-red-600' }
+        return { icon: '❌', bg: 'bg-red-400', text: 'text-white' }
       case 'nuovo_membro': 
-        return { icon: '👋', bg: 'bg-purple-100', color: 'text-purple-600' }
+        return { icon: '👋', bg: 'bg-purple-400', text: 'text-gray-900' }
       case 'bando_aggiornato': 
-        return { icon: '📝', bg: 'bg-amber-100', color: 'text-amber-600' }
+        return { icon: '📝', bg: 'bg-orange-400', text: 'text-gray-900' }
       case 'benvenuto': 
-        return { icon: '🎉', bg: 'bg-pink-100', color: 'text-pink-600' }
+        return { icon: '🎉', bg: 'bg-pink-400', text: 'text-gray-900' }
       default: 
-        return { icon: '🔔', bg: 'bg-gray-100', color: 'text-gray-600' }
+        return { icon: '🔔', bg: 'bg-gray-300', text: 'text-gray-900' }
     }
   }
+
+  // Tabs con emoji
+  const tabs = [
+    { id: 'miei_progetti' as const, label: 'I Miei Progetti', desc: 'Candidature ricevute', icon: '📁', color: 'bg-amber-400' },
+    { id: 'candidature' as const, label: 'Le Mie Candidature', desc: 'Risposte ricevute', icon: '🚀', color: 'bg-blue-400' },
+    { id: 'sistema' as const, label: 'Sistema', desc: 'Notifiche generali', icon: '⚙️', color: 'bg-emerald-400' }
+  ]
 
   if (loading) return (
     <div className="min-h-[60vh] flex items-center justify-center">
       <div className="text-center">
-        <div className="w-12 h-12 border-4 border-gray-300 border-t-red-600 rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-gray-500 font-medium">Caricamento notifiche...</p>
+        <div className="text-5xl sm:text-6xl animate-bounce mb-4">🔔</div>
+        <p className="text-gray-900 font-black uppercase tracking-widest text-sm sm:text-base">Caricamento notifiche...</p>
       </div>
     </div>
   )
@@ -166,181 +172,166 @@ export default function NotificationsPage() {
     sistema: grouped.sistema.filter(n => !n.letto).length
   }
 
-  const tabs = [
-    { 
-      id: 'miei_progetti' as const, 
-      label: 'I Miei Progetti', 
-      desc: 'Candidature ricevute',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-        </svg>
-      )
-    },
-    { 
-      id: 'candidature' as const, 
-      label: 'Le Mie Candidature', 
-      desc: 'Risposte ricevute',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-      )
-    },
-    { 
-      id: 'sistema' as const, 
-      label: 'Sistema', 
-      desc: 'Notifiche generali',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      )
-    }
-  ]
-
   return (
-    <div className="max-w-4xl mx-auto pb-20">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
+    <div className="max-w-5xl mx-auto pb-20 px-4 sm:px-6 mt-4 sm:mt-8">
+      
+      {/* HEADER CARTOON */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6 sm:mb-8">
+        <div className="flex items-center gap-3 sm:gap-4">
           <button 
             onClick={() => router.push('/dashboard')}
-            className="p-2 hover:bg-gray-100 rounded-xl text-gray-500 hover:text-gray-900 transition-colors"
+            className="p-2 sm:p-3 bg-white border-2 sm:border-4 border-gray-900 rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
+            <span className="text-xl sm:text-2xl">🔙</span>
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Notifiche</h1>
-            <p className="text-sm text-gray-500">
-              {totalUnread > 0 ? `${totalUnread} non lette` : 'Tutto letto ✓'}
-            </p>
+            <h1 className="text-3xl sm:text-5xl font-black text-gray-900 uppercase italic tracking-tighter leading-none">
+              Notifiche <span className="text-red-600">🔔</span>
+            </h1>
+            <div className="inline-block bg-yellow-300 border-2 border-gray-900 px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] mt-2">
+              <p className="text-gray-900 font-black text-[10px] sm:text-xs uppercase tracking-widest">
+                {totalUnread > 0 ? `${totalUnread} non lette` : 'Tutto letto ✨'}
+              </p>
+            </div>
           </div>
         </div>
 
         {unreadCount > 0 && (
           <button
             onClick={markAllAsRead}
-            className="text-sm text-red-600 hover:text-red-700 font-medium transition-colors"
+            className="self-start sm:self-auto px-4 py-2 sm:px-5 sm:py-3 bg-white border-2 sm:border-4 border-gray-900 rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-widest text-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center gap-2"
           >
-            Segna tutte lette
+            <span>👀</span> Segna tutte lette
           </button>
         )}
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 p-1 bg-gray-100 rounded-2xl mb-6">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium text-sm transition-all ${
-              activeTab === tab.id 
-                ? 'bg-white text-gray-900 shadow-sm' 
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <span className={activeTab === tab.id ? 'text-red-600' : ''}>{tab.icon}</span>
-            <span className="hidden sm:inline">{tab.label}</span>
-            {counts[tab.id] > 0 && (
-              <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                activeTab === tab.id 
-                  ? 'bg-red-100 text-red-600' 
-                  : 'bg-gray-200 text-gray-600'
-              }`}>
-                {counts[tab.id]}
-              </span>
-            )}
-          </button>
-        ))}
+      {/* TABS SCROLLABILI SU MOBILE */}
+      <div className="flex overflow-x-auto gap-2 sm:gap-3 pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 hide-scrollbar snap-x mb-2 sm:mb-6">
+        {tabs.map(tab => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all border-2 sm:border-4 border-gray-900 whitespace-nowrap snap-start shrink-0 ${
+                isActive
+                  ? 'bg-gray-900 text-white shadow-[2px_2px_0px_0px_rgba(220,38,38,1)] translate-x-[2px] translate-y-[2px]'
+                  : 'bg-white text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+              }`}
+            >
+              <span className="text-base sm:text-xl">{tab.icon}</span>
+              <span>{tab.label}</span>
+              {counts[tab.id] > 0 && (
+                <span className={`px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] border-2 border-gray-900 ${
+                  isActive ? 'bg-red-500 text-white border-red-500' : 'bg-red-400 text-white'
+                }`}>
+                  {counts[tab.id]}
+                </span>
+              )}
+            </button>
+          )
+        })}
       </div>
 
-      {/* Descrizione tab */}
-      <p className="text-sm text-gray-400 mb-4 px-1">
-        {tabs.find(t => t.id === activeTab)?.desc}
+      <p className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-gray-500 mb-4 sm:mb-6 pl-1">
+        👉 {tabs.find(t => t.id === activeTab)?.desc}
       </p>
 
-      {/* Lista Notifiche */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      {/* LISTA NOTIFICHE CARTOON */}
+      <div className="space-y-3 sm:space-y-4">
         {list.length > 0 ? (
-          <div className="divide-y divide-gray-100">
-            {list.map((n) => {
-              const style = getNotificationStyle(n.tipo)
-              
-              return (
-                <div
-                  key={n.id}
-                  onClick={() => markAsRead(n)}
-                  className={`p-4 cursor-pointer hover:bg-gray-50 transition-all flex gap-4 ${
-                    !n.letto ? 'bg-red-50/50' : ''
-                  }`}
-                >
-                  {/* Icona */}
-                  <div className={`w-10 h-10 rounded-xl ${style.bg} flex items-center justify-center text-lg flex-shrink-0`}>
+          list.map((n) => {
+            const style = getNotificationStyle(n.tipo)
+            const isUnread = !n.letto
+            
+            return (
+              <div
+                key={n.id}
+                onClick={() => markAsRead(n)}
+                className={`relative p-4 sm:p-5 border-[3px] sm:border-4 border-gray-900 rounded-xl sm:rounded-2xl flex flex-col sm:flex-row gap-3 sm:gap-4 transition-all cursor-pointer ${
+                  isUnread 
+                    ? 'bg-yellow-100 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] sm:hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]' 
+                    : 'bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] opacity-80 hover:opacity-100 hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+                }`}
+              >
+                {/* Icona */}
+                <div className="flex items-center sm:items-start gap-3 sm:gap-0 w-full sm:w-auto">
+                  <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl border-2 sm:border-3 border-gray-900 ${style.bg} ${style.text} flex items-center justify-center text-xl sm:text-3xl flex-shrink-0 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`}>
                     {style.icon}
                   </div>
-
-                  {/* Contenuto */}
-                  <div className="flex-1 min-w-0">
-                    {n.titolo && (
-                      <p className="text-sm font-semibold text-gray-900 mb-0.5">{n.titolo}</p>
-                    )}
-                    <p className={`text-sm leading-relaxed ${!n.letto ? 'text-gray-900' : 'text-gray-600'}`}>
-                      {n.messaggio || n.tipo}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {formatDate(n.created_at)}
-                    </p>
-                  </div>
-
-                  {/* Azioni */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {!n.letto && (
-                      <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                    )}
-                    
-                    <button
-                      onClick={(e) => deleteNotification(e, n.id)}
-                      className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                      title="Elimina"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-
-                    {n.link && (
-                      <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    )}
+                  
+                  {/* Titolo e data su Mobile (affiancati all'icona) */}
+                  <div className="flex-1 sm:hidden">
+                    <div className="flex justify-between items-start">
+                      <p className="text-xs font-black text-gray-900 uppercase tracking-tight line-clamp-1 pr-2">{n.titolo || 'Notifica'}</p>
+                      {isUnread && <span className="w-2 h-2 bg-red-500 border border-gray-900 rounded-full flex-shrink-0 mt-1"></span>}
+                    </div>
+                    <p className="text-[9px] font-bold text-gray-500 uppercase">{formatDate(n.created_at)}</p>
                   </div>
                 </div>
-              )
-            })}
-          </div>
+
+                {/* Contenuto */}
+                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                  <div className="hidden sm:flex justify-between items-center mb-1">
+                    {n.titolo && (
+                      <p className="text-sm sm:text-base font-black text-gray-900 uppercase tracking-tight">{n.titolo}</p>
+                    )}
+                    {isUnread && (
+                      <span className="w-3 h-3 bg-red-500 border-2 border-gray-900 rounded-full ml-2"></span>
+                    )}
+                  </div>
+                  <p className={`text-xs sm:text-sm font-bold ${isUnread ? 'text-gray-900' : 'text-gray-700'}`}>
+                    {n.messaggio || n.tipo.replace('_', ' ')}
+                  </p>
+                  <p className="hidden sm:block text-[10px] font-bold text-gray-500 uppercase mt-2">
+                    🕒 {formatDate(n.created_at)}
+                  </p>
+                </div>
+
+                {/* Azioni (Elimina e Naviga) */}
+                <div className="flex items-center justify-end sm:justify-center gap-2 border-t-2 border-dashed border-gray-300 pt-2 sm:pt-0 sm:border-t-0 mt-2 sm:mt-0 flex-shrink-0">
+                  <button
+                    onClick={(e) => deleteNotification(e, n.id)}
+                    className="p-2 sm:p-3 bg-red-500 border-2 border-gray-900 rounded-lg text-white font-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
+                    title="Elimina"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+
+                  {n.link && (
+                    <div className="p-2 sm:p-3 bg-white border-2 border-gray-900 rounded-lg text-gray-900 font-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] group-hover:bg-yellow-300 transition-colors">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })
         ) : (
-          <div className="p-12 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-400">
-              {tabs.find(t => t.id === activeTab)?.icon}
+          /* EMPTY STATE CARTOON */
+          <div className="text-center py-16 sm:py-20 bg-white border-[3px] sm:border-4 border-dashed border-gray-300 rounded-2xl sm:rounded-3xl mt-6">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-6 rounded-2xl sm:rounded-3xl bg-gray-100 border-4 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center rotate-3">
+              <span className="text-4xl sm:text-5xl">{tabs.find(t => t.id === activeTab)?.icon}</span>
             </div>
-            <p className="text-gray-900 font-medium mb-1">
-              Nessuna notifica
-            </p>
-            <p className="text-gray-500 text-sm">
-              {activeTab === 'miei_progetti' && 'Le candidature ai tuoi progetti appariranno qui'}
-              {activeTab === 'candidature' && 'Le risposte alle tue candidature appariranno qui'}
-              {activeTab === 'sistema' && 'Le notifiche di sistema appariranno qui'}
+            <h3 className="text-xl sm:text-2xl font-black text-gray-900 mb-2 uppercase tracking-tight">
+              Nessuna notifica qui
+            </h3>
+            <p className="text-xs sm:text-sm text-gray-500 font-bold max-w-xs mx-auto">
+              {activeTab === 'miei_progetti' && 'Quando qualcuno si candiderà ai tuoi progetti, lo vedrai qui.'}
+              {activeTab === 'candidature' && 'Le risposte dei creatori alle tue candidature appariranno qua.'}
+              {activeTab === 'sistema' && 'Il sistema non ha nulla da comunicarti per ora.'}
             </p>
           </div>
         )}
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-3 gap-4 mt-6">
+      {/* STATS CARDS (Retro Counters) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-8 sm:mt-12 pt-8 border-t-4 border-gray-900 border-dashed">
         {tabs.map(tab => {
           const tabNotifications = grouped[tab.id]
           const tabUnread = tabNotifications.filter(n => !n.letto).length
@@ -349,23 +340,30 @@ export default function NotificationsPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`p-4 rounded-2xl text-center transition-all ${
-                activeTab === tab.id
-                  ? 'bg-red-50 border-2 border-red-200'
-                  : 'bg-white border border-gray-200 hover:border-gray-300'
+              className={`p-4 sm:p-5 rounded-xl sm:rounded-2xl text-left border-4 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center justify-between ${
+                activeTab === tab.id ? tab.color : 'bg-white'
               }`}
             >
-              <p className={`text-2xl font-bold ${activeTab === tab.id ? 'text-red-600' : 'text-gray-900'}`}>
-                {tabNotifications.length}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                {tab.label}
-              </p>
-              {tabUnread > 0 && (
-                <p className="text-xs text-red-600 font-medium mt-1">
-                  {tabUnread} nuove
+              <div>
+                <p className="text-[10px] sm:text-xs font-black text-gray-900 uppercase tracking-widest mb-1">
+                  {tab.label}
                 </p>
-              )}
+                <div className="flex items-end gap-2">
+                  <span className="text-3xl sm:text-4xl font-black text-gray-900 leading-none">
+                    {tabNotifications.length}
+                  </span>
+                  <span className="text-xs font-bold text-gray-700 pb-1">totali</span>
+                </div>
+              </div>
+              
+              <div className="flex flex-col items-end gap-2">
+                <span className="text-2xl sm:text-3xl opacity-50 grayscale">{tab.icon}</span>
+                {tabUnread > 0 && (
+                  <span className="bg-red-500 text-white text-[9px] font-black uppercase px-2 py-1 rounded border-2 border-gray-900">
+                    {tabUnread} nuove
+                  </span>
+                )}
+              </div>
             </button>
           )
         })}
