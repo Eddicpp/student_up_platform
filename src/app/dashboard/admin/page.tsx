@@ -19,6 +19,9 @@ export default function AdminPanel() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [hideStaffProjects, setHideStaffProjects] = useState(false)
+  
+  // STATO PER IL CARICAMENTO DEI CORSI
+  const [seedingCorsi, setSeedingCorsi] = useState(false)
 
   // PROTEZIONE ADMIN
   useEffect(() => {
@@ -68,6 +71,41 @@ export default function AdminPanel() {
     await (supabase as any).from('admin_log').insert([
       { admin_id: user?.id, azione, bersaglio, dettagli }
     ])
+  }
+
+  // --- AZIONI DB: CARICA CORSI DI STUDIO ---
+  const caricaCorsi = async () => {
+    if (!confirm("⚠️ Vuoi caricare tutti i corsi di studio nel database? (Fallo solo se la lista è vuota per evitare duplicati)")) return;
+    
+    setSeedingCorsi(true)
+    
+    const corsi = [
+      'Informatica', 'Ingegneria Informatica', 'Ingegneria Meccanica', 'Ingegneria Gestionale',
+      'Ingegneria Aerospaziale', 'Ingegneria Elettronica', 'Ingegneria Biomedica', 'Ingegneria Civile',
+      'Economia Aziendale', 'Economia e Management', 'Economia e Finanza', 'Scienze della Comunicazione',
+      'Scienze Politiche', 'Giurisprudenza', 'Lettere Moderne', 'Lingue e Letterature Straniere',
+      'Filosofia', 'Design e Comunicazione Visiva', 'Architettura', 'Medicina e Chirurgia',
+      'Odontoiatria', 'Scienze Infermieristiche', 'Biotecnologie', 'Scienze Biologiche',
+      'Fisica', 'Matematica', 'Chimica', 'Psicologia', 'Scienze della Formazione Primaria',
+      'Scienze Motorie e Sportive', 'Scienze dei Beni Culturali', 'DAMS (Discipline Arti, Musica e Spettacolo)',
+      'Scienze Agrarie e Alimentari', 'Medicina Veterinaria'
+    ]
+
+    const corsiDaInserire = corsi.map(corso => ({ nome: corso }))
+
+    const { error } = await (supabase as any)
+      .from('corso')
+      .insert(corsiDaInserire)
+
+    if (error) {
+      alert("Errore durante l'inserimento: " + error.message)
+    } else {
+      await registraLog('POPOLAMENTO DB', 'Tabella Corsi', `Inseriti ${corsi.length} corsi di base.`)
+      alert("Corsi caricati con successo! 🎉")
+      fetchData() // Aggiorna i log
+    }
+    
+    setSeedingCorsi(false)
   }
 
   // --- AZIONI UTENTI ---
@@ -123,35 +161,32 @@ export default function AdminPanel() {
   }
 
   // --- AZIONI PROGETTI ---
-  
-  // Metti in pausa o riattiva un progetto (cambiando lo stato in 'pausa' o 'aperto')
   const toggleProjectPause = async (project: any) => {
-  let motivo = project.motivo_pausa;
-  const nuovoStato = project.stato === 'pausa' ? 'aperto' : 'pausa';
-  
-  if (nuovoStato === 'pausa') {
-    const inputMotivo = window.prompt("Inserisci il motivo della sospensione:", "Sospensione per verifica contenuti.");
-    if (inputMotivo === null) return; // Annulla se l'admin preme annulla
-    motivo = inputMotivo;
+    let motivo = project.motivo_pausa;
+    const nuovoStato = project.stato === 'pausa' ? 'aperto' : 'pausa';
+    
+    if (nuovoStato === 'pausa') {
+      const inputMotivo = window.prompt("Inserisci il motivo della sospensione:", "Sospensione per verifica contenuti.");
+      if (inputMotivo === null) return; 
+      motivo = inputMotivo;
+    }
+
+    const { error } = await supabase
+      .from('bando')
+      .update({ 
+        stato: nuovoStato,
+        motivo_pausa: motivo 
+      } as any)
+      .eq('id', project.id)
+
+    if (!error) {
+      await registraLog(nuovoStato === 'pausa' ? 'SOSPENSIONE PROGETTO' : 'RIATTIVAZIONE PROGETTO', project.titolo, motivo)
+      fetchData()
+    } else {
+      alert("Errore: " + error.message)
+    }
   }
 
-  const { error } = await supabase
-    .from('bando')
-    .update({ 
-      stato: nuovoStato,
-      motivo_pausa: motivo 
-    } as any)
-    .eq('id', project.id)
-
-  if (!error) {
-    await registraLog(nuovoStato === 'pausa' ? 'SOSPENSIONE PROGETTO' : 'RIATTIVAZIONE PROGETTO', project.titolo, motivo)
-    fetchData()
-  } else {
-    alert("Errore: " + error.message)
-  }
-}
-
-  // Elimina un progetto
   const deleteProject = async (project: any) => {
     if (!confirm(`⚠️ SEI SICURO? Questa azione cancellerà il progetto "${project.titolo}" per sempre e in modo irreversibile.`)) return
 
@@ -164,7 +199,6 @@ export default function AdminPanel() {
       if (error) throw error;
 
       await registraLog('ELIMINAZIONE PROGETTO', project.titolo, `Id Progetto: ${project.id}`)
-      // Rimuovi visivamente il progetto dalla lista
       setProjects(projects.filter(p => p.id !== project.id))
       
     } catch (error: any) {
@@ -185,7 +219,6 @@ export default function AdminPanel() {
     return matchesSearch && matchesStaffFilter
   })
 
-  // Filtro Log
   const filteredLogs = logs.filter(l => 
     l.azione.toLowerCase().includes(searchTerm.toLowerCase()) || 
     l.bersaglio.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -503,76 +536,107 @@ export default function AdminPanel() {
           </div>
         </div>
       )}
+      
 
-      {/* --- TABELLA LOGS (SOLO OWNER) --- */}
+      {/* --- TABELLA LOGS & TOOLS (SOLO OWNER) --- */}
       {activeTab === 'logs' && user?.is_owner && (
-        <div className="bg-white rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden border-4 border-gray-900 animate-in fade-in slide-in-from-bottom-4">
-          <div className="bg-gray-900 px-6 py-4 border-b-4 border-gray-900 flex items-center justify-between">
-            <p className="text-white font-black text-xs uppercase tracking-widest m-0">
-              🕵️ Registro Attività Staff
-            </p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-100 border-b-4 border-gray-900 text-[11px] font-black uppercase tracking-widest text-gray-600">
-                  <th className="p-4 whitespace-nowrap">Data & Ora</th>
-                  <th className="p-4 whitespace-nowrap">Chi ha agito</th>
-                  <th className="p-4 whitespace-nowrap">Azione Eseguita</th>
-                  <th className="p-4 whitespace-nowrap">Bersaglio</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y-4 divide-gray-900">
-                {filteredLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-amber-50 transition-colors">
-                    <td className="p-4 align-middle whitespace-nowrap">
-                      <div className="flex flex-col justify-center m-0">
-                        <p className="text-xs font-black text-gray-900 bg-white border-2 border-gray-900 px-2 py-1 rounded-lg inline-block shadow-sm m-0 w-fit">
-                          {new Date(log.created_at).toLocaleDateString('it-IT')}
-                        </p>
-                        <p className="text-[10px] font-bold text-gray-500 mt-1 uppercase tracking-wider m-0">
-                          {new Date(log.created_at).toLocaleTimeString('it-IT')}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="p-4 align-middle">
-                      {log.studente ? (
-                        <div className="flex items-center gap-3 m-0">
-                          <img 
-                            src={log.studente.avatar_url || '/default-avatar.png'} 
-                            alt="Avatar" 
-                            className="w-10 h-10 rounded-full object-cover border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex-shrink-0" 
-                          />
-                          <span className="text-xs font-black text-gray-900 uppercase m-0 pt-1">{log.studente.nome} {log.studente.cognome}</span>
-                        </div>
-                      ) : (
-                        <span className="text-xs font-black text-gray-400 uppercase bg-gray-100 px-2 py-1 rounded-lg border-2 border-gray-300 m-0">🤖 Sistema</span>
-                      )}
-                    </td>
-                    <td className="p-4 align-middle">
-                      <div className="flex flex-col justify-center m-0">
-                        <span className={`inline-block text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] w-fit m-0 ${
-                          log.azione.includes('ELIMINA') || log.azione.includes('BAN') ? 'bg-red-400 text-gray-900' :
-                          log.azione.includes('SOSPENSIONE') || log.azione.includes('PAUSA') ? 'bg-orange-400 text-gray-900' :
-                          'bg-white text-gray-900'
-                        }`}>
-                          {log.azione}
-                        </span>
-                        {log.dettagli && (
-                          <p className="text-[10px] text-gray-600 font-bold mt-1.5 uppercase tracking-wide break-words max-w-xs m-0">{log.dettagli}</p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-4 align-middle">
-                      <span className="text-sm font-black text-gray-900 uppercase m-0 flex items-center h-full">{log.bersaglio}</span>
-                    </td>
-                  </tr>
-                ))}
-                {filteredLogs.length === 0 && (
-                  <tr><td colSpan={4} className="p-10 text-center text-gray-500 font-black uppercase text-sm tracking-widest">Nessun log registrato</td></tr>
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+          
+          {/* SEZIONE STRUMENTI DATABASE */}
+          <div className="bg-white rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 border-4 border-gray-900">
+            <h3 className="font-black text-gray-900 uppercase tracking-widest mb-2 flex items-center gap-2">
+              <span className="text-2xl">🧰</span> Strumenti Database
+            </h3>
+            <p className="text-sm font-bold text-gray-500 mb-6">Azioni di configurazione del sistema riservate all'Owner.</p>
+            
+            <div className="flex flex-wrap gap-4">
+              <button 
+                onClick={caricaCorsi}
+                disabled={seedingCorsi}
+                className="px-6 py-3 bg-yellow-300 border-[3px] border-gray-900 text-gray-900 font-black uppercase tracking-widest rounded-xl hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {seedingCorsi ? (
+                  <>
+                    <span className="animate-spin">⏳</span> Caricamento...
+                  </>
+                ) : (
+                  <>
+                    <span className="text-lg">📚</span> Popola Tabella Corsi
+                  </>
                 )}
-              </tbody>
-            </table>
+              </button>
+            </div>
+          </div>
+
+          {/* TABELLA LOGS */}
+          <div className="bg-white rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden border-4 border-gray-900">
+            <div className="bg-gray-900 px-6 py-4 border-b-4 border-gray-900 flex items-center justify-between">
+              <p className="text-white font-black text-xs uppercase tracking-widest m-0">
+                🕵️ Registro Attività Staff
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-100 border-b-4 border-gray-900 text-[11px] font-black uppercase tracking-widest text-gray-600">
+                    <th className="p-4 whitespace-nowrap">Data & Ora</th>
+                    <th className="p-4 whitespace-nowrap">Chi ha agito</th>
+                    <th className="p-4 whitespace-nowrap">Azione Eseguita</th>
+                    <th className="p-4 whitespace-nowrap">Bersaglio</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y-4 divide-gray-900">
+                  {filteredLogs.map((log) => (
+                    <tr key={log.id} className="hover:bg-amber-50 transition-colors">
+                      <td className="p-4 align-middle whitespace-nowrap">
+                        <div className="flex flex-col justify-center m-0">
+                          <p className="text-xs font-black text-gray-900 bg-white border-2 border-gray-900 px-2 py-1 rounded-lg inline-block shadow-sm m-0 w-fit">
+                            {new Date(log.created_at).toLocaleDateString('it-IT')}
+                          </p>
+                          <p className="text-[10px] font-bold text-gray-500 mt-1 uppercase tracking-wider m-0">
+                            {new Date(log.created_at).toLocaleTimeString('it-IT')}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="p-4 align-middle">
+                        {log.studente ? (
+                          <div className="flex items-center gap-3 m-0">
+                            <img 
+                              src={log.studente.avatar_url || '/default-avatar.png'} 
+                              alt="Avatar" 
+                              className="w-10 h-10 rounded-full object-cover border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex-shrink-0" 
+                            />
+                            <span className="text-xs font-black text-gray-900 uppercase m-0 pt-1">{log.studente.nome} {log.studente.cognome}</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs font-black text-gray-400 uppercase bg-gray-100 px-2 py-1 rounded-lg border-2 border-gray-300 m-0">🤖 Sistema</span>
+                        )}
+                      </td>
+                      <td className="p-4 align-middle">
+                        <div className="flex flex-col justify-center m-0">
+                          <span className={`inline-block text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] w-fit m-0 ${
+                            log.azione.includes('ELIMINA') || log.azione.includes('BAN') ? 'bg-red-400 text-gray-900' :
+                            log.azione.includes('SOSPENSIONE') || log.azione.includes('PAUSA') ? 'bg-orange-400 text-gray-900' :
+                            'bg-white text-gray-900'
+                          }`}>
+                            {log.azione}
+                          </span>
+                          {log.dettagli && (
+                            <p className="text-[10px] text-gray-600 font-bold mt-1.5 uppercase tracking-wide break-words max-w-xs m-0">{log.dettagli}</p>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4 align-middle">
+                        <span className="text-sm font-black text-gray-900 uppercase m-0 flex items-center h-full">{log.bersaglio}</span>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredLogs.length === 0 && (
+                    <tr><td colSpan={4} className="p-10 text-center text-gray-500 font-black uppercase text-sm tracking-widest">Nessun log registrato</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
