@@ -135,7 +135,7 @@ export default function TeamWorkspacePage() {
       // --- BLOCCO SICUREZZA: PROGETTO IN PAUSA ---
       // Usiamo 'as string' per far accettare a TypeScript il valore 'pausa'
       if ((bandoData?.stato as string) === 'pausa' && !isPlatformAdmin) {
-        router.replace('/dashboard/my_teams') 
+        router.replace(`/dashboard/projects/${bandoId}/paused`) 
         return
       }
       // -------------------------------------------

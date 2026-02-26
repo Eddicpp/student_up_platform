@@ -126,21 +126,30 @@ export default function AdminPanel() {
   
   // Metti in pausa o riattiva un progetto (cambiando lo stato in 'pausa' o 'aperto')
   const toggleProjectPause = async (project: any) => {
-    const nuovoStato = project.stato === 'pausa' ? 'aperto' : 'pausa';
-    
-    const { error } = await supabase
-      .from('bando')
-      .update({ stato: nuovoStato } as any)
-      .eq('id', project.id)
-
-    if (!error) {
-      await registraLog(nuovoStato === 'aperto' ? 'RIATTIVAZIONE PROGETTO' : 'SOSPENSIONE PROGETTO', project.titolo)
-      // Aggiorna la lista progetti localmente per feedback istantaneo
-      setProjects(projects.map(p => p.id === project.id ? { ...p, stato: nuovoStato } : p))
-    } else {
-      alert("Errore durante la modifica dello stato: " + error.message)
-    }
+  let motivo = project.motivo_pausa;
+  const nuovoStato = project.stato === 'pausa' ? 'aperto' : 'pausa';
+  
+  if (nuovoStato === 'pausa') {
+    const inputMotivo = window.prompt("Inserisci il motivo della sospensione:", "Sospensione per verifica contenuti.");
+    if (inputMotivo === null) return; // Annulla se l'admin preme annulla
+    motivo = inputMotivo;
   }
+
+  const { error } = await supabase
+    .from('bando')
+    .update({ 
+      stato: nuovoStato,
+      motivo_pausa: motivo 
+    } as any)
+    .eq('id', project.id)
+
+  if (!error) {
+    await registraLog(nuovoStato === 'pausa' ? 'SOSPENSIONE PROGETTO' : 'RIATTIVAZIONE PROGETTO', project.titolo, motivo)
+    fetchData()
+  } else {
+    alert("Errore: " + error.message)
+  }
+}
 
   // Elimina un progetto
   const deleteProject = async (project: any) => {
