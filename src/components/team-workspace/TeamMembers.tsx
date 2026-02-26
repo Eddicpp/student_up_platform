@@ -34,35 +34,52 @@ export default function TeamMembers({
 }: TeamMembersProps) {
   const supabase = createClient()
   
-  const [hoveredMember, setHoveredMember] = useState<string | null>(null)
+  // STATI PRINCIPALI
+  const [activeMemberId, setActiveMemberId] = useState<string | null>(null)
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null)
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set())
   const [memberBadges, setMemberBadges] = useState<Record<string, string[]>>({})
   
-  // STATI PER IL PERSONAGGIO CHE SBUCA
+  // STATI SOPRANNOMI (Salvato nel localStorage)
+  const [nicknames, setNicknames] = useState<Record<string, string>>({})
+  const [editingNickFor, setEditingNickFor] = useState<string | null>(null)
+  const [tempNick, setTempNick] = useState('')
+
+  // STATI PEEKER (Personaggio che sbuca)
   const [isHoveringCard, setIsHoveringCard] = useState(false)
   const [peekerPos, setPeekerPos] = useState({ edge: 'top', position: '50%' })
 
-  // Timer per mantenere aperta la card durante l'hover
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  // 1. Caricamento Soprannomi
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(`nicknames_${currentUserId}_${bandoId}`)
+      if (stored) {
+        try {
+          setNicknames(JSON.parse(stored))
+        } catch (e) {}
+      }
+    }
+  }, [currentUserId, bandoId])
 
-  const handleMouseEnter = (id: string) => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current)
-    setHoveredMember(id)
+  // 2. Salvataggio Soprannomi
+  const saveNickname = (memberId: string) => {
+    const newNicknames = { ...nicknames }
+    if (tempNick.trim() === '') {
+      delete newNicknames[memberId]
+    } else {
+      newNicknames[memberId] = tempNick.trim()
+    }
+    
+    setNicknames(newNicknames)
+    localStorage.setItem(`nicknames_${currentUserId}_${bandoId}`, JSON.stringify(newNicknames))
+    setEditingNickFor(null)
   }
 
-  const handleMouseLeave = () => {
-    timeoutRef.current = setTimeout(() => {
-      setHoveredMember(null)
-    }, 300) 
-  }
-
-  // ✅ LOGICA PERSONAGGIO: Rimosso 'left', posizioni possibili solo top, bottom, right
+  // 3. Animazione Peeker (Nascosto su mobile per evitare overflow)
   const handleCardMouseEnter = () => {
     setIsHoveringCard(true)
-    const edges = ['top', 'bottom', 'right'] // 'left' rimosso
+    const edges = ['top', 'bottom', 'right']
     const randomEdge = edges[Math.floor(Math.random() * edges.length)]
-    // Posizione percentuale tra 10% e 90% per evitare gli angoli stretti
     const randomPos = `${Math.floor(Math.random() * 80) + 10}%`
     setPeekerPos({ edge: randomEdge, position: randomPos })
   }
@@ -71,7 +88,7 @@ export default function TeamMembers({
     setIsHoveringCard(false)
   }
 
-  // Fetch presenza e badge
+  // 4. Fetch Presenza e Badge
   useEffect(() => {
     const fetchPresenceAndBadges = async () => {
       const { data: presenceData } = await (supabase as any)
@@ -153,7 +170,7 @@ export default function TeamMembers({
       clearInterval(presenceInterval)
       window.removeEventListener('beforeunload', handleBeforeUnload)
     }
-  }, [members, currentUserId, bandoId])
+  }, [members, currentUserId, bandoId, supabase])
 
   const copyEmail = (email: string) => {
     navigator.clipboard.writeText(email)
@@ -161,23 +178,18 @@ export default function TeamMembers({
     setTimeout(() => setCopiedEmail(null), 2000)
   }
 
-  const cardStyle = "bg-white rounded-2xl border-2 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-
-  const activeMember = members.find(m => m.id === hoveredMember)
+  const activeMember = members.find(m => m.id === activeMemberId)
   const activeColor = activeMember ? getMemberColor(activeMember.id) : null
   const isActiveOnline = activeMember ? onlineUsers.has(activeMember.id) : false
 
-  // Stili calcolati per il personaggio che sbuca
   const getPeekerStyles = () => {
-    const baseStyle = "absolute text-3xl transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] z-0"
-    
+    const baseStyle = "absolute text-3xl transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] z-0 hidden lg:block"
     switch (peekerPos.edge) {
       case 'top':
         return `${baseStyle} left-[${peekerPos.position}] top-0 -translate-y-full ${isHoveringCard ? 'translate-y-[-70%]' : 'translate-y-0 opacity-0'}`
       case 'bottom':
         return `${baseStyle} left-[${peekerPos.position}] bottom-0 translate-y-full ${isHoveringCard ? 'translate-y-[70%]' : 'translate-y-0 opacity-0'}`
       case 'right':
-        // ✅ Aggiunto rotate-90 quando spunta dalla destra
         return `${baseStyle} top-[${peekerPos.position}] right-0 translate-x-full rotate-90 ${isHoveringCard ? 'translate-x-[70%]' : 'translate-x-0 opacity-0'}`
       default:
         return baseStyle
@@ -185,9 +197,9 @@ export default function TeamMembers({
   }
 
   return (
-    <div className="relative">
+    <div className="w-full lg:w-80 flex-shrink-0 relative z-10">
       
-      {/* L'osservatore (The Peeker) */}
+      {/* L'osservatore (The Peeker - Solo Desktop) */}
       <div 
         className={getPeekerStyles()}
         style={{
@@ -199,7 +211,7 @@ export default function TeamMembers({
 
       {/* LA CARD PRINCIPALE */}
       <div 
-        className={`${cardStyle} p-4 pb-6 sticky top-6 ml-2 lg:ml-6 max-w-sm relative z-10`}
+        className={`bg-white rounded-2xl border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-4 sticky top-6`}
         onMouseEnter={handleCardMouseEnter}
         onMouseLeave={handleCardMouseLeave}
       >
@@ -207,162 +219,213 @@ export default function TeamMembers({
           <span className="flex items-center gap-2">
             <span>👥</span> Team
           </span>
-          <span className="text-xs text-gray-900 font-black bg-white px-2 py-1 rounded-lg border-2 border-gray-900 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+          <span className="text-xs text-gray-900 font-black bg-white px-2 py-1 rounded-lg border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
             {members.length}
           </span>
         </h2>
 
-        <div className="flex items-center gap-2 mb-4 text-xs font-black text-gray-900 uppercase tracking-widest bg-green-100 p-2 rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-          <span className="w-3 h-3 bg-green-500 border border-gray-900 rounded-full animate-pulse shadow-sm"></span>
+        <div className="flex items-center gap-2 mb-4 text-xs font-black text-gray-900 uppercase tracking-widest bg-green-100 p-2.5 rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+          <span className="w-3 h-3 bg-green-500 border-2 border-gray-900 rounded-full animate-pulse shadow-sm"></span>
           <span>{onlineUsers.size} online</span>
         </div>
 
-        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 px-1 pb-1 pt-1">
+        {/* LISTA DEI MEMBRI */}
+        <div className="space-y-3 max-h-[300px] lg:max-h-[450px] overflow-y-auto pr-2 custom-scrollbar">
           {members.map((member) => {
-            const color = getMemberColor(member.id)
             const isOnline = onlineUsers.has(member.id)
             const badges = memberBadges[member.id] || []
+            const displayName = nicknames[member.id] || `${member.nome} ${member.cognome}`
 
             return (
               <div
                 key={member.id}
-                className="relative"
-                onMouseEnter={() => handleMouseEnter(member.id)}
-                onMouseLeave={handleMouseLeave}
+                onClick={() => setActiveMemberId(activeMemberId === member.id ? null : member.id)}
+                className={`flex items-center gap-3 p-2.5 rounded-xl border-2 border-gray-900 transition-all cursor-pointer select-none ${
+                  activeMemberId === member.id 
+                    ? 'bg-yellow-300 translate-x-[2px] translate-y-[2px] shadow-none' 
+                    : 'bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'
+                }`}
               >
-                <div className={`flex items-center gap-2.5 p-2.5 rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-transform cursor-pointer hover:-translate-y-1 hover:translate-x-1 hover:shadow-none ${
-                  hoveredMember === member.id 
-                    ? 'bg-yellow-100' 
-                    : 'bg-white'
-                }`}>
-                  <div className="relative flex-shrink-0">
-                    <img 
-                      src={member.avatar_url || '/default-avatar.png'} 
-                      alt=""
-                      className={`w-10 h-10 rounded-xl object-cover border-2 border-gray-900`}
-                    />
-                    <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-gray-900 ${
-                      isOnline ? 'bg-green-500' : 'bg-gray-300'
-                    }`}></span>
-                    
-                    {member.ruolo_team === 'owner' && (
-                      <span className="absolute -top-2 -right-2 text-[12px] bg-white rounded-full border border-gray-900 shadow-sm leading-none p-0.5">👑</span>
-                    )}
-                    {member.ruolo_team === 'admin' && (
-                      <span className="absolute -top-2 -right-2 text-[12px] bg-white rounded-full border border-gray-900 shadow-sm leading-none p-0.5">🛡️</span>
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <p className="font-black text-gray-900 truncate text-xs">
-                        {member.nome} {member.cognome}
-                      </p>
-                    </div>
-                    <p className={`text-[10px] font-black uppercase tracking-widest mt-0.5 ${
-                      member.ruolo_team === 'owner' ? 'text-amber-600' :
-                      member.ruolo_team === 'admin' ? 'text-blue-600' :
-                      'text-gray-500'
-                    }`}>
-                      {member.ruolo_team === 'owner' ? 'Owner' :
-                       member.ruolo_team === 'admin' ? 'Admin' : 'Membro'}
-                    </p>
-                  </div>
-
-                  {badges.length > 0 && (
-                    <div className="flex -space-x-1.5">
-                      {badges.slice(0, 2).map((badge, i) => (
-                        <span key={i} className="text-[12px] drop-shadow-sm bg-white rounded-full p-0.5 border border-gray-300" title={(BADGE_TYPES as any)[badge]?.label}>
-                          {(BADGE_TYPES as any)[badge]?.icon || '🏅'}
-                        </span>
-                      ))}
-                    </div>
+                {/* Avatar */}
+                <div className="relative flex-shrink-0">
+                  <img 
+                    src={member.avatar_url || '/default-avatar.png'} 
+                    alt=""
+                    className="w-10 h-10 rounded-xl object-cover border-2 border-gray-900 bg-white"
+                  />
+                  <span className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-gray-900 ${
+                    isOnline ? 'bg-green-500' : 'bg-gray-300'
+                  }`}></span>
+                  
+                  {member.ruolo_team === 'owner' && (
+                    <span className="absolute -top-2 -right-2 text-[10px] bg-white rounded-md border-2 border-gray-900 shadow-sm px-1 py-0.5">👑</span>
+                  )}
+                  {member.ruolo_team === 'admin' && (
+                    <span className="absolute -top-2 -right-2 text-[10px] bg-white rounded-md border-2 border-gray-900 shadow-sm px-1 py-0.5">🛡️</span>
                   )}
                 </div>
+
+                {/* Testo */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-black text-gray-900 truncate text-sm leading-tight">
+                    {displayName}
+                  </p>
+                  <p className={`text-[9px] font-black uppercase tracking-widest mt-0.5 ${
+                    member.ruolo_team === 'owner' ? 'text-amber-600' :
+                    member.ruolo_team === 'admin' ? 'text-blue-600' :
+                    'text-gray-500'
+                  }`}>
+                    {member.ruolo_team === 'owner' ? 'Proprietario' :
+                     member.ruolo_team === 'admin' ? 'Admin' : 'Membro'}
+                  </p>
+                </div>
+
+                {/* Badge */}
+                {badges.length > 0 && (
+                  <div className="flex -space-x-2">
+                    {badges.slice(0, 2).map((badge, i) => (
+                      <span key={i} className="text-[14px] bg-white rounded-full p-0.5 border-2 border-gray-900 shadow-sm z-10" title={(BADGE_TYPES as any)[badge]?.label}>
+                        {(BADGE_TYPES as any)[badge]?.icon || '🏅'}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             )
           })}
         </div>
 
-        {/* Hover Card (Popup a sinistra) */}
+        {/* MODALE DI DETTAGLIO (Su Mobile Modal centrato, su PC Popup laterale) */}
         {activeMember && activeColor && (
-          <div 
-            className={`absolute right-[105%] top-0 mr-4 w-64 bg-white rounded-2xl border-4 border-gray-900 shadow-[-8px_8px_0px_0px_rgba(0,0,0,1)] p-4 z-50 animate-in fade-in zoom-in-95 duration-200`}
-            onMouseEnter={() => { if (timeoutRef.current) clearTimeout(timeoutRef.current) }}
-            onMouseLeave={handleMouseLeave}
-          >
-            <div className={`-mx-4 -mt-4 mb-4 p-4 rounded-t-[14px] border-b-4 border-gray-900 ${activeColor.bgHex ? '' : activeColor.light}`}
-                 style={activeColor.bgHex ? { backgroundColor: activeColor.bgHex } : undefined}>
-              <div className="flex items-center gap-3">
-                <img 
-                  src={activeMember.avatar_url || '/default-avatar.png'} 
-                  alt=""
-                  className={`w-14 h-14 rounded-xl object-cover border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`}
-                />
-                <div className="bg-white/90 px-2 py-1 rounded-lg border border-gray-900 shadow-sm backdrop-blur-sm">
-                  <p className="font-black text-gray-900 text-sm leading-tight uppercase">{activeMember.nome} {activeMember.cognome}</p>
-                  <p className={`text-[10px] font-black uppercase tracking-widest text-gray-700 leading-tight mt-1`}>
-                    {activeMember.nome_corso || 'Corso ignoto'}
-                  </p>
-                  <div className="flex items-center gap-1 mt-1.5">
-                    <span className={`w-2 h-2 rounded-full border border-gray-900 ${isActiveOnline ? 'bg-green-500' : 'bg-gray-400'}`}></span>
-                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-900">
-                      {isActiveOnline ? 'Online' : 'Offline'}
-                    </span>
+          <>
+            {/* Overlay scuro solo per Mobile */}
+            <div 
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] lg:hidden"
+              onClick={() => setActiveMemberId(null)}
+            />
+
+            <div className={`fixed top-1/2 left-4 right-4 -translate-y-1/2 z-[101] lg:absolute lg:right-[105%] lg:top-0 lg:-translate-y-0 lg:left-auto lg:w-72 bg-white rounded-2xl sm:rounded-[1.5rem] border-4 border-gray-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-4 sm:p-5 animate-in fade-in zoom-in-95 duration-200`}>
+              
+              {/* Bottone Chiudi su Mobile */}
+              <button 
+                onClick={() => setActiveMemberId(null)}
+                className="absolute -top-3 -right-3 w-8 h-8 bg-red-400 border-2 border-gray-900 rounded-lg font-black flex items-center justify-center lg:hidden shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+              >
+                ✕
+              </button>
+
+              <div className={`-mx-4 sm:-mx-5 -mt-4 sm:-mt-5 mb-4 sm:mb-5 p-4 sm:p-5 rounded-t-[18px] border-b-4 border-gray-900 ${activeColor.bgHex ? '' : activeColor.light}`}
+                   style={activeColor.bgHex ? { backgroundColor: activeColor.bgHex } : undefined}>
+                <div className="flex items-center gap-3">
+                  <img 
+                    src={activeMember.avatar_url || '/default-avatar.png'} 
+                    alt=""
+                    className={`w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover border-3 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] bg-white`}
+                  />
+                  <div className="bg-white/95 px-3 py-2 rounded-xl border-2 border-gray-900 shadow-sm flex-1 min-w-0">
+                    
+                    {/* ZONA GESTIONE SOPRANNOME */}
+                    {editingNickFor === activeMember.id ? (
+                      <div className="flex gap-1 mb-1">
+                        <input 
+                          type="text" 
+                          value={tempNick}
+                          onChange={(e) => setTempNick(e.target.value)}
+                          placeholder="Nuovo nome..."
+                          className="w-full text-xs font-black text-gray-900 border-2 border-gray-900 rounded-md px-1 py-1 outline-none text-base"
+                          autoFocus
+                          onKeyDown={(e) => { if(e.key === 'Enter') saveNickname(activeMember.id) }}
+                        />
+                        <button onClick={() => saveNickname(activeMember.id)} className="bg-green-400 border-2 border-gray-900 rounded-md px-2 text-xs hover:bg-green-500 transition-colors">
+                          💾
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-start justify-between gap-1 group">
+                        <p className="font-black text-gray-900 text-sm sm:text-base leading-tight uppercase truncate">
+                          {nicknames[activeMember.id] || `${activeMember.nome} ${activeMember.cognome}`}
+                        </p>
+                        <button 
+                          onClick={() => { setTempNick(nicknames[activeMember.id] || ''); setEditingNickFor(activeMember.id); }}
+                          className="text-gray-400 hover:text-gray-900 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity flex-shrink-0"
+                          title="Assegna soprannome"
+                        >
+                          ✏️
+                        </button>
+                      </div>
+                    )}
+                    
+                    {/* Se c'è un soprannome, mostra il nome vero in piccolo */}
+                    {nicknames[activeMember.id] && !editingNickFor && (
+                      <p className="text-[9px] font-bold text-gray-500 truncate mt-0.5">
+                        ({activeMember.nome} {activeMember.cognome})
+                      </p>
+                    )}
+
+                    <p className={`text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-gray-700 leading-tight mt-1.5 truncate`}>
+                      {activeMember.nome_corso || 'Corso ignoto'}
+                    </p>
+                    <div className="flex items-center gap-1.5 mt-2">
+                      <span className={`w-2.5 h-2.5 rounded-full border border-gray-900 shadow-sm ${isActiveOnline ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                      <span className="text-[9px] font-black uppercase tracking-widest text-gray-900">
+                        {isActiveOnline ? 'Online' : 'Offline'}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {activeMember.bio && (
-              <p className="text-[11px] text-gray-900 mb-3 line-clamp-3 font-bold bg-gray-100 p-2.5 rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                "{activeMember.bio}"
-              </p>
-            )}
-
-            {activeMember.anno_inizio_corso && (
-              <div className="inline-block bg-yellow-300 px-3 py-1.5 rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] mb-4 -rotate-1">
-                <p className="text-[10px] text-gray-900 font-black uppercase tracking-widest">
-                  🎓 {new Date().getFullYear() - activeMember.anno_inizio_corso + 1}° Anno
+              {activeMember.bio && (
+                <p className="text-[11px] sm:text-xs text-gray-900 mb-3 line-clamp-3 font-bold bg-gray-50 p-3 rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                  "{activeMember.bio}"
                 </p>
-              </div>
-            )}
-
-            <div className="flex flex-col gap-2 mt-2 pt-4 border-t-4 border-dashed border-gray-200">
-              {activeMember.email && (
-                <button
-                  onClick={() => copyEmail(activeMember.email)}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
-                >
-                  {copiedEmail === activeMember.email ? '✅ Copiata!' : '📋 Copia email'}
-                </button>
               )}
 
-              <div className="flex gap-2">
-                {activeMember.id !== currentUserId && (
-                  <Link
-                    href={`/dashboard/messages?userId=${activeMember.id}`}
-                    className="flex-1 flex items-center justify-center gap-1 py-2.5 bg-blue-300 hover:bg-blue-400 text-gray-900 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
+              {activeMember.anno_inizio_corso && (
+                <div className="inline-block bg-yellow-300 px-3 py-1.5 rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] mb-4 -rotate-2">
+                  <p className="text-[10px] text-gray-900 font-black uppercase tracking-widest">
+                    🎓 {new Date().getFullYear() - activeMember.anno_inizio_corso + 1}° Anno
+                  </p>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-2 mt-2 pt-4 border-t-4 border-dashed border-gray-200">
+                {activeMember.email && (
+                  <button
+                    onClick={() => copyEmail(activeMember.email)}
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-white hover:bg-yellow-100 text-gray-900 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
                   >
-                    💬 Chat
-                  </Link>
+                    {copiedEmail === activeMember.email ? '✅ Copiata!' : '📋 Copia email'}
+                  </button>
                 )}
-                
-                <Link
-                  href={`/dashboard/user/${activeMember.id}`}
-                  className="flex-1 flex items-center justify-center gap-1 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-[10px] uppercase font-black tracking-widest transition-all border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
-                >
-                  👤 Profilo
-                </Link>
+
+                <div className="flex gap-2">
+                  {activeMember.id !== currentUserId && (
+                    <Link
+                      href={`/dashboard/messages?userId=${activeMember.id}`}
+                      className="flex-1 flex items-center justify-center gap-1 py-3 bg-blue-300 hover:bg-blue-400 text-gray-900 rounded-xl text-[10px] sm:text-xs uppercase font-black tracking-widest transition-all border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
+                    >
+                      💬 Chat
+                    </Link>
+                  )}
+                  
+                  <Link
+                    href={`/dashboard/user/${activeMember.id}`}
+                    className="flex-1 flex items-center justify-center gap-1 py-3 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-[10px] sm:text-xs uppercase font-black tracking-widest transition-all border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
+                  >
+                    👤 Profilo
+                  </Link>
+                </div>
               </div>
             </div>
-          </div>
+          </>
         )}
 
+        {/* Bottone Abbandona */}
         {!isOwner && (
           <button
             onClick={onLeaveTeam}
-            className="w-full mt-6 py-3 text-xs font-black uppercase tracking-widest text-red-600 bg-white hover:bg-red-50 rounded-xl transition-all border-2 border-gray-900 shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px]"
+            className="w-full mt-6 py-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white bg-red-500 hover:bg-red-600 rounded-xl transition-all border-2 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px]"
           >
             🚪 Abbandona team
           </button>
