@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { getMemberColor, BADGE_TYPES } from '@/lib/member-colors'
 import Link from 'next/link'
@@ -36,16 +36,17 @@ export default function TeamMembers({
   
   // STATI PRINCIPALI
   const [activeMemberId, setActiveMemberId] = useState<string | null>(null)
+  const [hoveredMemberId, setHoveredMemberId] = useState<string | null>(null)
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null)
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set())
   const [memberBadges, setMemberBadges] = useState<Record<string, string[]>>({})
   
-  // STATI SOPRANNOMI (Salvato nel localStorage)
+  // STATI SOPRANNOMI
   const [nicknames, setNicknames] = useState<Record<string, string>>({})
   const [editingNickFor, setEditingNickFor] = useState<string | null>(null)
   const [tempNick, setTempNick] = useState('')
 
-  // STATI PEEKER (Personaggio che sbuca)
+  // STATI PEEKER
   const [isHoveringCard, setIsHoveringCard] = useState(false)
   const [peekerPos, setPeekerPos] = useState({ edge: 'top', position: '50%' })
 
@@ -75,7 +76,7 @@ export default function TeamMembers({
     setEditingNickFor(null)
   }
 
-  // 3. Animazione Peeker (Nascosto su mobile per evitare overflow)
+  // 3. Animazione Peeker
   const handleCardMouseEnter = () => {
     setIsHoveringCard(true)
     const edges = ['top', 'bottom', 'right']
@@ -178,9 +179,11 @@ export default function TeamMembers({
     setTimeout(() => setCopiedEmail(null), 2000)
   }
 
-  const activeMember = members.find(m => m.id === activeMemberId)
-  const activeColor = activeMember ? getMemberColor(activeMember.id) : null
-  const isActiveOnline = activeMember ? onlineUsers.has(activeMember.id) : false
+  // Logica per determinare chi visualizzare nel popup
+  const displayMemberId = activeMemberId || hoveredMemberId
+  const displayMember = members.find(m => m.id === displayMemberId)
+  const displayColor = displayMember ? getMemberColor(displayMember.id) : null
+  const isDisplayOnline = displayMember ? onlineUsers.has(displayMember.id) : false
 
   const getPeekerStyles = () => {
     const baseStyle = "absolute text-3xl transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] z-0 hidden lg:block"
@@ -199,7 +202,7 @@ export default function TeamMembers({
   return (
     <div className="w-full lg:w-80 flex-shrink-0 relative z-10">
       
-      {/* L'osservatore (The Peeker - Solo Desktop) */}
+      {/* L'osservatore (Solo Desktop) */}
       <div 
         className={getPeekerStyles()}
         style={{
@@ -211,7 +214,7 @@ export default function TeamMembers({
 
       {/* LA CARD PRINCIPALE */}
       <div 
-        className={`bg-white rounded-2xl border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-4 sticky top-6`}
+        className={`bg-white rounded-2xl border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-4 sticky top-6 z-50`}
         onMouseEnter={handleCardMouseEnter}
         onMouseLeave={handleCardMouseLeave}
       >
@@ -230,7 +233,7 @@ export default function TeamMembers({
         </div>
 
         {/* LISTA DEI MEMBRI */}
-        <div className="space-y-3 max-h-[300px] lg:max-h-[450px] overflow-y-auto pr-2 custom-scrollbar">
+        <div className="space-y-3 max-h-[300px] lg:max-h-[450px] overflow-y-auto pr-2 custom-scrollbar relative z-50">
           {members.map((member) => {
             const isOnline = onlineUsers.has(member.id)
             const badges = memberBadges[member.id] || []
@@ -239,9 +242,13 @@ export default function TeamMembers({
             return (
               <div
                 key={member.id}
+                onMouseEnter={() => {
+                  if (!activeMemberId) setHoveredMemberId(member.id)
+                }}
+                onMouseLeave={() => setHoveredMemberId(null)}
                 onClick={() => setActiveMemberId(activeMemberId === member.id ? null : member.id)}
                 className={`flex items-center gap-3 p-2.5 rounded-xl border-2 border-gray-900 transition-all cursor-pointer select-none ${
-                  activeMemberId === member.id 
+                  displayMemberId === member.id 
                     ? 'bg-yellow-300 translate-x-[2px] translate-y-[2px] shadow-none' 
                     : 'bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'
                 }`}
@@ -295,37 +302,56 @@ export default function TeamMembers({
           })}
         </div>
 
-        {/* MODALE DI DETTAGLIO (Su Mobile Modal centrato, su PC Popup laterale) */}
-        {activeMember && activeColor && (
+        {/* MODALE DI DETTAGLIO: Usiamo z-[200] per superare tutte le altre tab e tabelle */}
+        {displayMember && displayColor && (
           <>
-            {/* Overlay scuro solo per Mobile */}
+            {/* Overlay scuro (Solo se bloccato con click o su Mobile) */}
+            {(activeMemberId || typeof window !== 'undefined' && window.innerWidth < 1024) && (
+              <div 
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[190] lg:hidden"
+                onClick={() => {
+                  setActiveMemberId(null);
+                  setHoveredMemberId(null);
+                }}
+              />
+            )}
+
             <div 
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] lg:hidden"
-              onClick={() => setActiveMemberId(null)}
-            />
-
-            <div className={`fixed top-1/2 left-4 right-4 -translate-y-1/2 z-[101] lg:absolute lg:right-[105%] lg:top-0 lg:-translate-y-0 lg:left-auto lg:w-72 bg-white rounded-2xl sm:rounded-[1.5rem] border-4 border-gray-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-4 sm:p-5 animate-in fade-in zoom-in-95 duration-200`}>
+              className={`fixed top-1/2 left-4 right-4 -translate-y-1/2 z-[200] lg:absolute lg:right-[105%] lg:top-0 lg:-translate-y-0 lg:left-auto lg:w-72 bg-white rounded-2xl sm:rounded-[1.5rem] border-4 border-gray-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-4 sm:p-5 animate-in fade-in zoom-in-95 duration-200 pointer-events-auto`}
+              onMouseEnter={() => {
+                if (!activeMemberId) setHoveredMemberId(displayMember.id)
+              }}
+              onMouseLeave={() => {
+                if (!activeMemberId) setHoveredMemberId(null)
+              }}
+            >
               
-              {/* Bottone Chiudi su Mobile */}
-              <button 
-                onClick={() => setActiveMemberId(null)}
-                className="absolute -top-3 -right-3 w-8 h-8 bg-red-400 border-2 border-gray-900 rounded-lg font-black flex items-center justify-center lg:hidden shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-              >
-                ✕
-              </button>
+              {/* Bottone Chiudi (visibile se bloccato col click o su Mobile) */}
+              {(activeMemberId || typeof window !== 'undefined' && window.innerWidth < 1024) && (
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveMemberId(null);
+                    setHoveredMemberId(null);
+                  }}
+                  className="absolute -top-3 -right-3 w-8 h-8 bg-red-400 border-2 border-gray-900 rounded-lg font-black flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] z-50 hover:bg-red-500"
+                >
+                  ✕
+                </button>
+              )}
 
-              <div className={`-mx-4 sm:-mx-5 -mt-4 sm:-mt-5 mb-4 sm:mb-5 p-4 sm:p-5 rounded-t-[18px] border-b-4 border-gray-900 ${activeColor.bgHex ? '' : activeColor.light}`}
-                   style={activeColor.bgHex ? { backgroundColor: activeColor.bgHex } : undefined}>
+              <div className={`-mx-4 sm:-mx-5 -mt-4 sm:-mt-5 mb-4 sm:mb-5 p-4 sm:p-5 rounded-t-[18px] border-b-4 border-gray-900 ${displayColor.bgHex ? '' : displayColor.light}`}
+                   style={displayColor.bgHex ? { backgroundColor: displayColor.bgHex } : undefined}>
                 <div className="flex items-center gap-3">
                   <img 
-                    src={activeMember.avatar_url || '/default-avatar.png'} 
+                    src={displayMember.avatar_url || '/default-avatar.png'} 
                     alt=""
                     className={`w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover border-3 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] bg-white`}
                   />
                   <div className="bg-white/95 px-3 py-2 rounded-xl border-2 border-gray-900 shadow-sm flex-1 min-w-0">
                     
                     {/* ZONA GESTIONE SOPRANNOME */}
-                    {editingNickFor === activeMember.id ? (
+                    {editingNickFor === displayMember.id ? (
                       <div className="flex gap-1 mb-1">
                         <input 
                           type="text" 
@@ -334,19 +360,24 @@ export default function TeamMembers({
                           placeholder="Nuovo nome..."
                           className="w-full text-xs font-black text-gray-900 border-2 border-gray-900 rounded-md px-1 py-1 outline-none text-base"
                           autoFocus
-                          onKeyDown={(e) => { if(e.key === 'Enter') saveNickname(activeMember.id) }}
+                          onKeyDown={(e) => { if(e.key === 'Enter') saveNickname(displayMember.id) }}
                         />
-                        <button onClick={() => saveNickname(activeMember.id)} className="bg-green-400 border-2 border-gray-900 rounded-md px-2 text-xs hover:bg-green-500 transition-colors">
+                        <button onClick={() => saveNickname(displayMember.id)} className="bg-green-400 border-2 border-gray-900 rounded-md px-2 text-xs hover:bg-green-500 transition-colors">
                           💾
                         </button>
                       </div>
                     ) : (
                       <div className="flex items-start justify-between gap-1 group">
                         <p className="font-black text-gray-900 text-sm sm:text-base leading-tight uppercase truncate">
-                          {nicknames[activeMember.id] || `${activeMember.nome} ${activeMember.cognome}`}
+                          {nicknames[displayMember.id] || `${displayMember.nome} ${displayMember.cognome}`}
                         </p>
                         <button 
-                          onClick={() => { setTempNick(nicknames[activeMember.id] || ''); setEditingNickFor(activeMember.id); }}
+                          onClick={(e) => { 
+                            e.stopPropagation();
+                            setActiveMemberId(displayMember.id); // Blocca la modale
+                            setTempNick(nicknames[displayMember.id] || ''); 
+                            setEditingNickFor(displayMember.id); 
+                          }}
                           className="text-gray-400 hover:text-gray-900 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity flex-shrink-0"
                           title="Assegna soprannome"
                         >
@@ -356,53 +387,53 @@ export default function TeamMembers({
                     )}
                     
                     {/* Se c'è un soprannome, mostra il nome vero in piccolo */}
-                    {nicknames[activeMember.id] && !editingNickFor && (
+                    {nicknames[displayMember.id] && !editingNickFor && (
                       <p className="text-[9px] font-bold text-gray-500 truncate mt-0.5">
-                        ({activeMember.nome} {activeMember.cognome})
+                        ({displayMember.nome} {displayMember.cognome})
                       </p>
                     )}
 
                     <p className={`text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-gray-700 leading-tight mt-1.5 truncate`}>
-                      {activeMember.nome_corso || 'Corso ignoto'}
+                      {displayMember.nome_corso || 'Corso ignoto'}
                     </p>
                     <div className="flex items-center gap-1.5 mt-2">
-                      <span className={`w-2.5 h-2.5 rounded-full border border-gray-900 shadow-sm ${isActiveOnline ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                      <span className={`w-2.5 h-2.5 rounded-full border border-gray-900 shadow-sm ${isDisplayOnline ? 'bg-green-500' : 'bg-gray-400'}`}></span>
                       <span className="text-[9px] font-black uppercase tracking-widest text-gray-900">
-                        {isActiveOnline ? 'Online' : 'Offline'}
+                        {isDisplayOnline ? 'Online' : 'Offline'}
                       </span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {activeMember.bio && (
+              {displayMember.bio && (
                 <p className="text-[11px] sm:text-xs text-gray-900 mb-3 line-clamp-3 font-bold bg-gray-50 p-3 rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                  "{activeMember.bio}"
+                  "{displayMember.bio}"
                 </p>
               )}
 
-              {activeMember.anno_inizio_corso && (
+              {displayMember.anno_inizio_corso && (
                 <div className="inline-block bg-yellow-300 px-3 py-1.5 rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] mb-4 -rotate-2">
                   <p className="text-[10px] text-gray-900 font-black uppercase tracking-widest">
-                    🎓 {new Date().getFullYear() - activeMember.anno_inizio_corso + 1}° Anno
+                    🎓 {new Date().getFullYear() - displayMember.anno_inizio_corso + 1}° Anno
                   </p>
                 </div>
               )}
 
               <div className="flex flex-col gap-2 mt-2 pt-4 border-t-4 border-dashed border-gray-200">
-                {activeMember.email && (
+                {displayMember.email && (
                   <button
-                    onClick={() => copyEmail(activeMember.email)}
+                    onClick={() => copyEmail(displayMember.email)}
                     className="w-full flex items-center justify-center gap-2 py-3 bg-white hover:bg-yellow-100 text-gray-900 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
                   >
-                    {copiedEmail === activeMember.email ? '✅ Copiata!' : '📋 Copia email'}
+                    {copiedEmail === displayMember.email ? '✅ Copiata!' : '📋 Copia email'}
                   </button>
                 )}
 
                 <div className="flex gap-2">
-                  {activeMember.id !== currentUserId && (
+                  {displayMember.id !== currentUserId && (
                     <Link
-                      href={`/dashboard/messages?userId=${activeMember.id}`}
+                      href={`/dashboard/messages?userId=${displayMember.id}`}
                       className="flex-1 flex items-center justify-center gap-1 py-3 bg-blue-300 hover:bg-blue-400 text-gray-900 rounded-xl text-[10px] sm:text-xs uppercase font-black tracking-widest transition-all border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
                     >
                       💬 Chat
@@ -410,7 +441,7 @@ export default function TeamMembers({
                   )}
                   
                   <Link
-                    href={`/dashboard/user/${activeMember.id}`}
+                    href={`/dashboard/user/${displayMember.id}`}
                     className="flex-1 flex items-center justify-center gap-1 py-3 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-[10px] sm:text-xs uppercase font-black tracking-widest transition-all border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
                   >
                     👤 Profilo
