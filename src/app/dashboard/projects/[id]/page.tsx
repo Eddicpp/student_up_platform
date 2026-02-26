@@ -369,6 +369,7 @@ export default function ProjectDetailPage() {
                   haGiaPartecipato={!!partecipazione}
                   statoCandidatura={partecipazione?.stato}
                   dominantColor={dominantColor}
+                  statoBando={bando.stato}
                 />
               </div>
             )}

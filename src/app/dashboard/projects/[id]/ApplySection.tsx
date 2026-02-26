@@ -7,8 +7,9 @@ interface ApplySectionProps {
   bandoId: string
   isAdmin: boolean
   haGiaPartecipato: boolean
-  statoCandidatura?: string // Può essere undefined
+  statoCandidatura?: string 
   dominantColor?: string
+  statoBando?: string 
 }
 
 export default function ApplySection({ 
@@ -16,7 +17,8 @@ export default function ApplySection({
   isAdmin, 
   haGiaPartecipato, 
   statoCandidatura,
-  dominantColor = '239, 68, 68'
+  dominantColor = '239, 68, 68',
+  statoBando
 }: ApplySectionProps) {
   const [messaggio, setMessaggio] = useState('')
   const [link, setLink] = useState('')
@@ -30,6 +32,29 @@ export default function ApplySection({
 
   // Se sei Admin, non mostrare nulla
   if (isAdmin) return null
+
+  // ==========================================
+  // BLOCCO BANDO CHIUSO
+  // ==========================================
+  if (statoBando === 'chiuso' && !haGiaPartecipato && !inviato) {
+    return (
+      <div className="mt-8 rounded-2xl sm:rounded-3xl border-4 border-gray-900 p-5 sm:p-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] bg-gray-100 opacity-80">
+        <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white border-4 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center text-3xl sm:text-4xl -rotate-3">
+            🔒
+          </div>
+          <div>
+            <h4 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-gray-900">
+              Candidature Chiuse
+            </h4>
+            <p className="text-sm sm:text-base font-bold text-gray-500 mt-1">
+              Il leader ha smesso di accettare nuovi membri per questo progetto.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const handleApply = async () => {
     if (messaggio.length < 20) {
