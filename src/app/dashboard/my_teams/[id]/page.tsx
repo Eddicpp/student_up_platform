@@ -99,14 +99,28 @@ export default function TeamWorkspacePage() {
     setLoading(true)
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      // Recuperiamo l'utente base da Auth
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (!authUser) {
         router.push('/login')
         return
       }
-      setCurrentUser(user)
 
-      // Fetch project
+      // 1. RECUPERO INFO PROFILO (Puntiamo a is_owner)
+      // Usiamo (supabase as any) per evitare l'errore di cache dei tipi di TypeScript
+      const { data: studenteData, error: profileError } = await (supabase as any)
+        .from('studente')
+        .select('is_owner')
+        .eq('id', authUser.id)
+        .single()
+      
+      // Verifichiamo se l'utente è l'Admin globale della piattaforma
+      const isPlatformAdmin = studenteData?.is_owner || false;
+      
+      // Aggiorniamo lo stato locale includendo l'info is_owner
+      setCurrentUser({ ...authUser, is_owner: isPlatformAdmin });
+
+      // 2. Fetch project
       const { data: bandoData, error: bandoError } = await supabase
         .from('bando')
         .select(`
@@ -118,15 +132,23 @@ export default function TeamWorkspacePage() {
 
       if (bandoError) throw bandoError
 
-      const checkIsOwner = bandoData.creatore_studente_id === user.id
+      // --- BLOCCO SICUREZZA: PROGETTO IN PAUSA ---
+      // Usiamo 'as string' per far accettare a TypeScript il valore 'pausa'
+      if ((bandoData?.stato as string) === 'pausa' && !isPlatformAdmin) {
+        router.replace('/dashboard/my_teams') 
+        return
+      }
+      // -------------------------------------------
+
+      const checkIsOwner = bandoData.creatore_studente_id === authUser.id
       
-      // Check if user is member
-      if (!checkIsOwner) {
+      // Controllo se l'utente ha diritto di stare qui (Creatore, Membro o Admin globale)
+      if (!checkIsOwner && !isPlatformAdmin) {
         const { data: myParticipation } = await supabase
           .from('partecipazione')
           .select('stato')
           .eq('bando_id', bandoId)
-          .eq('studente_id', user.id)
+          .eq('studente_id', authUser.id)
           .single()
 
         if (!myParticipation || myParticipation.stato !== 'accepted') {
@@ -160,14 +182,10 @@ export default function TeamWorkspacePage() {
       const { data: membersData } = await supabase
         .from('partecipazione')
         .select(`
-          id, 
-          ruolo, 
+          id, ruolo, 
           studente:studente_id (
             id, nome, cognome, avatar_url, email, bio,
-            studente_corso (
-              anno_inizio,
-              corso:corso_id ( nome )
-            )
+            studente_corso ( anno_inizio, corso:corso_id ( nome ) )
           )
         `)
         .eq('bando_id', bandoId)
@@ -191,9 +209,9 @@ export default function TeamWorkspacePage() {
 
       setTeamMembers(formattedMembers)
 
-      // Check if admin
-      const userMemberData = formattedMembers.find(m => m.id === user?.id)
-      if (checkIsOwner || userMemberData?.ruolo_team === 'admin') {
+      // Check if Admin (Proprietario bando, Admin del team o Admin globale della piattaforma)
+      const userMemberData = formattedMembers.find(m => m.id === authUser.id)
+      if (checkIsOwner || userMemberData?.ruolo_team === 'admin' || isPlatformAdmin) {
         setIsAdmin(true)
       }
 
@@ -254,7 +272,7 @@ export default function TeamWorkspacePage() {
           <p className="text-gray-900 font-black uppercase tracking-tight text-lg mb-2">Errore</p>
           <p className="text-red-600 font-bold text-sm mb-6">{error}</p>
           <button 
-            onClick={() => router.push('/dashboard/my-projects')}
+            onClick={() => router.push('/dashboard/my_teams')}
             className="w-full py-3 bg-gray-900 text-white rounded-xl font-black uppercase tracking-widest border-2 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
           >
             Torna ai Miei Team
@@ -277,7 +295,7 @@ export default function TeamWorkspacePage() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
         
         <div className="absolute top-3 left-3 sm:top-6 sm:left-6">
-          <button onClick={() => router.push('/dashboard/my-projects')} className="flex items-center gap-1.5 sm:gap-2 bg-white text-gray-900 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-black uppercase tracking-widest text-[10px] sm:text-xs border-2 sm:border-3 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
+          <button onClick={() => router.push('/dashboard/my_teams')} className="flex items-center gap-1.5 sm:gap-2 bg-white text-gray-900 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-black uppercase tracking-widest text-[10px] sm:text-xs border-2 sm:border-3 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
             <span className="text-sm sm:text-base">🔙</span> <span className="hidden sm:inline">I miei team</span>
           </button>
         </div>
@@ -293,8 +311,12 @@ export default function TeamWorkspacePage() {
         <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 lg:p-8">
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-wrap items-center gap-2 mb-2 sm:mb-3">
-              <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[9px] sm:text-xs font-black uppercase tracking-widest border-2 ${project?.stato === 'chiuso' ? 'bg-gray-700 text-white border-gray-900' : 'bg-green-400 text-gray-900 border-gray-900'}`}>
-                {project?.stato === 'chiuso' ? '🔒 Chiuso' : '🟢 Aperto'}
+              <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[9px] sm:text-xs font-black uppercase tracking-widest border-2 ${
+                (project?.stato as string) === 'pausa' ? 'bg-orange-500 text-white border-gray-900' :
+                project?.stato === 'chiuso' ? 'bg-gray-700 text-white border-gray-900' : 
+                'bg-green-400 text-gray-900 border-gray-900'
+              }`}>
+                {(project?.stato as string) === 'pausa' ? '⏸ IN PAUSA' : project?.stato === 'chiuso' ? '🔒 Chiuso' : '🟢 Aperto'}
               </span>
               <span className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[9px] sm:text-xs font-black uppercase tracking-widest bg-white text-gray-900 border-2 border-gray-900">
                 Workspace
@@ -387,7 +409,7 @@ export default function TeamWorkspacePage() {
             </div>
           </div>
 
-          {/* Sidebar - Team Members (Con Z-INDEX a 50 per scavalcare tutto!) */}
+          {/* Sidebar - Team Members */}
           <div className="space-y-6 lg:order-last order-4 mt-2 sm:mt-0 relative z-10">
             <TeamMembers 
               members={allMembers}
