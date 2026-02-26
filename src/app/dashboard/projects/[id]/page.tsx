@@ -21,7 +21,7 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true)
   
   // Colore dominante
-  const [dominantColor, setDominantColor] = useState('239, 68, 68')
+  const [dominantColor, setDominantColor] = useState('253, 224, 71') // Giallo cartoon di default
   
   // Chat modal
   const [showChat, setShowChat] = useState(false)
@@ -108,7 +108,7 @@ export default function ProjectDetailPage() {
         extractColor(bandoData.foto_url)
       }
 
-      // Registra visualizzazione (solo se non sei il creatore)
+      // Registra visualizzazione
       if (bandoData.creatore_studente_id && bandoData.creatore_studente_id !== user.id) {
         await (supabase
           .from('visualizzazione_bando' as any)
@@ -118,8 +118,7 @@ export default function ProjectDetailPage() {
           }) as any)
       }
 
-      // --- CORREZIONE QUI ---
-      // Eseguiamo la query solo se l'ID del creatore esiste effettivamente
+      // Altri progetti leader
       if (bandoData.creatore_studente_id) {
         const { data: otherProjects } = await supabase
           .from('bando')
@@ -131,7 +130,6 @@ export default function ProjectDetailPage() {
 
         if (otherProjects) setLeaderProjects(otherProjects)
       }
-      // ---------------------
 
       // Partecipazione utente
       const { data: partData } = await supabase
@@ -152,8 +150,8 @@ export default function ProjectDetailPage() {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-gray-300 border-t-red-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500 font-medium">Caricamento progetto...</p>
+          <div className="text-5xl sm:text-6xl animate-bounce mb-4">🚀</div>
+          <p className="text-gray-900 font-black uppercase tracking-widest text-sm sm:text-base">Caricamento progetto...</p>
         </div>
       </div>
     )
@@ -165,131 +163,114 @@ export default function ProjectDetailPage() {
   const figureRicercate = (bando as any).figure_ricercate || []
 
   return (
-    <div 
-      className="min-h-screen pb-20 transition-colors duration-700"
-      style={{ backgroundColor: `rgba(${dominantColor}, 0.08)` }}
-    >
-      {/* Banner */}
-      <div className="relative h-72 sm:h-96 overflow-hidden">
-        {bando.foto_url ? (
-          <img 
-            src={bando.foto_url} 
-            alt={bando.titolo}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div 
-            className="w-full h-full"
-            style={{ background: `linear-gradient(135deg, rgb(${dominantColor}) 0%, rgba(${dominantColor}, 0.7) 100%)` }}
-          />
+    <div className="min-h-screen pb-20 bg-gray-50">
+      
+      {/* HEADER BANNER CARTOON */}
+      <div className="relative h-64 sm:h-80 md:h-96 border-b-[4px] sm:border-b-8 border-gray-900 overflow-hidden bg-gray-200 pattern-dots" style={{ backgroundColor: `rgb(${dominantColor})` }}>
+        
+        {bando.foto_url && (
+          <div className="absolute inset-0 z-0">
+            <img 
+              src={bando.foto_url} 
+              alt={bando.titolo}
+              className="w-full h-full object-cover mix-blend-overlay opacity-50"
+            />
+          </div>
         )}
-        
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-        
-        {/* Back button */}
-        <div className="absolute top-4 left-4 sm:top-6 sm:left-6">
-          <button 
-            onClick={() => router.push('/dashboard')}
-            className="flex items-center gap-2 bg-white/10 backdrop-blur-md text-white px-4 py-2 rounded-xl font-medium text-sm hover:bg-white/20 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Bacheca
-          </button>
-        </div>
 
-        {/* Status badge */}
-        <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
-          <span className={`px-4 py-2 rounded-xl text-sm font-bold ${
-            bando.stato === 'chiuso' 
-              ? 'bg-gray-800 text-gray-300' 
-              : 'bg-green-500 text-white'
-          }`}>
-            {bando.stato === 'chiuso' ? '🔒 Chiuso' : '🟢 Aperto'}
-          </span>
-        </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 z-0" />
+        
+        <div className="relative z-10 max-w-6xl mx-auto h-full px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col justify-between">
+          
+          {/* Top Bar (Back & Status) */}
+          <div className="flex justify-between items-start">
+            <button 
+              onClick={() => router.push('/dashboard')}
+              className="flex items-center gap-1.5 sm:gap-2 bg-white border-2 sm:border-4 border-gray-900 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-gray-900 font-black uppercase text-[10px] sm:text-sm hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+            >
+              <span className="text-sm sm:text-xl">🔙</span> <span className="hidden sm:inline">Bacheca</span>
+            </button>
 
-        {/* Title overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
-          <div className="max-w-4xl mx-auto">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-2">
+            <span className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl border-2 sm:border-4 border-gray-900 text-[10px] sm:text-sm font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${
+              bando.stato === 'chiuso' 
+                ? 'bg-gray-800 text-white' 
+                : 'bg-green-400 text-gray-900'
+            }`}>
+              {bando.stato === 'chiuso' ? '🔒 Chiuso' : '🟢 Aperto'}
+            </span>
+          </div>
+
+          {/* Title Area */}
+          <div>
+            <h1 className="text-3xl sm:text-5xl lg:text-7xl font-black text-white uppercase italic tracking-tighter leading-none mb-2 drop-shadow-[2px_2px_0px_rgba(0,0,0,1)] sm:drop-shadow-[4px_4px_0px_rgba(0,0,0,1)]">
               {bando.titolo}
             </h1>
-            <p className="text-white/70 text-sm">
-              Pubblicato il {new Date(bando.data_creazione).toLocaleDateString('it-IT', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-              })}
-            </p>
+            <div className="inline-block bg-white border-2 sm:border-4 border-gray-900 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+              <p className="text-gray-900 font-black text-[10px] sm:text-xs uppercase tracking-widest">
+                📅 Pubblicato il {new Date(bando.data_creazione).toLocaleDateString('it-IT')}
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 -mt-6 relative z-10">
-        <div className="grid lg:grid-cols-3 gap-6">
+      {/* CONTENUTO PRINCIPALE */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 sm:mt-10">
+        <div className="grid lg:grid-cols-3 gap-6 sm:gap-8">
           
-          {/* Main content */}
-          <div className="lg:col-span-2 space-y-6">
+          {/* COLONNA SINISTRA (Dettagli) */}
+          <div className="lg:col-span-2 space-y-8 sm:space-y-12">
             
             {/* Descrizione */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Descrizione</h2>
-              <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">
+            <div className="bg-white border-[3px] sm:border-4 border-gray-900 rounded-2xl sm:rounded-3xl p-5 sm:p-8 relative shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] mt-4">
+              <span className="absolute -top-3.5 sm:-top-5 left-4 sm:left-8 bg-yellow-300 border-2 sm:border-4 border-gray-900 px-3 py-0.5 sm:px-4 sm:py-1 rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-gray-900 text-[10px] sm:text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                Descrizione 📝
+              </span>
+              <p className="text-gray-800 font-bold text-sm sm:text-lg leading-relaxed whitespace-pre-wrap mt-2 sm:mt-4">
                 {bando.descrizione}
               </p>
             </div>
 
             {/* Figure Ricercate */}
             {figureRicercate.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <span>👥</span> Figure Ricercate
-                </h2>
-                <div className="space-y-4">
+              <div className="bg-purple-50 border-[3px] sm:border-4 border-gray-900 rounded-2xl sm:rounded-3xl p-5 sm:p-8 relative shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                <span className="absolute -top-3.5 sm:-top-5 left-4 sm:left-8 bg-white border-2 sm:border-4 border-gray-900 px-3 py-0.5 sm:px-4 sm:py-1 rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-gray-900 text-[10px] sm:text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                  Cerchiamo 👥
+                </span>
+                
+                <div className="grid gap-3 sm:gap-4 mt-2 sm:mt-4">
                   {figureRicercate.map((figura: any, idx: number) => (
                     <div 
                       key={idx}
-                      className="p-4 bg-gray-50 rounded-xl border border-gray-100"
+                      className="bg-white border-2 sm:border-3 border-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-transform"
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                            figura.tipo === 'strutturata' 
-                              ? 'bg-blue-100 text-blue-700' 
-                              : 'bg-purple-100 text-purple-700'
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-0 mb-3">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <span className={`w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg sm:rounded-xl border-2 border-gray-900 text-sm sm:text-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${
+                            figura.tipo === 'strutturata' ? 'bg-blue-300' : 'bg-pink-300'
                           }`}>
                             {figura.tipo === 'strutturata' ? '📋' : '✍️'}
                           </span>
-                          <h3 className="font-semibold text-gray-900">
-                            {figura.tipo === 'strutturata' 
-                              ? (figura.corso_nome || 'Studente')
-                              : figura.titolo_libero
-                            }
+                          <h3 className="font-black text-gray-900 text-base sm:text-xl uppercase tracking-tight">
+                            {figura.tipo === 'strutturata' ? (figura.corso_nome || 'Studente') : figura.titolo_libero}
                           </h3>
                         </div>
-                        <span className="text-sm font-medium text-gray-500">
-                          {figura.quantita}x
-                        </span>
+                        <div className="self-start sm:self-auto bg-gray-900 text-white px-3 py-1 rounded-lg border-2 border-gray-900 font-black text-xs sm:text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                          Q.tà: {figura.quantita}
+                        </div>
                       </div>
                       
                       {figura.tipo === 'strutturata' ? (
-                        <div className="space-y-2">
+                        <div className="space-y-3 border-t-2 border-dashed border-gray-200 pt-3">
                           {figura.anno_preferito && (
-                            <p className="text-sm text-gray-600">
-                              🎓 Preferibilmente {figura.anno_preferito}° anno
+                            <p className="text-[10px] sm:text-xs font-black text-gray-600 uppercase tracking-widest bg-gray-100 inline-block px-2 py-1 rounded border-2 border-gray-900">
+                              🎓 Anno preferito: {figura.anno_preferito}°
                             </p>
                           )}
                           {figura.competenze_nomi && figura.competenze_nomi.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 mt-2">
+                            <div className="flex flex-wrap gap-1.5 sm:gap-2">
                               {figura.competenze_nomi.map((comp: string, i: number) => (
-                                <span 
-                                  key={i}
-                                  className="px-2 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium"
-                                >
+                                <span key={i} className="px-2 py-1 bg-white border-2 border-gray-900 text-gray-900 rounded-lg text-[9px] sm:text-xs font-black uppercase">
                                   {comp}
                                 </span>
                               ))}
@@ -298,9 +279,11 @@ export default function ProjectDetailPage() {
                         </div>
                       ) : (
                         figura.descrizione_libera && (
-                          <p className="text-sm text-gray-600 mt-2">
-                            {figura.descrizione_libera}
-                          </p>
+                          <div className="border-t-2 border-dashed border-gray-200 pt-3">
+                            <p className="text-xs sm:text-sm font-bold text-gray-700 italic">
+                              "{figura.descrizione_libera}"
+                            </p>
+                          </div>
                         )
                       )}
                     </div>
@@ -309,17 +292,17 @@ export default function ProjectDetailPage() {
               </div>
             )}
 
-            {/* Competenze richieste */}
+            {/* Competenze richieste (Tag Generali) */}
             {bando.bando_interesse && bando.bando_interesse.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <span>🏷️</span> Competenze Richieste
-                </h2>
-                <div className="flex flex-wrap gap-2">
+              <div className="bg-orange-50 border-[3px] sm:border-4 border-gray-900 rounded-2xl sm:rounded-3xl p-5 sm:p-8 relative shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                <span className="absolute -top-3.5 sm:-top-5 left-4 sm:left-8 bg-white border-2 sm:border-4 border-gray-900 px-3 py-0.5 sm:px-4 sm:py-1 rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-gray-900 text-[10px] sm:text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                  Tag / Competenze 🏷️
+                </span>
+                <div className="flex flex-wrap gap-2 sm:gap-3 mt-2 sm:mt-4">
                   {bando.bando_interesse.map((item: any, idx: number) => (
                     <span 
                       key={idx}
-                      className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium"
+                      className="px-3 sm:px-4 py-1.5 sm:py-2 bg-white border-2 sm:border-3 border-gray-900 text-gray-900 rounded-lg sm:rounded-xl text-[10px] sm:text-sm font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-transform"
                     >
                       {item.interesse?.nome}
                     </span>
@@ -330,17 +313,17 @@ export default function ProjectDetailPage() {
 
             {/* Gallery */}
             {bando.gallery_urls && bando.gallery_urls.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <span>📸</span> Galleria
-                </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="bg-white border-[3px] sm:border-4 border-gray-900 rounded-2xl sm:rounded-3xl p-5 sm:p-8 relative shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                <span className="absolute -top-3.5 sm:-top-5 left-4 sm:left-8 bg-blue-300 border-2 sm:border-4 border-gray-900 px-3 py-0.5 sm:px-4 sm:py-1 rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-gray-900 text-[10px] sm:text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                  Galleria 📸
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mt-2 sm:mt-4">
                   {bando.gallery_urls.map((img: string, i: number) => (
-                    <div key={i} className="aspect-square rounded-xl overflow-hidden">
+                    <div key={i} className="aspect-square rounded-xl sm:rounded-2xl border-2 sm:border-4 border-gray-900 overflow-hidden shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
                       <img 
                         src={img} 
-                        alt="" 
-                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                        alt="Screenshot progetto" 
+                        className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
                       />
                     </div>
                   ))}
@@ -348,105 +331,129 @@ export default function ProjectDetailPage() {
               </div>
             )}
 
-            {/* Apply Section */}
-            <ApplySection 
-              bandoId={id}
-              isAdmin={isAdmin}
-              haGiaPartecipato={!!partecipazione}
-              statoCandidatura={partecipazione?.stato}
-              dominantColor={dominantColor}
-            />
+            {/* Apply Section (Modulo Candidatura) */}
+            <div className="pt-4">
+              <ApplySection 
+                bandoId={id}
+                isAdmin={isAdmin}
+                haGiaPartecipato={!!partecipazione}
+                statoCandidatura={partecipazione?.stato}
+                dominantColor={dominantColor}
+              />
+            </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
+          {/* COLONNA DESTRA (Sidebar) */}
+          <div className="space-y-6 sm:space-y-8 mt-4 lg:mt-0">
             
             {/* Leader Card */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-4">Project Leader</h3>
+            <div className="bg-blue-50 border-[3px] sm:border-4 border-gray-900 rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative">
+              <span className="absolute -top-3 sm:-top-4 right-4 sm:right-6 bg-white border-2 border-gray-900 px-2 py-0.5 rounded-lg font-black uppercase tracking-widest text-gray-900 text-[9px] sm:text-[10px] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] rotate-3">
+                Creatore 👑
+              </span>
               
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-16 h-16 rounded-2xl overflow-hidden bg-gray-100 flex-shrink-0">
+              <div className="flex flex-col sm:flex-row lg:flex-col xl:flex-row items-center sm:items-start lg:items-center xl:items-start gap-4 mb-4 text-center sm:text-left lg:text-center xl:text-left">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-3 sm:border-4 border-gray-900 overflow-hidden bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex-shrink-0">
                   {bando.studente?.avatar_url ? (
                     <img 
                       src={bando.studente.avatar_url} 
-                      alt=""
+                      alt="Avatar leader"
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400 font-bold text-xl">
+                    <div className="w-full h-full flex items-center justify-center bg-red-400 text-gray-900 font-black text-2xl uppercase">
                       {bando.studente?.nome?.[0]}{bando.studente?.cognome?.[0]}
                     </div>
                   )}
                 </div>
-                <div>
-                  <p className="font-semibold text-gray-900">
+                <div className="mt-2 sm:mt-0">
+                  <p className="font-black text-gray-900 text-lg sm:text-xl uppercase leading-tight">
                     {bando.studente?.nome} {bando.studente?.cognome}
                   </p>
-                  <p className="text-sm text-gray-500">Fondatore</p>
+                  {bando.studente?.bio && (
+                    <p className="text-xs sm:text-sm text-gray-700 font-bold mt-2 line-clamp-3 italic">
+                      "{bando.studente.bio}"
+                    </p>
+                  )}
                 </div>
               </div>
 
-              {bando.studente?.bio && (
-                <p className="text-sm text-gray-600 mb-4 line-clamp-3">
-                  {bando.studente.bio}
-                </p>
-              )}
-
-              <div className="space-y-2">
-                {/* Chat con leader */}
+              <div className="space-y-3 pt-4 border-t-2 border-dashed border-gray-900">
                 {!isAdmin && (
                   <button
                     onClick={() => setShowChat(true)}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium text-sm transition-colors"
+                    className="w-full py-3 sm:py-4 bg-green-400 text-gray-900 rounded-xl font-black uppercase tracking-widest text-xs sm:text-sm border-2 sm:border-3 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                    Contatta il Leader
+                    <span className="text-lg">💬</span> Invia Messaggio
                   </button>
                 )}
                 
                 <Link
                   href={`/dashboard/user/${bando.creatore_studente_id}`}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium text-sm transition-colors"
+                  className="w-full py-3 sm:py-4 bg-white text-gray-900 rounded-xl font-black uppercase tracking-widest text-xs sm:text-sm border-2 sm:border-3 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2"
                 >
-                  Vedi Profilo
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+                  <span className="text-lg">👤</span> Visita Profilo
                 </Link>
+              </div>
+            </div>
+
+            {/* Info Dettagli */}
+            <div className="bg-green-50 border-[3px] sm:border-4 border-gray-900 rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative">
+              <span className="absolute -top-3 sm:-top-4 left-4 sm:left-6 bg-white border-2 border-gray-900 px-3 py-0.5 rounded-lg font-black uppercase tracking-widest text-gray-900 text-[10px] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                Info ℹ️
+              </span>
+              <div className="space-y-3 mt-2">
+                <div className="flex justify-between items-center pb-2 border-b-2 border-gray-200">
+                  <span className="text-xs font-black text-gray-600 uppercase tracking-widest">Stato</span>
+                  <span className={`text-xs font-black uppercase px-2 py-1 rounded border-2 border-gray-900 ${bando.stato === 'chiuso' ? 'bg-gray-300' : 'bg-green-300'}`}>
+                    {bando.stato === 'chiuso' ? 'Chiuso' : 'Aperto'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pb-2 border-b-2 border-gray-200">
+                  <span className="text-xs font-black text-gray-600 uppercase tracking-widest">Creazione</span>
+                  <span className="text-xs font-black text-gray-900">
+                    {new Date(bando.data_creazione).toLocaleDateString('it-IT')}
+                  </span>
+                </div>
+                {bando.data_chiusura && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-black text-gray-600 uppercase tracking-widest">Scadenza</span>
+                    <span className="text-xs font-black text-red-600 bg-red-100 px-2 py-0.5 rounded border border-red-200">
+                      {new Date(bando.data_chiusura).toLocaleDateString('it-IT')}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Altri progetti del leader */}
             {leaderProjects.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-4">
-                  Altri progetti di {bando.studente?.nome}
-                </h3>
-                <div className="space-y-3">
+              <div className="bg-red-50 border-[3px] sm:border-4 border-gray-900 rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative">
+                <span className="absolute -top-3 sm:-top-4 left-4 sm:left-6 bg-white border-2 border-gray-900 px-3 py-0.5 rounded-lg font-black uppercase tracking-widest text-gray-900 text-[10px] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                  Altri Progetti 🎯
+                </span>
+                <div className="space-y-3 sm:space-y-4 mt-3 sm:mt-4">
                   {leaderProjects.map((proj) => (
                     <Link
                       key={proj.id}
                       href={`/dashboard/projects/${proj.id}`}
-                      className="block p-3 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors group"
+                      className="block p-2 sm:p-3 bg-white border-2 sm:border-3 border-gray-900 rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all group"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg border-2 border-gray-900 overflow-hidden bg-gray-100 flex-shrink-0">
                           {proj.foto_url ? (
-                            <img src={proj.foto_url} alt="" className="w-full h-full object-cover" />
+                            <img src={proj.foto_url} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
-                              📁
-                            </div>
+                            <div className="w-full h-full flex items-center justify-center text-xl">📁</div>
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 text-sm truncate group-hover:text-blue-600 transition-colors">
+                          <p className="font-black text-gray-900 text-xs sm:text-sm uppercase truncate leading-tight mb-1">
                             {proj.titolo}
                           </p>
-                          <p className="text-xs text-gray-500">{proj.stato}</p>
+                          <span className={`text-[8px] sm:text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border border-gray-900 ${proj.stato === 'chiuso' ? 'bg-gray-300' : 'bg-green-300'}`}>
+                            {proj.stato}
+                          </span>
                         </div>
                       </div>
                     </Link>
@@ -454,33 +461,7 @@ export default function ProjectDetailPage() {
                 </div>
               </div>
             )}
-
-            {/* Info box */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-4">Dettagli</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Stato</span>
-                  <span className={`font-medium ${bando.stato === 'chiuso' ? 'text-gray-600' : 'text-green-600'}`}>
-                    {bando.stato === 'chiuso' ? 'Chiuso' : 'Aperto'}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Pubblicato</span>
-                  <span className="font-medium text-gray-900">
-                    {new Date(bando.data_creazione).toLocaleDateString('it-IT')}
-                  </span>
-                </div>
-                {bando.data_chiusura && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Scadenza</span>
-                    <span className="font-medium text-gray-900">
-                      {new Date(bando.data_chiusura).toLocaleDateString('it-IT')}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
+            
           </div>
         </div>
       </div>
