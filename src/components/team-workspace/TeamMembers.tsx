@@ -201,7 +201,7 @@ export default function TeamMembers({
   }
 
   return (
-    <div className="w-full lg:w-80 flex-shrink-0 relative z-10">
+    <div className="w-full lg:w-80 flex-shrink-0 relative z-40">
       
       {/* L'osservatore */}
       <div 
@@ -213,7 +213,7 @@ export default function TeamMembers({
 
       {/* LA CARD PRINCIPALE */}
       <div 
-        className={`bg-white rounded-2xl border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-4 sticky top-6 z-20`}
+        className="bg-white rounded-2xl border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-4 sticky top-6 z-10"
         onMouseEnter={handleCardMouseEnter}
         onMouseLeave={handleCardMouseLeave}
       >
@@ -232,7 +232,7 @@ export default function TeamMembers({
         </div>
 
         {/* LISTA DEI MEMBRI */}
-        <div className="space-y-3 max-h-[300px] lg:max-h-[450px] overflow-y-auto pr-2 custom-scrollbar relative z-20">
+        <div className="space-y-3 max-h-[300px] lg:max-h-[450px] overflow-y-auto pr-2 custom-scrollbar">
           {members.map((member) => {
             const isOnline = onlineUsers.has(member.id)
             const badges = memberBadges[member.id] || []
@@ -248,7 +248,7 @@ export default function TeamMembers({
                   if (!isMobile) setHoveredMemberId(null)
                 }}
                 onClick={() => setActiveMemberId(activeMemberId === member.id ? null : member.id)}
-                className={`flex items-center gap-3 p-2.5 rounded-xl border-2 border-gray-900 transition-all cursor-pointer select-none ${
+                className={`flex items-center gap-3 p-2.5 rounded-xl border-2 border-gray-900 transition-all cursor-pointer select-none relative ${
                   displayMemberId === member.id 
                     ? 'bg-yellow-300 translate-x-[2px] translate-y-[2px] shadow-none' 
                     : 'bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'
@@ -303,7 +303,7 @@ export default function TeamMembers({
             {/* L'overlay blocca lo schermo solo se abbiamo CLICCATO e siamo su MOBILE */}
             {isMobile && activeMemberId && (
               <div 
-                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[30] lg:hidden"
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] lg:hidden"
                 onClick={() => {
                   setActiveMemberId(null);
                   setHoveredMemberId(null);
@@ -314,7 +314,7 @@ export default function TeamMembers({
             <div 
               className={`
                 ${isMobile ? 'fixed top-1/2 left-4 right-4 -translate-y-1/2' : 'absolute right-[105%] top-0 w-72'} 
-                z-[40] bg-white rounded-2xl sm:rounded-[1.5rem] border-4 border-gray-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-4 sm:p-5 animate-in fade-in zoom-in-95 duration-200 pointer-events-auto
+                z-[100] bg-white rounded-2xl sm:rounded-[1.5rem] border-4 border-gray-900 shadow-[-8px_8px_0px_0px_rgba(0,0,0,1)] lg:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-4 sm:p-5 animate-in fade-in zoom-in-95 duration-200 pointer-events-auto
               `}
               onMouseEnter={() => {
                 if (!isMobile && !activeMemberId) setHoveredMemberId(displayMember.id)
