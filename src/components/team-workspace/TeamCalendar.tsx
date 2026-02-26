@@ -158,13 +158,13 @@ export default function TeamCalendar({ bandoId, currentUserId, members }: TeamCa
   const { daysInMonth, startDayOfWeek } = getDaysInMonth(currentMonth)
 
   const getEventsForDay = (day: number) => {
-    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
-    const dateStr = date.toISOString().split('T')[0]
+    const targetDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
     
     return events.filter(e => {
-      const eventDate = e.data_inizio.split('T')[0]
-      return eventDate === dateStr
-    })
+      // Trasforma la data dell'evento in oggetto Date locale
+      const eventDate = new Date(e.data_inizio);
+      return isSameDay(eventDate, targetDate);
+    });
   }
 
   const formatTime = (dateStr: string) => {
@@ -179,8 +179,11 @@ export default function TeamCalendar({ bandoId, currentUserId, members }: TeamCa
   const todayDate = new Date()
   todayDate.setHours(0, 0, 0, 0)
 
-  const isSameDay = (d1: Date, d2: Date) => 
-    d1.getDate() === d2.getDate() && d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear()
+  const isSameDay = (d1: Date, d2: Date) => {
+    return d1.getDate() === d2.getDate() && 
+           d1.getMonth() === d2.getMonth() && 
+           d1.getFullYear() === d2.getFullYear();
+  }
 
   const isSameMonthAndYear = (d1: Date, d2: Date) => 
     d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear()
