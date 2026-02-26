@@ -11,11 +11,16 @@ export default function AdminPanel() {
   const router = useRouter()
   const supabase = createClient()
 
-  const [activeTab, setActiveTab] = useState<'utenti' | 'progetti' | 'logs'>('utenti')
+  // Aggiunto 'corsi' ai tab possibili
+  const [activeTab, setActiveTab] = useState<'utenti' | 'progetti' | 'corsi' | 'logs'>('utenti')
   
   const [users, setUsers] = useState<any[]>([])
   const [projects, setProjects] = useState<any[]>([])
   const [logs, setLogs] = useState<any[]>([])
+  
+  // NUOVO STATO: Richieste dei corsi
+  const [richiesteCorsi, setRichiesteCorsi] = useState<any[]>([])
+  
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [hideStaffProjects, setHideStaffProjects] = useState(false)
@@ -48,6 +53,14 @@ export default function AdminPanel() {
       .order('data_creazione', { ascending: false })
     if (projectData) setProjects(projectData as any[])
 
+    // FETCH RICHIESTE CORSI PENDENTI
+    const { data: richiesteData } = await (supabase as any)
+      .from('richiesta_nuovo_corso')
+      .select('*, studente(nome, cognome, avatar_url)')
+      .eq('stato', 'pending')
+      .order('created_at', { ascending: false })
+    if (richiesteData) setRichiesteCorsi(richiesteData as any[])
+
     // FETCH LOGS (Solo Owner)
     if (user?.is_owner) {
       const { data: logData, error: logError } = await (supabase as any)
@@ -74,7 +87,6 @@ export default function AdminPanel() {
   }
 
   // --- AZIONI DB: CARICA CORSI DI STUDIO ---
-  // --- AZIONI DB: CARICA CORSI DI STUDIO ---
   const caricaCorsi = async () => {
     if (!confirm("⚠️ Vuoi caricare tutti i corsi di studio nel database? (Fallo solo se la lista è vuota per evitare duplicati)")) return;
     
@@ -94,19 +106,62 @@ export default function AdminPanel() {
 
     const corsiDaInserire = corsi.map(corso => ({ nome: corso }))
 
+    // Corretto nome tabella in 'corso_di_studi'
     const { error } = await (supabase as any)
-      .from('corso')
+      .from('corso_di_studi')
       .insert(corsiDaInserire)
 
     if (error) {
       alert("Errore durante l'inserimento: " + error.message)
     } else {
-      await registraLog('POPOLAMENTO DB', 'Tabella Corsi', `Inseriti ${corsi.length} corsi di base.`)
+      await registraLog('POPOLAMENTO DB', 'Tabella Corsi', `Inseriti ${corsi.length} corsi base.`)
       alert("Corsi caricati con successo! 🎉")
-      fetchData() // Aggiorna i log
+      fetchData()
     }
     
     setSeedingCorsi(false)
+  }
+
+  // --- GESTIONE RICHIESTE NUOVI CORSI ---
+  const gestisciRichiesta = async (richiesta: any, azione: 'approvato' | 'rifiutato') => {
+    try {
+      if (azione === 'approvato') {
+        // 1. Aggiungiamo il corso alla tabella ufficiale
+        const { data: nuovoCorso, error: insertError } = await (supabase as any)
+          .from('corso_di_studi')
+          .insert({ nome: richiesta.nome_corso })
+          .select()
+          .single()
+
+        if (insertError) throw insertError
+
+        // 2. Colleghiamo lo studente a questo nuovo corso automaticamente
+        if (nuovoCorso) {
+          await (supabase as any).from('studente_corso').insert({
+            studente_id: richiesta.studente_id,
+            corso_id: nuovoCorso.id,
+            anno_inizio: new Date().getFullYear() // Fallback
+          })
+        }
+      }
+
+      // 3. Aggiorniamo lo stato della richiesta
+      await (supabase as any)
+        .from('richiesta_nuovo_corso')
+        .update({ stato: azione })
+        .eq('id', richiesta.id)
+
+      await registraLog(
+        azione === 'approvato' ? 'APPROVAZIONE CORSO' : 'RIFIUTO CORSO', 
+        richiesta.nome_corso, 
+        `Richiesto da: ${richiesta.studente.nome} ${richiesta.studente.cognome}`
+      )
+      
+      alert(azione === 'approvato' ? "Corso approvato e aggiunto! ✅" : "Richiesta rifiutata ❌")
+      fetchData() // Aggiorna la lista
+    } catch (err: any) {
+      alert("Errore: " + err.message)
+    }
   }
 
   // --- AZIONI UTENTI ---
@@ -283,6 +338,20 @@ export default function AdminPanel() {
         >
           <span className="text-xl">📁</span> Progetti ({projects.length})
         </button>
+
+        {/* NUOVO TAB: CORSI */}
+        <button 
+          onClick={() => setActiveTab('corsi')}
+          className={`flex-1 sm:flex-none px-6 py-4 rounded-xl font-black text-sm md:text-base uppercase tracking-widest transition-all border-4 border-gray-900 flex items-center justify-center gap-2 ${
+            activeTab === 'corsi' ? 'bg-green-400 text-gray-900 shadow-none translate-x-[4px] translate-y-[4px]' : 'bg-white text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+          }`}
+        >
+          <span className="text-xl">🎓</span> Corsi 
+          {richiesteCorsi.length > 0 && (
+            <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full ml-1 animate-pulse">{richiesteCorsi.length}</span>
+          )}
+        </button>
+
         {user?.is_owner && (
           <button 
             onClick={() => setActiveTab('logs')}
@@ -539,36 +608,85 @@ export default function AdminPanel() {
       )}
       
 
-      {/* --- TABELLA LOGS & TOOLS (SOLO OWNER) --- */}
-      {activeTab === 'logs' && user?.is_owner && (
+      {/* --- NUOVO TAB: CORSI E DATABASE TOOLS (Visibile a tutti gli admin) --- */}
+      {activeTab === 'corsi' && (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
           
-          {/* ========================================= */}
-          {/* IL BOTTONE VA QUI: SEZIONE STRUMENTI DATABASE */}
-          {/* ========================================= */}
-          <div className="bg-white rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 border-4 border-gray-900">
+          {/* SEZIONE: GESTIONE RICHIESTE CORSI */}
+          <div className="bg-white rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden border-4 border-gray-900">
+            <div className="bg-green-400 px-6 py-4 border-b-4 border-gray-900 flex items-center justify-between">
+              <p className="text-gray-900 font-black text-sm uppercase tracking-widest m-0">
+                📥 Richieste Nuovi Corsi ({richiesteCorsi.length})
+              </p>
+            </div>
+            
+            <div className="p-6 bg-gray-50">
+              {richiesteCorsi.length === 0 ? (
+                <div className="text-center py-8">
+                  <span className="text-4xl block mb-2 opacity-50">🎉</span>
+                  <p className="font-black text-gray-500 uppercase tracking-widest">Nessuna richiesta in sospeso!</p>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {richiesteCorsi.map(r => (
+                    <div key={r.id} className="bg-white p-4 rounded-2xl border-4 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between">
+                      <div className="mb-4">
+                        <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Corso Richiesto:</span>
+                        <h4 className="text-xl font-black text-gray-900 uppercase leading-tight mt-1">{r.nome_corso}</h4>
+                        
+                        <div className="mt-3 flex items-center gap-2">
+                          <img src={r.studente?.avatar_url || '/default-avatar.png'} className="w-6 h-6 rounded-full border border-gray-900" alt="avatar" />
+                          <span className="text-xs font-bold text-gray-600">Da: {r.studente?.nome} {r.studente?.cognome}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2 border-t-2 border-gray-100 pt-3">
+                        <button 
+                          onClick={() => gestisciRichiesta(r, 'approvato')}
+                          className="flex-1 bg-green-400 border-2 border-gray-900 text-gray-900 font-black text-[10px] uppercase tracking-widest py-2 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
+                        >
+                          ✅ Approva
+                        </button>
+                        <button 
+                          onClick={() => gestisciRichiesta(r, 'rifiutato')}
+                          className="flex-1 bg-red-400 border-2 border-gray-900 text-gray-900 font-black text-[10px] uppercase tracking-widest py-2 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
+                        >
+                          ❌ Rifiuta
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* SEZIONE: STRUMENTI DATABASE (Il bottone che non vedevi) */}
+          <div className="bg-white rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 sm:p-8 border-4 border-gray-900">
             <h3 className="font-black text-gray-900 uppercase tracking-widest mb-2 flex items-center gap-2">
               <span className="text-2xl">🧰</span> Strumenti Database
             </h3>
-            <p className="text-sm font-bold text-gray-500 mb-6">Azioni di configurazione del sistema riservate all'Owner.</p>
+            <p className="text-sm font-bold text-gray-500 mb-6">Usa questo pulsante per inserire rapidamente una lista di 30+ corsi di laurea standard (Informatica, Ingegneria, Medicina, ecc.) nel database. Fallo solo una volta a sistema vuoto.</p>
             
-            <div className="flex flex-wrap gap-4">
-              <button 
-                onClick={caricaCorsi}
-                disabled={seedingCorsi}
-                className="px-6 py-3 bg-yellow-300 border-[3px] border-gray-900 text-gray-900 font-black uppercase tracking-widest rounded-xl hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {seedingCorsi ? (
-                  <><span className="animate-spin">⏳</span> Caricamento...</>
-                ) : (
-                  <><span className="text-lg">📚</span> Popola Tabella Corsi</>
-                )}
-              </button>
-            </div>
+            <button 
+              onClick={caricaCorsi}
+              disabled={seedingCorsi}
+              className="w-full sm:w-auto px-8 py-4 bg-yellow-300 border-[3px] border-gray-900 text-gray-900 font-black uppercase tracking-widest rounded-xl hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+            >
+              {seedingCorsi ? (
+                <><span className="animate-spin text-xl">⏳</span> Caricamento in corso...</>
+              ) : (
+                <><span className="text-xl">📚</span> Popola Tabella Corsi Base</>
+              )}
+            </button>
           </div>
-          {/* ========================================= */}
+        </div>
+      )}
 
-          {/* TABELLA LOGS */}
+
+      {/* --- TABELLA LOGS (SOLO OWNER) --- */}
+      {activeTab === 'logs' && user?.is_owner && (
+        <div className="animate-in fade-in slide-in-from-bottom-4">
           <div className="bg-white rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden border-4 border-gray-900">
             <div className="bg-gray-900 px-6 py-4 border-b-4 border-gray-900 flex items-center justify-between">
               <p className="text-white font-black text-xs uppercase tracking-widest m-0">
@@ -615,8 +733,9 @@ export default function AdminPanel() {
                       <td className="p-4 align-middle">
                         <div className="flex flex-col justify-center m-0">
                           <span className={`inline-block text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] w-fit m-0 ${
-                            log.azione.includes('ELIMINA') || log.azione.includes('BAN') ? 'bg-red-400 text-gray-900' :
+                            log.azione.includes('ELIMINA') || log.azione.includes('BAN') || log.azione.includes('RIFIUT') ? 'bg-red-400 text-gray-900' :
                             log.azione.includes('SOSPENSIONE') || log.azione.includes('PAUSA') ? 'bg-orange-400 text-gray-900' :
+                            log.azione.includes('APPROVAZ') ? 'bg-green-400 text-gray-900' :
                             'bg-white text-gray-900'
                           }`}>
                             {log.azione}
