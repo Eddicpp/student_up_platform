@@ -317,9 +317,9 @@ export default function TeamWorkspacePage() {
           {/* Main content - 2/3 */}
           <div className="lg:col-span-2 flex flex-col gap-5 sm:gap-6 lg:gap-8 relative z-10">
             
-            {/* Tools Tabs - RIPRISTINATI ORIGINALI */}
+            {/* Tools Tabs - RIMPICCIOLITI */}
             <div className="order-1 lg:order-1 relative z-20">
-              <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-4 pt-1 -mx-3 px-3 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] snap-x">
+              <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-4 pt-1 -mx-3 px-3 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] snap-x">
                 {[
                   { id: 'chat' as const, label: 'Chat', icon: '💬' },
                   { id: 'todo' as const, label: 'To-Do', icon: '✅' },
@@ -330,10 +330,10 @@ export default function TeamWorkspacePage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-sm uppercase tracking-widest whitespace-nowrap transition-all border-[3px] snap-start shrink-0 ${
+                    className={`flex items-center gap-1 sm:gap-1.5 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl font-black text-[9px] sm:text-xs uppercase tracking-wider whitespace-nowrap transition-all border-2 snap-start shrink-0 ${
                       activeTab === tab.id
                         ? 'bg-gray-900 text-white border-gray-900 translate-x-[2px] translate-y-[2px] shadow-none'
-                        : 'bg-white text-gray-900 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50'
+                        : 'bg-white text-gray-900 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50'
                     }`}
                   >
                     <span className="text-base sm:text-lg">{tab.icon}</span>
