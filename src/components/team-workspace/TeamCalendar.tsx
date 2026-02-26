@@ -315,7 +315,7 @@ export default function TeamCalendar({ bandoId, currentUserId, members }: TeamCa
             
             {/* Day cells */}
             {Array.from({ length: daysInMonth }).map((_, i) => {
-              const day = i + 1
+              const day = i //+ 1
               const dayEvents = getEventsForDay(day)
               const isToday = new Date().toDateString() === 
                 new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).toDateString()
