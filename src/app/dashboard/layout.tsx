@@ -567,35 +567,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </main>
 
-      {/* ✅ CHAT WIDGET - Inserito correttamente nel flusso */}
-      <div className="hidden md:block fixed bottom-6 right-6 z-[100]">
-        <div className="relative group">
+      {/* ✅ CHAT WIDGET - Versione Cartoon Pro */}
+      <div className="hidden md:block fixed bottom-8 right-8 z-[100]">
+        <div className={`
+          relative transition-all duration-300 transform
+          ${isChatWidgetOpen ? 'translate-y-0' : 'hover:-translate-x-1 hover:-translate-y-1'}
+        `}>
           
-          {/* Ombra cartoon (visibile solo se chiusa) */}
+          {/* Badge Notifica "Pop" */}
           {!isChatWidgetOpen && (
-            <div className="absolute inset-0 bg-gray-900 rounded-2xl translate-x-1.5 translate-y-1.5" />
+            <div className="absolute -top-3 -left-3 w-8 h-8 bg-red-500 border-[3px] border-gray-900 rounded-full flex items-center justify-center animate-bounce z-10 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+              <span className="text-white font-black text-sm italic">!</span>
+            </div>
           )}
 
-          {/* Container animato */}
-          <div className={`
-            relative transition-all duration-300 ease-out
-            ${isChatWidgetOpen ? 'translate-y-0' : 'hover:-translate-y-1 hover:-translate-x-1'}
-          `}>
+          {/* Il Widget vero e proprio */}
+          <div className="rounded-3xl border-[4px] border-gray-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden bg-white">
             <ChatWidget 
               isOpen={isChatWidgetOpen} 
               onToggle={handleChatWidgetToggle} 
             />
           </div>
-
-          {/* Badge Notifica */}
-          {!isChatWidgetOpen && (
-            <div className="absolute -top-2 -left-2 w-6 h-6 bg-red-500 border-2 border-gray-900 rounded-full flex items-center justify-center animate-bounce shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-              <span className="text-[10px] font-black text-white italic">!</span>
-            </div>
-          )}
         </div>
       </div>
 
-    </div> 
-  ) 
-} 
+    </div> // <--- Questo chiude il div principale (style={{ backgroundColor... }})
+  )
+}
