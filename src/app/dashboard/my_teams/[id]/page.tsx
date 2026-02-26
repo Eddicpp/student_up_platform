@@ -254,7 +254,7 @@ export default function TeamWorkspacePage() {
           <p className="text-gray-900 font-black uppercase tracking-tight text-lg mb-2">Errore</p>
           <p className="text-red-600 font-bold text-sm mb-6">{error}</p>
           <button 
-            onClick={() => router.push('/dashboard/my_teams')}
+            onClick={() => router.push('/dashboard/my_projects')}
             className="w-full py-3 bg-gray-900 text-white rounded-xl font-black uppercase tracking-widest border-2 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
           >
             Torna ai Miei Team
@@ -265,7 +265,7 @@ export default function TeamWorkspacePage() {
   }
 
   return (
-    <div className="min-h-screen pb-20 transition-colors duration-700" style={{ backgroundColor: `rgba(${dominantColor}, 0.15)` }}>
+    <div className="min-h-screen pb-20 transition-colors duration-700 relative" style={{ backgroundColor: `rgba(${dominantColor}, 0.15)` }}>
       
       {/* Banner Header */}
       <div className="relative h-48 sm:h-64 lg:h-72 overflow-hidden border-b-[3px] sm:border-b-4 border-gray-900 pattern-dots">
@@ -308,14 +308,15 @@ export default function TeamWorkspacePage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-6xl mx-auto px-3 sm:px-6 mt-4 sm:mt-8">
+      <div className="max-w-6xl mx-auto px-3 sm:px-6 mt-4 sm:mt-8 relative">
         <div className="flex flex-col lg:grid lg:grid-cols-3 gap-5 sm:gap-6 lg:gap-8">
           
           {/* Main content - 2/3 */}
-          <div className="lg:col-span-2 flex flex-col gap-5 sm:gap-6 lg:gap-8 relative z-10">
+          {/* CRITICO: z-10 per far stare i tab sotto la modale del profilo, overflow-visible per non tagliare niente */}
+          <div className="lg:col-span-2 flex flex-col gap-5 sm:gap-6 lg:gap-8 relative z-10 overflow-visible">
             
             {/* Tools Tabs */}
-            <div className="order-1 lg:order-1 relative z-20">
+            <div className="order-1 lg:order-1 relative">
               <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-4 pt-1 -mx-3 px-3 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] snap-x">
                 {[
                   { id: 'chat' as const, label: 'Chat', icon: '💬' },
@@ -341,7 +342,8 @@ export default function TeamWorkspacePage() {
             </div>
 
             {/* Active Tool */}
-            <div className="order-2 lg:order-2 relative z-10">
+            {/* CRITICO: z-0 e overflow-visible per far passare la modale del profilo */}
+            <div className="order-2 lg:order-2 relative z-0 overflow-visible">
               {activeTab === 'chat' && <TeamChat bandoId={bandoId} currentUserId={currentUser?.id} members={allMembers} projectTitle={project?.titolo || ''} isAdmin={isAdmin} />}
               {activeTab === 'todo' && <TeamTodoList bandoId={bandoId} currentUserId={currentUser?.id} members={allMembers} />}
               {activeTab === 'polls' && <TeamPolls bandoId={bandoId} currentUserId={currentUser?.id} members={allMembers} />}
@@ -350,7 +352,7 @@ export default function TeamWorkspacePage() {
             </div>
 
             {/* Project Links */}
-            <div className={`order-3 lg:order-3 ${cardStyle} p-4 sm:p-6 bg-white relative z-10`}>
+            <div className={`order-3 lg:order-3 ${cardStyle} p-4 sm:p-6 bg-white relative z-0`}>
               <h2 className="text-base sm:text-lg font-black text-gray-900 mb-4 flex items-center gap-2 uppercase tracking-tight">
                 <span>🔗</span> Link di Progetto
               </h2>
@@ -387,8 +389,9 @@ export default function TeamWorkspacePage() {
             </div>
           </div>
 
-          {/* Sidebar - Team Members (Con Z-INDEX a 50 per scavalcare tutto!) */}
-          <div className="space-y-6 lg:order-last order-4 mt-2 sm:mt-0 relative z-10">
+          {/* Sidebar - Team Members */}
+          {/* CRITICO: z-50 in modo che il popup passi SOPRA la chat e non venga tagliato */}
+          <div className="space-y-6 lg:order-last order-4 mt-2 sm:mt-0 relative z-50">
             <TeamMembers 
               members={allMembers}
               currentUserId={currentUser?.id}
