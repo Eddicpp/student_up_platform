@@ -11,6 +11,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
+  // Nuovo stato per mostrare/nascondere la password
+  const [showPassword, setShowPassword] = useState(false)
+  
   const router = useRouter()
   const supabase = createClient()
 
@@ -53,7 +56,7 @@ export default function LoginPage() {
     <main className="relative flex min-h-screen items-center justify-center p-4 overflow-hidden bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500">
       
       {/* --- PATTERN DI SFONDO --- */}
-      <div className="absolute inset-0 opacity-10">
+      <div className="absolute inset-0 opacity-10 pointer-events-none">
         <div className="absolute inset-0" style={{
           backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`,
           backgroundSize: '32px 32px'
@@ -486,7 +489,7 @@ export default function LoginPage() {
               <input
                 type="email"
                 placeholder="mario.rossi@studenti.unipd.it"
-                className="w-full p-4 pl-12 border-4 border-gray-900 rounded-xl focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-gray-900 font-black placeholder:text-gray-500 placeholder:font-bold bg-white transition-all text-lg"
+                className="w-full p-4 pl-12 border-4 border-gray-900 rounded-xl focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-gray-900 font-black placeholder:text-gray-500 placeholder:font-bold bg-white transition-all text-base sm:text-lg"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -494,25 +497,43 @@ export default function LoginPage() {
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl transition-transform group-focus-within:scale-110">📧</span>
             </div>
 
-            {/* Input Password */}
+            {/* Input Password con Occhietto */}
             <div className="relative group">
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="La tua password"
-                className="w-full p-4 pl-12 border-4 border-gray-900 rounded-xl focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-gray-900 font-black placeholder:text-gray-500 placeholder:font-bold bg-white transition-all text-lg"
+                className="w-full p-4 pl-12 pr-12 border-4 border-gray-900 rounded-xl focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-gray-900 font-black placeholder:text-gray-500 placeholder:font-bold bg-white transition-all text-base sm:text-lg"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl transition-transform group-focus-within:scale-110">🔑</span>
+              
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-xl text-gray-500 hover:text-gray-900 transition-colors focus:outline-none"
+                tabIndex={-1} // Evita che il bottone prenda il focus navigando con il tab
+              >
+                {showPassword ? '🙈' : '👁️'}
+              </button>
             </div>
           </div>
 
           <button
             disabled={loading}
-            className="w-full bg-gray-900 text-white p-4 rounded-xl font-black text-xl uppercase tracking-widest border-4 border-gray-900 shadow-[6px_6px_0px_0px_rgba(220,38,38,1)] hover:shadow-none hover:translate-x-[6px] hover:translate-y-[6px] transition-all disabled:opacity-50 mt-4"
+            className="w-full bg-gray-900 text-white p-4 rounded-xl font-black text-xl uppercase tracking-widest border-4 border-gray-900 shadow-[6px_6px_0px_0px_rgba(220,38,38,1)] hover:shadow-none hover:translate-x-[6px] hover:translate-y-[6px] transition-all disabled:opacity-50 mt-4 flex items-center justify-center gap-2"
           >
-            {loading ? 'Caricamento...' : 'Entra 🚀'}
+            {loading ? (
+              <>
+                <span className="animate-spin text-2xl">⏳</span>
+                Caricamento...
+              </>
+            ) : (
+              <>
+                Entra <span className="text-2xl">🚀</span>
+              </>
+            )}
           </button>
         </form>
 

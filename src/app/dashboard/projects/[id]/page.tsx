@@ -160,10 +160,12 @@ export default function ProjectDetailPage() {
   if (!bando) return null
 
   const isAdmin = bando.creatore_studente_id === currentUser?.id
+  const isAccepted = partecipazione?.stato === 'accepted'
+  const isTeamMember = isAdmin || isAccepted
   const figureRicercate = (bando as any).figure_ricercate || []
 
   return (
-    <div className="min-h-screen pb-20 bg-gray-50">
+    <div className="min-h-screen pb-28 lg:pb-20 bg-gray-50 relative">
       
       {/* HEADER BANNER CARTOON */}
       <div className="relative h-64 sm:h-80 md:h-96 border-b-[4px] sm:border-b-8 border-gray-900 overflow-hidden bg-gray-200 pattern-dots" style={{ backgroundColor: `rgb(${dominantColor})` }}>
@@ -216,10 +218,37 @@ export default function ProjectDetailPage() {
 
       {/* CONTENUTO PRINCIPALE */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 sm:mt-10">
-        <div className="grid lg:grid-cols-3 gap-6 sm:gap-8">
+        
+        {/* BANNER WORKSPACE (Cima alla pagina se accettato o admin) */}
+        {isTeamMember && (
+          <div className="mb-6 sm:mb-8 bg-green-400 border-[3px] sm:border-4 border-gray-900 rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col sm:flex-row items-center justify-between gap-4 animate-in zoom-in-95 duration-300">
+            <div className="text-center sm:text-left">
+              <h2 className="text-2xl sm:text-4xl font-black text-gray-900 uppercase tracking-tighter">
+                {isAdmin ? 'Il Tuo Progetto 👑' : 'Sei nel Team! 🎉'}
+              </h2>
+              <p className="text-gray-900 font-bold text-sm sm:text-base mt-1">
+                {isAdmin 
+                  ? 'Gestisci le candidature e il calendario dal workspace.' 
+                  : 'La tua candidatura è stata accettata. Inizia subito a collaborare!'}
+              </p>
+            </div>
+            <Link 
+              href={`/dashboard/my_teams/${id}`} 
+              className="w-full sm:w-auto px-6 py-4 bg-white border-[3px] border-gray-900 rounded-xl font-black text-gray-900 uppercase tracking-widest text-sm sm:text-base shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all text-center flex items-center justify-center gap-2"
+            >
+              Vai al Workspace 🚀
+            </Link>
+          </div>
+        )}
+
+        {/* GRIGLIA ADATTIVA: 
+            Se sei nel team, su mobile la colonna destra (sidebar) passa prima della descrizione 
+            per una vista molto più pulita. 
+        */}
+        <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6 sm:gap-8">
           
-          {/* COLONNA SINISTRA (Dettagli) */}
-          <div className="lg:col-span-2 space-y-8 sm:space-y-12">
+          {/* COLONNA SINISTRA (Dettagli Lunghi) */}
+          <div className={`lg:col-span-2 space-y-8 sm:space-y-12 ${isTeamMember ? 'order-2 lg:order-1' : 'order-1'}`}>
             
             {/* Descrizione */}
             <div className="bg-white border-[3px] sm:border-4 border-gray-900 rounded-2xl sm:rounded-3xl p-5 sm:p-8 relative shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] mt-4">
@@ -331,20 +360,22 @@ export default function ProjectDetailPage() {
               </div>
             )}
 
-            {/* Apply Section (Modulo Candidatura) */}
-            <div className="pt-4">
-              <ApplySection 
-                bandoId={id}
-                isAdmin={isAdmin}
-                haGiaPartecipato={!!partecipazione}
-                statoCandidatura={partecipazione?.stato}
-                dominantColor={dominantColor}
-              />
-            </div>
+            {/* Apply Section (Modulo Candidatura) - Nascosto se accettato per pulire la vista */}
+            {!isAccepted && (
+              <div className="pt-4">
+                <ApplySection 
+                  bandoId={id}
+                  isAdmin={isAdmin}
+                  haGiaPartecipato={!!partecipazione}
+                  statoCandidatura={partecipazione?.stato}
+                  dominantColor={dominantColor}
+                />
+              </div>
+            )}
           </div>
 
           {/* COLONNA DESTRA (Sidebar) */}
-          <div className="space-y-6 sm:space-y-8 mt-4 lg:mt-0">
+          <div className={`space-y-6 sm:space-y-8 mt-4 lg:mt-0 ${isTeamMember ? 'order-1 lg:order-2' : 'order-2'}`}>
             
             {/* Leader Card */}
             <div className="bg-blue-50 border-[3px] sm:border-4 border-gray-900 rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative">
@@ -465,6 +496,26 @@ export default function ProjectDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* STICKY BOTTOM BAR SU MOBILE (Visibile solo se si è parte del team e solo su schermi piccoli) */}
+      {isTeamMember && (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-white border-t-[3px] border-gray-900 z-40 flex items-center justify-between shadow-[0_-4px_0px_0px_rgba(0,0,0,0.1)]">
+          <div>
+            <p className="font-black text-gray-900 uppercase text-xs">
+              {isAdmin ? 'Proprietario 👑' : 'Candidatura Accettata 🎉'}
+            </p>
+            <p className="text-[10px] font-bold text-gray-600 mt-0.5">
+              {isAdmin ? 'Gestisci il tuo team' : 'Sei ufficialmente nel team!'}
+            </p>
+          </div>
+          <Link 
+            href={`/dashboard/my_teams/${id}`} 
+            className="px-5 py-3 bg-green-400 border-2 border-gray-900 rounded-xl font-black text-gray-900 uppercase tracking-widest text-[10px] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
+          >
+            Workspace 🚀
+          </Link>
+        </div>
+      )}
 
       {/* Chat Modal */}
       {showChat && currentUser && bando.studente && (
