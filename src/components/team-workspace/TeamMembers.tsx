@@ -53,7 +53,7 @@ export default function TeamMembers({
   const [isHoveringCard, setIsHoveringCard] = useState(false)
   const [peekerPos, setPeekerPos] = useState({ edge: 'top', position: '50%' })
 
-  // 1. Controllo se è Mobile (per evitare hover fasulli e touch-bugs)
+  // 1. Controllo se è Mobile
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024)
     checkMobile()
@@ -185,7 +185,6 @@ export default function TeamMembers({
     setTimeout(() => setCopiedEmail(null), 2000)
   }
 
-  // Se siamo su Mobile, ignora completamente l'hover e usa solo l'active (Click).
   const displayMemberId = isMobile ? activeMemberId : (activeMemberId || hoveredMemberId)
   const displayMember = members.find(m => m.id === displayMemberId)
   const displayColor = displayMember ? getMemberColor(displayMember.id) : null
@@ -202,9 +201,9 @@ export default function TeamMembers({
   }
 
   return (
-    <div className="w-full lg:w-80 flex-shrink-0 relative z-50">
+    <div className="w-full lg:w-80 flex-shrink-0 relative z-10">
       
-      {/* L'osservatore (Solo Desktop) */}
+      {/* L'osservatore */}
       <div 
         className={getPeekerStyles()}
         style={{ [peekerPos.edge === 'top' || peekerPos.edge === 'bottom' ? 'left' : 'top']: peekerPos.position }}
@@ -214,7 +213,7 @@ export default function TeamMembers({
 
       {/* LA CARD PRINCIPALE */}
       <div 
-        className={`bg-white rounded-2xl border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-4 sticky top-6 z-50`}
+        className={`bg-white rounded-2xl border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-4 sticky top-6 z-20`}
         onMouseEnter={handleCardMouseEnter}
         onMouseLeave={handleCardMouseLeave}
       >
@@ -233,7 +232,7 @@ export default function TeamMembers({
         </div>
 
         {/* LISTA DEI MEMBRI */}
-        <div className="space-y-3 max-h-[300px] lg:max-h-[450px] overflow-y-auto pr-2 custom-scrollbar relative z-50">
+        <div className="space-y-3 max-h-[300px] lg:max-h-[450px] overflow-y-auto pr-2 custom-scrollbar relative z-20">
           {members.map((member) => {
             const isOnline = onlineUsers.has(member.id)
             const badges = memberBadges[member.id] || []
@@ -282,18 +281,29 @@ export default function TeamMembers({
                     {member.ruolo_team === 'owner' ? 'Proprietario' : member.ruolo_team === 'admin' ? 'Admin' : 'Membro'}
                   </p>
                 </div>
+
+                {/* Badge */}
+                {badges.length > 0 && (
+                  <div className="flex -space-x-2">
+                    {badges.slice(0, 2).map((badge, i) => (
+                      <span key={i} className="text-[14px] bg-white rounded-full p-0.5 border-2 border-gray-900 shadow-sm z-10" title={(BADGE_TYPES as any)[badge]?.label}>
+                        {(BADGE_TYPES as any)[badge]?.icon || '🏅'}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             )
           })}
         </div>
 
-        {/* MODALE DI DETTAGLIO: Z-INDEX ESTREMO per coprire chat e calendario */}
+        {/* MODALE DI DETTAGLIO */}
         {displayMember && displayColor && (
           <>
             {/* L'overlay blocca lo schermo solo se abbiamo CLICCATO e siamo su MOBILE */}
             {isMobile && activeMemberId && (
               <div 
-                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[190] lg:hidden"
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[30] lg:hidden"
                 onClick={() => {
                   setActiveMemberId(null);
                   setHoveredMemberId(null);
@@ -304,7 +314,7 @@ export default function TeamMembers({
             <div 
               className={`
                 ${isMobile ? 'fixed top-1/2 left-4 right-4 -translate-y-1/2' : 'absolute right-[105%] top-0 w-72'} 
-                z-[200] bg-white rounded-2xl sm:rounded-[1.5rem] border-4 border-gray-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-4 sm:p-5 animate-in fade-in zoom-in-95 duration-200 pointer-events-auto
+                z-[40] bg-white rounded-2xl sm:rounded-[1.5rem] border-4 border-gray-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-4 sm:p-5 animate-in fade-in zoom-in-95 duration-200 pointer-events-auto
               `}
               onMouseEnter={() => {
                 if (!isMobile && !activeMemberId) setHoveredMemberId(displayMember.id)
@@ -362,7 +372,7 @@ export default function TeamMembers({
                         <button 
                           onClick={(e) => { 
                             e.stopPropagation();
-                            setActiveMemberId(displayMember.id); // Blocca la modale se non lo era
+                            setActiveMemberId(displayMember.id); 
                             setTempNick(nicknames[displayMember.id] || ''); 
                             setEditingNickFor(displayMember.id); 
                           }}
@@ -374,7 +384,6 @@ export default function TeamMembers({
                       </div>
                     )}
                     
-                    {/* Se c'è un soprannome, mostra il nome vero in piccolo */}
                     {nicknames[displayMember.id] && !editingNickFor && (
                       <p className="text-[9px] font-bold text-gray-500 truncate mt-0.5">
                         ({displayMember.nome} {displayMember.cognome})
