@@ -47,7 +47,8 @@ export default function ManageApplicationPage() {
   // Gestione Immagine
   const [newCoverFile, setNewCoverFile] = useState<File | null>(null)
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
-  const [coverPositionY, setCoverPositionY] = useState(50) // Posizione Y per l'inquadratura (0-100)
+  const [coverPositionY, setCoverPositionY] = useState(50) 
+  const [coverZoom, setCoverZoom] = useState(1) // NUOVO: Gestione zoom (da 1 a 3)
   const [savingEdit, setSavingEdit] = useState(false)
   const [editSuccess, setEditSuccess] = useState(false)
 
@@ -337,46 +338,45 @@ export default function ManageApplicationPage() {
   }
 
   // Funzione per generare l'immagine ritagliata tramite HTML5 Canvas
-  const generateCroppedFile = (imageUrl: string, positionY: number): Promise<File> => {
+  // Funzione per generare l'immagine ritagliata tramite HTML5 Canvas con Posizione e Zoom
+  const generateCroppedFile = (imageUrl: string, positionY: number, zoom: number): Promise<File> => {
     return new Promise((resolve, reject) => {
       const img = new Image()
-      img.crossOrigin = 'Anonymous' // Permette il CORS
+      img.crossOrigin = 'Anonymous'
       img.onload = () => {
         const canvas = document.createElement('canvas')
         const targetRatio = 16 / 9
-        const imgRatio = img.width / img.height
-
-        // Impostiamo una risoluzione standard per i banner
+        
         canvas.width = 1200
         canvas.height = Math.round(1200 / targetRatio)
-
+        
         const ctx = canvas.getContext('2d')
         if (!ctx) return reject(new Error("Canvas context missing"))
 
-        let drawWidth = canvas.width
-        let drawHeight = canvas.height
-        let offsetX = 0
-        let offsetY = 0
+        // Calcoliamo la porzione di immagine da catturare in base allo zoom
+        const sourceWidth = img.width / zoom
+        const sourceHeight = img.height / zoom
 
-        if (imgRatio > targetRatio) {
-          drawHeight = canvas.height
-          drawWidth = img.width * (canvas.height / img.height)
-          offsetX = (canvas.width - drawWidth) / 2
+        let cropWidth = sourceWidth
+        let cropHeight = sourceHeight
+        
+        if (sourceWidth / sourceHeight > targetRatio) {
+          cropHeight = sourceHeight
+          cropWidth = sourceHeight * targetRatio
         } else {
-          drawWidth = canvas.width
-          drawHeight = img.height * (canvas.width / img.width)
-          // Applica lo scostamento Y scelto dall'utente per allinearlo come object-position
-          offsetY = (canvas.height - drawHeight) * (positionY / 100)
+          cropWidth = sourceWidth
+          cropHeight = sourceWidth / targetRatio
         }
 
-        ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight)
+        // Calcolo offset: X al centro, Y basato sullo slider
+        const sourceX = (img.width - cropWidth) / 2
+        const sourceY = (img.height - cropHeight) * (positionY / 100)
+
+        ctx.drawImage(img, sourceX, sourceY, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height)
 
         canvas.toBlob((blob) => {
-          if (blob) {
-            resolve(new File([blob], "cover-cropped.jpg", { type: "image/jpeg" }))
-          } else {
-            reject(new Error("Blob creation failed"))
-          }
+          if (blob) resolve(new File([blob], "cover-cropped.jpg", { type: "image/jpeg" }))
+          else reject(new Error("Blob creation failed"))
         }, 'image/jpeg', 0.9)
       }
       img.onerror = () => reject(new Error("Image load failed"))
@@ -392,9 +392,9 @@ export default function ManageApplicationPage() {
     try {
       let finalFotoUrl = editForm.foto_url
 
-      // Se c'è una nuova immagine caricata, la ritagliamo in base allo slider prima di salvarla
-      if (newCoverFile && coverPreview) {
-        const croppedFile = await generateCroppedFile(coverPreview, coverPositionY)
+      // Se c'è un'immagine, applichiamo ritaglio e zoom (anche a quella già esistente se l'utente ha mosso gli slider)
+      if (coverPreview && (newCoverFile || coverPositionY !== 50 || coverZoom !== 1)) {
+        const croppedFile = await generateCroppedFile(coverPreview, coverPositionY, coverZoom)
         finalFotoUrl = await uploadImage(croppedFile)
       }
 
@@ -414,6 +414,10 @@ export default function ManageApplicationPage() {
           descrizione: editForm.descrizione,
           foto_url: finalFotoUrl
         }))
+        setEditForm(prev => ({ ...prev, foto_url: finalFotoUrl }))
+        setNewCoverFile(null) 
+        setCoverPositionY(50) // Resetta posizione
+        setCoverZoom(1)       // Resetta zoom
         setEditForm(prev => ({ ...prev, foto_url: finalFotoUrl }))
         setNewCoverFile(null) // Resetta il file nuovo così lo slider scompare
         setCoverPositionY(50) // Resetta dopo il salvataggio
@@ -939,8 +943,11 @@ export default function ManageApplicationPage() {
                           src={coverPreview} 
                           alt="Preview" 
                           className="w-full h-full object-cover transition-all" 
-                          // Applica visivamente il posizionamento in tempo reale SOLO SE c'è un file nuovo
-                          style={{ objectPosition: newCoverFile ? `center ${coverPositionY}%` : 'center center' }} 
+                          // Applica visivamente il posizionamento e zoom SEMPRE
+                          style={{ 
+                            objectPosition: `center ${coverPositionY}%`,
+                            transform: `scale(${coverZoom})`
+                          }} 
                         />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
                           <span className="text-white font-bold text-sm bg-gray-900 px-4 py-2 rounded-xl border-2 border-white">
@@ -958,24 +965,35 @@ export default function ManageApplicationPage() {
                     )}
                   </div>
 
-                  {/* Slider Visibile SOLO quando carichi una NUOVA immagine */}
-                  {newCoverFile && coverPreview && (
-                    <div className="mt-4 p-4 bg-white/60 border-2 border-gray-300 rounded-xl backdrop-blur-sm animate-in fade-in zoom-in duration-300">
-                      <label className="block text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-                        <span>↕️</span> Scorri per regolare l'inquadratura del banner
-                      </label>
-                      <input 
-                        type="range" 
-                        min="0" 
-                        max="100" 
-                        value={coverPositionY} 
-                        onChange={(e) => setCoverPositionY(Number(e.target.value))}
-                        className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-gray-900"
-                      />
-                      <div className="flex justify-between text-xs text-gray-500 font-bold mt-2 px-1">
-                        <span>Alto</span>
-                        <span>Centro</span>
-                        <span>Basso</span>
+                  {/* Slider Visibili SEMPRE se c'è un'immagine, non solo nuova */}
+                  {coverPreview && (
+                    <div className="mt-4 p-4 bg-white/60 border-2 border-gray-300 rounded-xl backdrop-blur-sm animate-in fade-in zoom-in duration-300 space-y-4">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
+                          <span>↕️</span> Scorri per l'inquadratura verticale
+                        </label>
+                        <input 
+                          type="range" 
+                          min="0" 
+                          max="100" 
+                          value={coverPositionY} 
+                          onChange={(e) => setCoverPositionY(Number(e.target.value))}
+                          className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-gray-900"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
+                          <span>🔍</span> Regola lo Zoom
+                        </label>
+                        <input 
+                          type="range" 
+                          min="1" 
+                          max="3" 
+                          step="0.05"
+                          value={coverZoom} 
+                          onChange={(e) => setCoverZoom(Number(e.target.value))}
+                          className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-gray-900"
+                        />
                       </div>
                     </div>
                   )}
@@ -987,7 +1005,7 @@ export default function ManageApplicationPage() {
                     type="text"
                     value={editForm.titolo}
                     onChange={(e) => setEditForm({ ...editForm, titolo: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-50 rounded-xl border-2 border-gray-300 focus:border-gray-900 outline-none font-bold"
+                    className="w-full px-4 py-3 bg-gray-50 text-gray-900 rounded-xl border-2 border-gray-300 focus:border-gray-900 outline-none font-bold"
                   />
                 </div>
 
@@ -997,7 +1015,7 @@ export default function ManageApplicationPage() {
                     rows={5}
                     value={editForm.descrizione}
                     onChange={(e) => setEditForm({ ...editForm, descrizione: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-50 rounded-xl border-2 border-gray-300 focus:border-gray-900 outline-none resize-none font-medium"
+                    className="w-full px-4 py-3 bg-gray-50 text-gray-900 rounded-xl border-2 border-gray-300 focus:border-gray-900 outline-none resize-none font-medium"
                   />
                 </div>
 
@@ -1027,7 +1045,7 @@ export default function ManageApplicationPage() {
                     value={linksForm.github}
                     onChange={(e) => setLinksForm({ ...linksForm, github: e.target.value })}
                     placeholder="https://github.com/..."
-                    className="w-full px-4 py-3 bg-gray-50 rounded-xl border-2 border-gray-300 focus:border-gray-900 outline-none"
+                    className="w-full px-4 py-3 bg-gray-50 text-gray-900 rounded-xl border-2 border-gray-300 focus:border-gray-900 outline-none font-bold"
                   />
                 </div>
                 <div>
@@ -1037,7 +1055,7 @@ export default function ManageApplicationPage() {
                     value={linksForm.drive}
                     onChange={(e) => setLinksForm({ ...linksForm, drive: e.target.value })}
                     placeholder="https://drive.google.com/..."
-                    className="w-full px-4 py-3 bg-gray-50 rounded-xl border-2 border-gray-300 focus:border-gray-900 outline-none"
+                    className="w-full px-4 py-3 bg-gray-50 text-gray-900 rounded-xl border-2 border-gray-300 focus:border-gray-900 outline-none font-bold"
                   />
                 </div>
                 <button
