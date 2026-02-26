@@ -74,6 +74,7 @@ export default function AdminPanel() {
   }
 
   // --- AZIONI DB: CARICA CORSI DI STUDIO ---
+  // --- AZIONI DB: CARICA CORSI DI STUDIO ---
   const caricaCorsi = async () => {
     if (!confirm("⚠️ Vuoi caricare tutti i corsi di studio nel database? (Fallo solo se la lista è vuota per evitare duplicati)")) return;
     
@@ -542,7 +543,9 @@ export default function AdminPanel() {
       {activeTab === 'logs' && user?.is_owner && (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
           
-          {/* SEZIONE STRUMENTI DATABASE */}
+          {/* ========================================= */}
+          {/* IL BOTTONE VA QUI: SEZIONE STRUMENTI DATABASE */}
+          {/* ========================================= */}
           <div className="bg-white rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 border-4 border-gray-900">
             <h3 className="font-black text-gray-900 uppercase tracking-widest mb-2 flex items-center gap-2">
               <span className="text-2xl">🧰</span> Strumenti Database
@@ -556,17 +559,14 @@ export default function AdminPanel() {
                 className="px-6 py-3 bg-yellow-300 border-[3px] border-gray-900 text-gray-900 font-black uppercase tracking-widest rounded-xl hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {seedingCorsi ? (
-                  <>
-                    <span className="animate-spin">⏳</span> Caricamento...
-                  </>
+                  <><span className="animate-spin">⏳</span> Caricamento...</>
                 ) : (
-                  <>
-                    <span className="text-lg">📚</span> Popola Tabella Corsi
-                  </>
+                  <><span className="text-lg">📚</span> Popola Tabella Corsi</>
                 )}
               </button>
             </div>
           </div>
+          {/* ========================================= */}
 
           {/* TABELLA LOGS */}
           <div className="bg-white rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden border-4 border-gray-900">
