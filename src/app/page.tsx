@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 // Emoji per lo sfondo animato (stesso di login/register)
 const EMOJI_LIST = [
@@ -27,6 +28,11 @@ interface FloatingEmoji {
 
 export default function Home() {
   const [emojis, setEmojis] = useState<FloatingEmoji[]>([])
+  
+  // Stato per il numero degli iscritti
+  const [studentCount, setStudentCount] = useState<number | null>(null)
+  
+  const supabase = createClient()
 
   useEffect(() => {
     // Genera emoji casuali
@@ -43,10 +49,35 @@ export default function Home() {
       })
     }
     setEmojis(generated)
-  }, [])
+
+    // Recupera numero iscritti da Supabase
+    const fetchStudentCount = async () => {
+      try {
+        const { count, error } = await supabase
+          .from('studente')
+          .select('*', { count: 'exact', head: true })
+
+        if (!error && count !== null) {
+          // Se sono meno di 100, aggiunge 100 per non far sembrare il sito vuoto
+          setStudentCount(count < 100 ? count + 100 : count)
+        }
+      } catch (err) {
+        console.error("Errore recupero iscritti:", err)
+      }
+    }
+
+    fetchStudentCount()
+  }, [supabase])
+
+  const features = [
+    { emoji: '🎓', text: 'Studenti', isCountable: true },
+    { emoji: '🤝', text: 'Team', isCountable: false },
+    { emoji: '💡', text: 'Progetti', isCountable: false },
+    { emoji: '🚀', text: 'Crescita', isCountable: false },
+  ]
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 p-4 sm:p-6">
+    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 p-4 sm:p-6 pb-20">
       
       {/* Sfondo animato con emoji */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -76,7 +107,7 @@ export default function Home() {
       />
 
       {/* Contenuto principale */}
-      <div className="relative z-10 flex flex-col items-center text-center">
+      <div className="relative z-10 flex flex-col items-center text-center mt-10">
         
         {/* Logo/Titolo con stile cartoon */}
         <div className="mb-6 sm:mb-8">
@@ -112,21 +143,31 @@ export default function Home() {
 
         {/* Badge/Features */}
         <div className="mt-10 sm:mt-16 flex flex-wrap justify-center gap-2 sm:gap-3 max-w-lg">
-          {[
-            { emoji: '🎓', text: 'Studenti' },
-            { emoji: '🤝', text: 'Team' },
-            { emoji: '💡', text: 'Progetti' },
-            { emoji: '🚀', text: 'Crescita' },
-          ].map((item, i) => (
+          {features.map((item, i) => (
             <div 
               key={i}
-              className="bg-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] text-xs sm:text-sm font-bold text-gray-800"
+              className="group relative bg-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] text-xs sm:text-sm font-bold text-gray-800 transition-all cursor-default"
               style={{ transform: `rotate(${(i % 2 === 0 ? -1 : 1) * (Math.random() * 2 + 1)}deg)` }}
             >
-              {item.emoji} {item.text}
+              {/* Testo normale */}
+              <span className={`block transition-opacity duration-300 ${item.isCountable ? 'group-hover:opacity-0' : ''}`}>
+                {item.emoji} {item.text}
+              </span>
+              
+              {/* Testo hover (Visibile solo per "Studenti") */}
+              {item.isCountable && (
+                <span className="absolute inset-0 flex items-center justify-center font-black text-red-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  {studentCount !== null ? `+${studentCount} Iscritti` : 'Caricamento...'}
+                </span>
+              )}
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Firma SDL */}
+      <div className="absolute bottom-6 font-black text-gray-900 tracking-widest uppercase text-sm sm:text-base opacity-70">
+        ❤️ SDL
       </div>
 
       {/* Stile per l'animazione float */}
