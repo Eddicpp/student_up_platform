@@ -388,7 +388,7 @@ export default function TeamWorkspacePage() {
           </div>
 
           {/* Sidebar - Team Members (Con Z-INDEX a 50 per scavalcare tutto!) */}
-          <div className="space-y-6 lg:order-last order-4 mt-2 sm:mt-0 relative z-50">
+          <div className="space-y-6 lg:order-last order-4 mt-2 sm:mt-0 relative z-10">
             <TeamMembers 
               members={allMembers}
               currentUserId={currentUser?.id}
