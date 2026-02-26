@@ -41,6 +41,9 @@ export default function TeamMembers({
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set())
   const [memberBadges, setMemberBadges] = useState<Record<string, string[]>>({})
   
+  // STATI MOBILE / HOVER
+  const [isMobile, setIsMobile] = useState(false)
+
   // STATI SOPRANNOMI
   const [nicknames, setNicknames] = useState<Record<string, string>>({})
   const [editingNickFor, setEditingNickFor] = useState<string | null>(null)
@@ -50,7 +53,15 @@ export default function TeamMembers({
   const [isHoveringCard, setIsHoveringCard] = useState(false)
   const [peekerPos, setPeekerPos] = useState({ edge: 'top', position: '50%' })
 
-  // 1. Caricamento Soprannomi
+  // 1. Controllo se è Mobile (per evitare hover fasulli e touch-bugs)
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // 2. Caricamento Soprannomi
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem(`nicknames_${currentUserId}_${bandoId}`)
@@ -62,7 +73,7 @@ export default function TeamMembers({
     }
   }, [currentUserId, bandoId])
 
-  // 2. Salvataggio Soprannomi
+  // 3. Salvataggio Soprannomi
   const saveNickname = (memberId: string) => {
     const newNicknames = { ...nicknames }
     if (tempNick.trim() === '') {
@@ -76,8 +87,9 @@ export default function TeamMembers({
     setEditingNickFor(null)
   }
 
-  // 3. Animazione Peeker
+  // 4. Animazione Peeker
   const handleCardMouseEnter = () => {
+    if (isMobile) return;
     setIsHoveringCard(true)
     const edges = ['top', 'bottom', 'right']
     const randomEdge = edges[Math.floor(Math.random() * edges.length)]
@@ -89,7 +101,7 @@ export default function TeamMembers({
     setIsHoveringCard(false)
   }
 
-  // 4. Fetch Presenza e Badge
+  // 5. Fetch Presenza
   useEffect(() => {
     const fetchPresenceAndBadges = async () => {
       const { data: presenceData } = await (supabase as any)
@@ -161,15 +173,9 @@ export default function TeamMembers({
     updatePresence()
     const presenceInterval = setInterval(updatePresence, 30000)
 
-    const handleBeforeUnload = () => {
-      navigator.sendBeacon('/api/presence-offline', JSON.stringify({ userId: currentUserId }))
-    }
-    window.addEventListener('beforeunload', handleBeforeUnload)
-
     return () => {
       supabase.removeChannel(channel)
       clearInterval(presenceInterval)
-      window.removeEventListener('beforeunload', handleBeforeUnload)
     }
   }, [members, currentUserId, bandoId, supabase])
 
@@ -179,8 +185,8 @@ export default function TeamMembers({
     setTimeout(() => setCopiedEmail(null), 2000)
   }
 
-  // Logica per determinare chi visualizzare nel popup
-  const displayMemberId = activeMemberId || hoveredMemberId
+  // Se siamo su Mobile, ignora completamente l'hover e usa solo l'active (Click).
+  const displayMemberId = isMobile ? activeMemberId : (activeMemberId || hoveredMemberId)
   const displayMember = members.find(m => m.id === displayMemberId)
   const displayColor = displayMember ? getMemberColor(displayMember.id) : null
   const isDisplayOnline = displayMember ? onlineUsers.has(displayMember.id) : false
@@ -188,26 +194,20 @@ export default function TeamMembers({
   const getPeekerStyles = () => {
     const baseStyle = "absolute text-3xl transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] z-0 hidden lg:block"
     switch (peekerPos.edge) {
-      case 'top':
-        return `${baseStyle} left-[${peekerPos.position}] top-0 -translate-y-full ${isHoveringCard ? 'translate-y-[-70%]' : 'translate-y-0 opacity-0'}`
-      case 'bottom':
-        return `${baseStyle} left-[${peekerPos.position}] bottom-0 translate-y-full ${isHoveringCard ? 'translate-y-[70%]' : 'translate-y-0 opacity-0'}`
-      case 'right':
-        return `${baseStyle} top-[${peekerPos.position}] right-0 translate-x-full rotate-90 ${isHoveringCard ? 'translate-x-[70%]' : 'translate-x-0 opacity-0'}`
-      default:
-        return baseStyle
+      case 'top': return `${baseStyle} left-[${peekerPos.position}] top-0 -translate-y-full ${isHoveringCard ? 'translate-y-[-70%]' : 'translate-y-0 opacity-0'}`
+      case 'bottom': return `${baseStyle} left-[${peekerPos.position}] bottom-0 translate-y-full ${isHoveringCard ? 'translate-y-[70%]' : 'translate-y-0 opacity-0'}`
+      case 'right': return `${baseStyle} top-[${peekerPos.position}] right-0 translate-x-full rotate-90 ${isHoveringCard ? 'translate-x-[70%]' : 'translate-x-0 opacity-0'}`
+      default: return baseStyle
     }
   }
 
   return (
-    <div className="w-full lg:w-80 flex-shrink-0 relative z-10">
+    <div className="w-full lg:w-80 flex-shrink-0 relative z-50">
       
       {/* L'osservatore (Solo Desktop) */}
       <div 
         className={getPeekerStyles()}
-        style={{
-          [peekerPos.edge === 'top' || peekerPos.edge === 'bottom' ? 'left' : 'top']: peekerPos.position
-        }}
+        style={{ [peekerPos.edge === 'top' || peekerPos.edge === 'bottom' ? 'left' : 'top']: peekerPos.position }}
       >
         👀
       </div>
@@ -243,9 +243,11 @@ export default function TeamMembers({
               <div
                 key={member.id}
                 onMouseEnter={() => {
-                  if (!activeMemberId) setHoveredMemberId(member.id)
+                  if (!isMobile && !activeMemberId) setHoveredMemberId(member.id)
                 }}
-                onMouseLeave={() => setHoveredMemberId(null)}
+                onMouseLeave={() => {
+                  if (!isMobile) setHoveredMemberId(null)
+                }}
                 onClick={() => setActiveMemberId(activeMemberId === member.id ? null : member.id)}
                 className={`flex items-center gap-3 p-2.5 rounded-xl border-2 border-gray-900 transition-all cursor-pointer select-none ${
                   displayMemberId === member.id 
@@ -264,12 +266,8 @@ export default function TeamMembers({
                     isOnline ? 'bg-green-500' : 'bg-gray-300'
                   }`}></span>
                   
-                  {member.ruolo_team === 'owner' && (
-                    <span className="absolute -top-2 -right-2 text-[10px] bg-white rounded-md border-2 border-gray-900 shadow-sm px-1 py-0.5">👑</span>
-                  )}
-                  {member.ruolo_team === 'admin' && (
-                    <span className="absolute -top-2 -right-2 text-[10px] bg-white rounded-md border-2 border-gray-900 shadow-sm px-1 py-0.5">🛡️</span>
-                  )}
+                  {member.ruolo_team === 'owner' && <span className="absolute -top-2 -right-2 text-[10px] bg-white rounded-md border-2 border-gray-900 shadow-sm px-1 py-0.5">👑</span>}
+                  {member.ruolo_team === 'admin' && <span className="absolute -top-2 -right-2 text-[10px] bg-white rounded-md border-2 border-gray-900 shadow-sm px-1 py-0.5">🛡️</span>}
                 </div>
 
                 {/* Testo */}
@@ -279,34 +277,21 @@ export default function TeamMembers({
                   </p>
                   <p className={`text-[9px] font-black uppercase tracking-widest mt-0.5 ${
                     member.ruolo_team === 'owner' ? 'text-amber-600' :
-                    member.ruolo_team === 'admin' ? 'text-blue-600' :
-                    'text-gray-500'
+                    member.ruolo_team === 'admin' ? 'text-blue-600' : 'text-gray-500'
                   }`}>
-                    {member.ruolo_team === 'owner' ? 'Proprietario' :
-                     member.ruolo_team === 'admin' ? 'Admin' : 'Membro'}
+                    {member.ruolo_team === 'owner' ? 'Proprietario' : member.ruolo_team === 'admin' ? 'Admin' : 'Membro'}
                   </p>
                 </div>
-
-                {/* Badge */}
-                {badges.length > 0 && (
-                  <div className="flex -space-x-2">
-                    {badges.slice(0, 2).map((badge, i) => (
-                      <span key={i} className="text-[14px] bg-white rounded-full p-0.5 border-2 border-gray-900 shadow-sm z-10" title={(BADGE_TYPES as any)[badge]?.label}>
-                        {(BADGE_TYPES as any)[badge]?.icon || '🏅'}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
             )
           })}
         </div>
 
-        {/* MODALE DI DETTAGLIO: Usiamo z-[200] per superare tutte le altre tab e tabelle */}
+        {/* MODALE DI DETTAGLIO: Z-INDEX ESTREMO per coprire chat e calendario */}
         {displayMember && displayColor && (
           <>
-            {/* Overlay scuro (Solo se bloccato con click o su Mobile) */}
-            {(activeMemberId || typeof window !== 'undefined' && window.innerWidth < 1024) && (
+            {/* L'overlay blocca lo schermo solo se abbiamo CLICCATO e siamo su MOBILE */}
+            {isMobile && activeMemberId && (
               <div 
                 className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[190] lg:hidden"
                 onClick={() => {
@@ -317,24 +302,27 @@ export default function TeamMembers({
             )}
 
             <div 
-              className={`fixed top-1/2 left-4 right-4 -translate-y-1/2 z-[200] lg:absolute lg:right-[105%] lg:top-0 lg:-translate-y-0 lg:left-auto lg:w-72 bg-white rounded-2xl sm:rounded-[1.5rem] border-4 border-gray-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-4 sm:p-5 animate-in fade-in zoom-in-95 duration-200 pointer-events-auto`}
+              className={`
+                ${isMobile ? 'fixed top-1/2 left-4 right-4 -translate-y-1/2' : 'absolute right-[105%] top-0 w-72'} 
+                z-[200] bg-white rounded-2xl sm:rounded-[1.5rem] border-4 border-gray-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-4 sm:p-5 animate-in fade-in zoom-in-95 duration-200 pointer-events-auto
+              `}
               onMouseEnter={() => {
-                if (!activeMemberId) setHoveredMemberId(displayMember.id)
+                if (!isMobile && !activeMemberId) setHoveredMemberId(displayMember.id)
               }}
               onMouseLeave={() => {
-                if (!activeMemberId) setHoveredMemberId(null)
+                if (!isMobile && !activeMemberId) setHoveredMemberId(null)
               }}
             >
               
-              {/* Bottone Chiudi (visibile se bloccato col click o su Mobile) */}
-              {(activeMemberId || typeof window !== 'undefined' && window.innerWidth < 1024) && (
+              {/* Bottone Chiudi (visibile su Mobile o se bloccato col click su PC) */}
+              {(isMobile || activeMemberId) && (
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
                     setActiveMemberId(null);
                     setHoveredMemberId(null);
                   }}
-                  className="absolute -top-3 -right-3 w-8 h-8 bg-red-400 border-2 border-gray-900 rounded-lg font-black flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] z-50 hover:bg-red-500"
+                  className="absolute -top-3 -right-3 w-8 h-8 bg-red-400 border-2 border-gray-900 rounded-lg font-black flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] z-50 hover:bg-red-500 transition-colors"
                 >
                   ✕
                 </button>
@@ -374,7 +362,7 @@ export default function TeamMembers({
                         <button 
                           onClick={(e) => { 
                             e.stopPropagation();
-                            setActiveMemberId(displayMember.id); // Blocca la modale
+                            setActiveMemberId(displayMember.id); // Blocca la modale se non lo era
                             setTempNick(nicknames[displayMember.id] || ''); 
                             setEditingNickFor(displayMember.id); 
                           }}

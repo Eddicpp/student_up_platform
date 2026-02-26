@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { getMemberColor } from '@/lib/member-colors'
 
 // Import components
 import TeamChat from '@/components/team-workspace/TeamChat'
@@ -205,7 +204,6 @@ export default function TeamWorkspacePage() {
     }
   }
 
-  // Leave team
   const handleLeaveTeam = async () => {
     if (!currentUser?.id || !bandoId) return
     if (!window.confirm("Sei sicuro di voler abbandonare il team? Non potrai più rientrare.")) return
@@ -234,18 +232,12 @@ export default function TeamWorkspacePage() {
     }
   }, [bandoId])
 
-  // All members including leader
   const allMembers: TeamMember[] = leader ? [leader, ...teamMembers] : teamMembers
-
-  // Cartoon styles
   const cardStyle = "bg-white rounded-2xl border-[3px] sm:border-4 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
 
   if (loading) {
     return (
-      <div 
-        className="min-h-screen flex items-center justify-center"
-        style={{ backgroundColor: `rgba(${dominantColor}, 0.1)` }}
-      >
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: `rgba(${dominantColor}, 0.1)` }}>
         <div className={`${cardStyle} p-6 sm:p-8 text-center bg-white`}>
           <div className="text-4xl sm:text-5xl animate-bounce mb-3 sm:mb-4">🚀</div>
           <p className="text-gray-900 font-black uppercase tracking-widest text-sm sm:text-base">Caricamento workspace...</p>
@@ -273,59 +265,35 @@ export default function TeamWorkspacePage() {
   }
 
   return (
-    <div 
-      className="min-h-screen pb-20 transition-colors duration-700"
-      style={{ backgroundColor: `rgba(${dominantColor}, 0.15)` }}
-    >
+    <div className="min-h-screen pb-20 transition-colors duration-700" style={{ backgroundColor: `rgba(${dominantColor}, 0.15)` }}>
+      
       {/* Banner Header */}
       <div className="relative h-48 sm:h-64 lg:h-72 overflow-hidden border-b-[3px] sm:border-b-4 border-gray-900 pattern-dots">
         {project?.foto_url ? (
-          <img 
-            src={project.foto_url} 
-            alt={project.titolo}
-            className="w-full h-full object-cover mix-blend-overlay opacity-60"
-          />
+          <img src={project.foto_url} alt={project.titolo} className="w-full h-full object-cover mix-blend-overlay opacity-60" />
         ) : (
-          <div 
-            className="w-full h-full"
-            style={{ background: `linear-gradient(135deg, rgb(${dominantColor}) 0%, rgba(${dominantColor}, 0.7) 100%)` }}
-          />
+          <div className="w-full h-full" style={{ background: `linear-gradient(135deg, rgb(${dominantColor}) 0%, rgba(${dominantColor}, 0.7) 100%)` }} />
         )}
-        
-        {/* Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
         
-        {/* Back button */}
         <div className="absolute top-3 left-3 sm:top-6 sm:left-6">
-          <button 
-            onClick={() => router.push('/dashboard/my_teams')}
-            className="flex items-center gap-1.5 sm:gap-2 bg-white text-gray-900 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-black uppercase tracking-widest text-[10px] sm:text-xs border-2 sm:border-3 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
-          >
+          <button onClick={() => router.push('/dashboard/my_teams')} className="flex items-center gap-1.5 sm:gap-2 bg-white text-gray-900 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-black uppercase tracking-widest text-[10px] sm:text-xs border-2 sm:border-3 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
             <span className="text-sm sm:text-base">🔙</span> <span className="hidden sm:inline">I miei team</span>
           </button>
         </div>
 
-        {/* Admin settings button */}
         {isAdmin && (
           <div className="absolute top-3 right-3 sm:top-6 sm:right-6">
-            <Link
-              href={`/dashboard/projects/${bandoId}/manage`}
-              className="flex items-center gap-1.5 sm:gap-2 bg-yellow-300 text-gray-900 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-black uppercase tracking-widest text-[10px] sm:text-xs border-2 sm:border-3 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
-            >
+            <Link href={`/dashboard/projects/${bandoId}/manage`} className="flex items-center gap-1.5 sm:gap-2 bg-yellow-300 text-gray-900 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-black uppercase tracking-widest text-[10px] sm:text-xs border-2 sm:border-3 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
               <span className="text-sm sm:text-base">⚙️</span> <span className="hidden sm:inline">Gestione</span>
             </Link>
           </div>
         )}
 
-        {/* Project info */}
         <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 lg:p-8">
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-wrap items-center gap-2 mb-2 sm:mb-3">
-              <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[9px] sm:text-xs font-black uppercase tracking-widest border-2 ${
-                project?.stato === 'chiuso' 
-                  ? 'bg-gray-700 text-white border-gray-900' 
-                  : 'bg-green-400 text-gray-900 border-gray-900'
-              }`}>
+              <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[9px] sm:text-xs font-black uppercase tracking-widest border-2 ${project?.stato === 'chiuso' ? 'bg-gray-700 text-white border-gray-900' : 'bg-green-400 text-gray-900 border-gray-900'}`}>
                 {project?.stato === 'chiuso' ? '🔒 Chiuso' : '🟢 Aperto'}
               </span>
               <span className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[9px] sm:text-xs font-black uppercase tracking-widest bg-white text-gray-900 border-2 border-gray-900">
@@ -335,9 +303,6 @@ export default function TeamWorkspacePage() {
             <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white mb-1 sm:mb-2 drop-shadow-[2px_2px_0px_rgba(0,0,0,1)] leading-tight line-clamp-2">
               {project?.titolo}
             </h1>
-            <p className="text-gray-200 text-xs sm:text-sm max-w-2xl line-clamp-1 font-bold">
-              {project?.descrizione}
-            </p>
           </div>
         </div>
       </div>
@@ -347,11 +312,10 @@ export default function TeamWorkspacePage() {
         <div className="flex flex-col lg:grid lg:grid-cols-3 gap-5 sm:gap-6 lg:gap-8">
           
           {/* Main content - 2/3 */}
-          {/* Utilizziamo flex-col e order per invertire l'ordine su mobile: prima chat, poi link */}
-          <div className="lg:col-span-2 flex flex-col gap-5 sm:gap-6 lg:gap-8">
+          <div className="lg:col-span-2 flex flex-col gap-5 sm:gap-6 lg:gap-8 relative z-10">
             
-            {/* Tools Tabs (Top su mobile, Top su PC) */}
-            <div className="order-1 lg:order-1">
+            {/* Tools Tabs */}
+            <div className="order-1 lg:order-1 relative z-20">
               <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-4 pt-1 -mx-3 px-3 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] snap-x">
                 {[
                   { id: 'chat' as const, label: 'Chat', icon: '💬' },
@@ -376,67 +340,24 @@ export default function TeamWorkspacePage() {
               </div>
             </div>
 
-            {/* Active Tool (Middle su mobile, Middle su PC) */}
-            <div className="order-2 lg:order-2">
-              {activeTab === 'chat' && (
-                <TeamChat 
-                  bandoId={bandoId}
-                  currentUserId={currentUser?.id}
-                  members={allMembers}
-                  projectTitle={project?.titolo || ''}
-                  isAdmin={isAdmin}
-                />
-              )}
-
-              {activeTab === 'todo' && (
-                <TeamTodoList 
-                  bandoId={bandoId}
-                  currentUserId={currentUser?.id}
-                  members={allMembers}
-                />
-              )}
-
-              {activeTab === 'polls' && (
-                <TeamPolls 
-                  bandoId={bandoId}
-                  currentUserId={currentUser?.id}
-                  members={allMembers}
-                />
-              )}
-
-              {activeTab === 'notes' && (
-                <TeamNotes 
-                  bandoId={bandoId}
-                  currentUserId={currentUser?.id}
-                  members={allMembers}
-                />
-              )}
-
-              {activeTab === 'calendar' && (
-                <TeamCalendar 
-                  bandoId={bandoId}
-                  currentUserId={currentUser?.id}
-                  members={allMembers}
-                />
-              )}
+            {/* Active Tool */}
+            <div className="order-2 lg:order-2 relative z-10">
+              {activeTab === 'chat' && <TeamChat bandoId={bandoId} currentUserId={currentUser?.id} members={allMembers} projectTitle={project?.titolo || ''} isAdmin={isAdmin} />}
+              {activeTab === 'todo' && <TeamTodoList bandoId={bandoId} currentUserId={currentUser?.id} members={allMembers} />}
+              {activeTab === 'polls' && <TeamPolls bandoId={bandoId} currentUserId={currentUser?.id} members={allMembers} />}
+              {activeTab === 'notes' && <TeamNotes bandoId={bandoId} currentUserId={currentUser?.id} members={allMembers} />}
+              {activeTab === 'calendar' && <TeamCalendar bandoId={bandoId} currentUserId={currentUser?.id} members={allMembers} />}
             </div>
 
-            {/* Project Links (Bottom su mobile, Top su PC originariamente ma li teniamo sotto per non interrompere l'UX) */}
-            <div className={`order-3 lg:order-3 ${cardStyle} p-4 sm:p-6 bg-white`}>
+            {/* Project Links */}
+            <div className={`order-3 lg:order-3 ${cardStyle} p-4 sm:p-6 bg-white relative z-10`}>
               <h2 className="text-base sm:text-lg font-black text-gray-900 mb-4 flex items-center gap-2 uppercase tracking-tight">
                 <span>🔗</span> Link di Progetto
               </h2>
               <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3 sm:gap-4">
                 {project?.github_url ? (
-                  <a 
-                    href={project.github_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-3 sm:p-4 bg-gray-900 text-white rounded-xl transition-all border-2 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px]"
-                  >
-                    <svg className="w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                    </svg>
+                  <a href={project.github_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 sm:p-4 bg-gray-900 text-white rounded-xl transition-all border-2 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px]">
+                    <svg className="w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
                     <div className="min-w-0">
                       <p className="font-black text-sm sm:text-base uppercase">GitHub</p>
                       <p className="text-[10px] sm:text-xs text-gray-400 font-bold truncate">Repository</p>
@@ -448,14 +369,8 @@ export default function TeamWorkspacePage() {
                     <span className="font-bold text-xs sm:text-sm">Nessun link GitHub</span>
                   </div>
                 )}
-
                 {project?.drive_url ? (
-                  <a 
-                    href={project.drive_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-3 sm:p-4 bg-blue-500 text-white rounded-xl transition-all border-2 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px]"
-                  >
+                  <a href={project.drive_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 sm:p-4 bg-blue-500 text-white rounded-xl transition-all border-2 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px]">
                     <span className="text-2xl sm:text-3xl bg-white rounded p-1 shadow-sm">📁</span>
                     <div className="min-w-0">
                       <p className="font-black text-sm sm:text-base uppercase text-gray-900">Google Drive</p>
@@ -470,11 +385,10 @@ export default function TeamWorkspacePage() {
                 )}
               </div>
             </div>
-
           </div>
 
-          {/* Sidebar - Team Members */}
-          <div className="space-y-6 lg:order-last order-4 mt-2 sm:mt-0">
+          {/* Sidebar - Team Members (Con Z-INDEX a 50 per scavalcare tutto!) */}
+          <div className="space-y-6 lg:order-last order-4 mt-2 sm:mt-0 relative z-50">
             <TeamMembers 
               members={allMembers}
               currentUserId={currentUser?.id}
