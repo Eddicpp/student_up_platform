@@ -567,13 +567,35 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </main>
 
-      {/* ✅ CHAT WIDGET - Nascosto su mobile (hidden md:block), riceve prop per comunicazione bidirezionale */}
-      <div className="hidden md:block">
-        <ChatWidget 
-          isOpen={isChatWidgetOpen} 
-          onToggle={handleChatWidgetToggle} 
-        />
+      {/* ✅ CHAT WIDGET - Inserito correttamente nel flusso */}
+      <div className="hidden md:block fixed bottom-6 right-6 z-[100]">
+        <div className="relative group">
+          
+          {/* Ombra cartoon (visibile solo se chiusa) */}
+          {!isChatWidgetOpen && (
+            <div className="absolute inset-0 bg-gray-900 rounded-2xl translate-x-1.5 translate-y-1.5" />
+          )}
+
+          {/* Container animato */}
+          <div className={`
+            relative transition-all duration-300 ease-out
+            ${isChatWidgetOpen ? 'translate-y-0' : 'hover:-translate-y-1 hover:-translate-x-1'}
+          `}>
+            <ChatWidget 
+              isOpen={isChatWidgetOpen} 
+              onToggle={handleChatWidgetToggle} 
+            />
+          </div>
+
+          {/* Badge Notifica */}
+          {!isChatWidgetOpen && (
+            <div className="absolute -top-2 -left-2 w-6 h-6 bg-red-500 border-2 border-gray-900 rounded-full flex items-center justify-center animate-bounce shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+              <span className="text-[10px] font-black text-white italic">!</span>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  )
-}
+
+    </div> 
+  ) 
+} 
