@@ -52,7 +52,7 @@ export default function RegisterPage() {
       password,
       options: {
         // Usiamo l'URL esplicito della tua produzione
-        emailRedirectTo: `https://studentup.org/auth/callback?next=/onboarding`,
+        emailRedirectTo: `https://studentup.org/callback?next=/onboarding`,
       },
     })
 
