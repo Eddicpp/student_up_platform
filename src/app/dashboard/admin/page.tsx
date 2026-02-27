@@ -129,7 +129,10 @@ export default function AdminPanel() {
         // 1. Aggiungiamo il corso alla tabella ufficiale
         const { data: nuovoCorso, error: insertError } = await (supabase as any)
           .from('corso_di_studi')
-          .insert({ nome: richiesta.nome_corso })
+          .insert({ 
+            nome: richiesta.nome_corso,
+            tipo: richiesta.tipo_corso || 'Laurea' // <-- INSERITO IL TIPO QUI
+          })
           .select()
           .single()
 
@@ -633,6 +636,11 @@ export default function AdminPanel() {
                       <div className="mb-4">
                         <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Corso Richiesto:</span>
                         <h4 className="text-xl font-black text-gray-900 uppercase leading-tight mt-1">{r.nome_corso}</h4>
+                        {r.tipo_corso && (
+                          <span className="text-[10px] font-black bg-blue-100 text-blue-900 border-2 border-blue-900 px-2 py-0.5 rounded-md inline-block mt-1 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] uppercase tracking-widest">
+                            {r.tipo_corso}
+                          </span>
+                        )}
                         
                         <div className="mt-3 flex items-center gap-2">
                           <img src={r.studente?.avatar_url || '/default-avatar.png'} className="w-6 h-6 rounded-full border border-gray-900" alt="avatar" />
