@@ -15,6 +15,7 @@ export default function OnboardingPage() {
   const [listaCorsi, setListaCorsi] = useState<any[]>([])
   const [corsoSelezionato, setCorsoSelezionato] = useState('')
   const [corsoAltro, setCorsoAltro] = useState('')
+  const [tipoCorsoAltro, setTipoCorsoAltro] = useState('')
   const [sesso, setSesso] = useState<SessoType>('non_specificato')
   const [dataNascita, setDataNascita] = useState('')
   
@@ -57,6 +58,13 @@ export default function OnboardingPage() {
       setLoading(false)
       return
     }
+
+    if (corsoSelezionato === 'altro' && !tipoCorsoAltro) {
+      setError("Specifica se è una Triennale, Magistrale, ecc.")
+      setLoading(false)
+      return
+    }
+
     if (corsoSelezionato === 'altro' && !corsoAltro.trim()) {
       setError("Specifica il nome del corso di laurea.")
       setLoading(false)
@@ -87,6 +95,7 @@ export default function OnboardingPage() {
           .from('richiesta_nuovo_corso')
           .insert({ 
             nome_corso: corsoAltro.trim(), 
+            tipo_corso: tipoCorsoAltro,
             studente_id: user.id 
           })
           
@@ -587,18 +596,40 @@ export default function OnboardingPage() {
 
             {/* SE L'UTENTE SCEGLIE ALTRO, MOSTRA QUESTO */}
             {corsoSelezionato === 'altro' && (
-              <div className="animate-in fade-in zoom-in-95 duration-200">
-                <label className={labelClass}>Nome del Corso (da approvare)</label>
-                <input 
-                  type="text" 
-                  placeholder="Es: Laurea in Astrofisica" 
-                  className={`${inputClass} border-blue-500 focus:border-blue-700 bg-blue-50`}
-                  value={corsoAltro} 
-                  onChange={(e) => setCorsoAltro(e.target.value)} 
-                  required
-                />
-                <p className="text-[10px] text-gray-500 font-bold mt-2 italic">
-                  *Il tuo corso verrà inviato agli Admin per l'approvazione e aggiunto al database.
+              <div className="animate-in fade-in zoom-in-95 duration-200 mt-4 p-4 sm:p-5 border-4 border-blue-900 rounded-2xl bg-blue-100 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] space-y-4">
+                
+                {/* 1. TENDINA TIPO DI LAUREA */}
+                <div>
+                  <label className={labelClass}>Tipo di Laurea *</label>
+                  <select
+                    className={`${inputClass} border-blue-900 focus:border-blue-900 appearance-none bg-white cursor-pointer`}
+                    value={tipoCorsoAltro}
+                    onChange={(e) => setTipoCorsoAltro(e.target.value)}
+                    required
+                  >
+                    <option value="" disabled>Seleziona il tipo...</option>
+                    <option value="Triennale">Triennale (3 anni)</option>
+                    <option value="Magistrale">Magistrale (2 anni)</option>
+                    <option value="Ciclo Unico">Ciclo Unico (5/6 anni)</option>
+                    <option value="Master">Master / Specializzazione</option>
+                  </select>
+                </div>
+
+                {/* 2. NOME DEL CORSO */}
+                <div>
+                  <label className={labelClass}>Nome esatto del Corso *</label>
+                  <input 
+                    type="text" 
+                    placeholder="Es: Ingegneria Aerospaziale" 
+                    className={`${inputClass} border-blue-900 focus:border-blue-900 bg-white`}
+                    value={corsoAltro} 
+                    onChange={(e) => setCorsoAltro(e.target.value)} 
+                    required
+                  />
+                </div>
+                
+                <p className="text-[10px] sm:text-xs text-gray-700 font-bold mt-2 italic leading-tight">
+                  ⚠️ Il corso verrà inviato agli Admin. Non appena approvato, il tuo profilo si aggiornerà automaticamente.
                 </p>
               </div>
             )}
