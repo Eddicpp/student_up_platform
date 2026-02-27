@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 type SessoType = 'M' | 'F' | 'altro' | 'non_specificato';
 
@@ -28,6 +28,9 @@ export default function OnboardingPage() {
   
   const router = useRouter()
   const supabase = createClient()
+
+  const searchParams = useSearchParams()
+  const isVerified = searchParams.get('verified') === 'true'
 
   // FETCH CORSI ALL'AVVIO
   useEffect(() => {
@@ -129,7 +132,7 @@ export default function OnboardingPage() {
   const labelClass = "block text-[10px] sm:text-xs font-black uppercase tracking-widest text-gray-900 mb-1"
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center p-4 overflow-hidden bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500">
+    <main className="relative flex min-h-screen items-center justify-center p-4 overflow-hidden bg-gradient-to-br from-indigo-400 via-purple-500 to-pink-500">
       
       {/* --- PATTERN DI SFONDO --- */}
       <div className="absolute inset-0 opacity-10">
@@ -527,6 +530,15 @@ export default function OnboardingPage() {
       {/* Utilizziamo flex-col sm:flex-row per far impilare gli elementi su telefono evitando sovrapposizioni */}
       <div className="relative z-10 w-full max-w-lg bg-white p-6 sm:p-10 rounded-3xl border-4 border-gray-900 shadow-[12px_12px_0px_0px_rgba(0,0,0,0.3)] max-h-[90vh] overflow-y-auto custom-scrollbar">
         
+        {/* ✨ BANNER EMAIL VERIFICATA AGGIUNTO QUI ✨ */}
+        {isVerified && (
+          <div className="mb-6 p-4 bg-green-400 border-4 border-gray-900 rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] animate-in slide-in-from-top duration-500">
+            <p className="font-black text-gray-900 uppercase tracking-tight text-center">
+              ✨ Email confermata! Benvenuto a bordo. Completa il tuo profilo per iniziare.
+            </p>
+          </div>
+        )}
+
         <div className="text-center mb-6 sm:mb-8">
           <h1 className="text-4xl sm:text-5xl font-black text-gray-900 italic tracking-tighter uppercase mb-2">
             PROFILO <span className="text-red-600">UNIPD</span>

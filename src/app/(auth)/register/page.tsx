@@ -46,12 +46,13 @@ export default function RegisterPage() {
       return
     }
 
-    // 3. Registrazione veloce su Supabase Auth 
-    // (Avendo disattivato "Confirm Email" su Supabase, questo farà il login automatico)
+    // 3. Registrazione con REINDIRIZZAMENTO MAIL RIATTIVATO
     const { data: authData, error: signUpError } = await supabase.auth.signUp({
       email: emailPulita,
       password,
-      // Rimosso emailRedirectTo perché non serve più
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
     })
 
     if (signUpError) {
@@ -63,19 +64,22 @@ export default function RegisterPage() {
     const userId = authData.user?.id
 
     if (userId) {
-      // 4. Creazione del "guscio" vuoto nel database
-      await supabase.from('studente').insert([
+      // 4. Creazione del guscio nel database (usando upsert per sicurezza)
+      await supabase.from('studente').upsert([
         { 
           id: userId, 
           email: emailPulita,
           nome: '', 
           cognome: '' 
         }
-      ] as any)
-    }
+      ], { onConflict: 'id' } as any)
 
-    // 5. Niente email, niente alert: dritto all'Onboarding! 🚀
-    router.push('/onboarding')
+      // 5. Avviso all'utente e ritorno al login (in attesa della conferma)
+      alert("🎉 Account creato con successo! Vai a controllare la tua casella email (anche nello Spam) per confermare la registrazione e fare l'accesso.")
+      router.push('/login')
+    } else {
+      setLoading(false)
+    }
   }
 
   // ... (Qui inizia il tuo return con il JSX)
