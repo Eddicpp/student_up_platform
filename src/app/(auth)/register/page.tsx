@@ -6,9 +6,12 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 export default function RegisterPage() {
-  // Stati Base: Solo Email e Password
+  // Stati Base: Email e Password
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  
+  // NUOVO STATO: Occhietto per la password
+  const [showPassword, setShowPassword] = useState(false)
   
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -43,13 +46,12 @@ export default function RegisterPage() {
       return
     }
 
-    // 3. Registrazione veloce su Supabase Auth (solo credenziali)
+    // 3. Registrazione veloce su Supabase Auth 
+    // (Avendo disattivato "Confirm Email" su Supabase, questo farà il login automatico)
     const { data: authData, error: signUpError } = await supabase.auth.signUp({
       email: emailPulita,
       password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
+      // Rimosso emailRedirectTo perché non serve più
     })
 
     if (signUpError) {
@@ -61,27 +63,22 @@ export default function RegisterPage() {
     const userId = authData.user?.id
 
     if (userId) {
-      // 4. Creazione del "guscio" vuoto nel database (riempiremo il resto nell'onboarding)
+      // 4. Creazione del "guscio" vuoto nel database
       await supabase.from('studente').insert([
         { 
           id: userId, 
           email: emailPulita,
-          nome: '',     // Temporaneamente vuoto
-          cognome: ''   // Temporaneamente vuoto
+          nome: '', 
+          cognome: '' 
         }
       ] as any)
     }
 
-    // 5. Messaggio di successo
-    if (isInstitutional) {
-      alert("Account creato! Clicca sul link che ti abbiamo inviato via email.")
-    } else {
-      alert("Account creato! Controlla la tua email per confermare l'accesso, tester.")
-    }
-    
-    router.push('/login')
-    setLoading(false)
+    // 5. Niente email, niente alert: dritto all'Onboarding! 🚀
+    router.push('/onboarding')
   }
+
+  // ... (Qui inizia il tuo return con il JSX)
 
   return (
     <main className="relative flex min-h-screen items-center justify-center p-4 overflow-hidden bg-gradient-to-br from-indigo-400 via-purple-500 to-pink-500">
@@ -383,18 +380,30 @@ export default function RegisterPage() {
              </div>
           </div>
 
+          {/* CAMPO PASSWORD CON OCCHIETTO */}
           <div className="flex flex-col gap-2">
              <label className="text-xs font-black uppercase text-gray-900 tracking-widest ml-1">Scegli una Password *</label>
              <div className="relative group">
                <input 
-                 type="password" 
+                 // Se showPassword è true mostra il testo, altrimenti i pallini
+                 type={showPassword ? "text" : "password"} 
                  placeholder="Minimo 6 caratteri" 
                  value={password} 
                  onChange={(e) => setPassword(e.target.value)} 
                  required 
-                 className="w-full p-4 pl-12 bg-white border-4 border-gray-900 rounded-xl focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all font-black text-gray-900 placeholder-gray-500 text-lg relative z-20" 
+                 // Aggiunto pr-12 (padding right) per non far finire il testo sotto l'occhietto
+                 className="w-full p-4 pl-12 pr-12 bg-white border-4 border-gray-900 rounded-xl focus:outline-none focus:translate-x-[4px] focus:translate-y-[4px] focus:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all font-black text-gray-900 placeholder-gray-500 text-lg relative z-20" 
                />
                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl z-20 transition-transform group-focus-within:scale-110">🔑</span>
+               
+               {/* BOTTONE OCCHIETTO */}
+               <button 
+                 type="button"
+                 onClick={() => setShowPassword(!showPassword)}
+                 className="absolute right-4 top-1/2 -translate-y-1/2 text-xl z-30 hover:scale-110 transition-transform"
+               >
+                 {showPassword ? "🙈" : "👁️"}
+               </button>
              </div>
           </div>
 
