@@ -225,7 +225,7 @@ export default function TeamWorkspacePage() {
         .update({ stato: 'abandoned' } as any)
         .eq('id', myPart.id)
 
-      router.push('/dashboard/my_teams')
+      router.push('/dashboard/my-projects')
     }
   }
 
