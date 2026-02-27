@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 type SessoType = 'M' | 'F' | 'altro' | 'non_specificato';
 
-export default function OnboardingPage() {
+// 1. IL TUO COMPONENTE DIVENTA "OnboardingContent"
+function OnboardingContent() {
   // Stati aggiunti: Nome e Cognome
   const [nome, setNome] = useState('')
   const [cognome, setCognome] = useState('')
@@ -679,5 +680,18 @@ export default function OnboardingPage() {
         </form>
       </div>
     </main>
+  )
+}
+
+// 2. IL COMPONENTE PRINCIPALE DIVENTA QUESTO "WRAPPER" CON SUSPENSE
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-400 via-purple-500 to-pink-500">
+        <p className="font-black text-white uppercase text-2xl animate-pulse">Caricamento...</p>
+      </div>
+    }>
+      <OnboardingContent />
+    </Suspense>
   )
 }
