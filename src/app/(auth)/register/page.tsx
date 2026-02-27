@@ -51,7 +51,8 @@ export default function RegisterPage() {
       email: emailPulita,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        // Usiamo l'URL esplicito della tua produzione
+        emailRedirectTo: `https://studentup.org/auth/callback?next=/onboarding`,
       },
     })
 
