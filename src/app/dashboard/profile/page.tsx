@@ -38,6 +38,10 @@ export default function ProfilePage() {
   const [corsoSelezionato, setCorsoSelezionato] = useState<string | null>(null)
   const [annoInizio, setAnnoInizio] = useState<number>(new Date().getFullYear())
   const [studenteCorsoId, setStudenteCorsoId] = useState<string | null>(null)
+
+  const [ricercaCorso, setRicercaCorso] = useState('')
+  const [corsoAltro, setCorsoAltro] = useState('')
+  const [tipoCorsoAltro, setTipoCorsoAltro] = useState('')
   
   // --- STATI FILE ---
   const [avatarUrl, setAvatarUrl] = useState('')
@@ -153,6 +157,8 @@ export default function ProfilePage() {
         .from('corso_di_studi')
         .select('id, nome') 
         .order('nome', { ascending: true })
+
+        if (corsi) setCorsiDisponibili(corsi as any)
 
         const { data: corsoAttuale } = await supabase.from('studente_corso').select('id, corso_id, anno_inizio').eq('studente_id', user.id).eq('completato', false).order('anno_inizio', { ascending: false }).limit(1).maybeSingle()
 
@@ -272,7 +278,26 @@ export default function ProfilePage() {
 
       if (updateError) throw updateError
 
-      if (corsoSelezionato) {
+      // ---> SOSTITUISCI IL BLOCCO DI SALVATAGGIO CORSO CON QUESTO <---
+      if (corsoSelezionato === 'altro') {
+        if (!tipoCorsoAltro || !corsoAltro.trim()) {
+          throw new Error("Compila il tipo e il nome del nuovo corso di laurea.")
+        }
+        
+        const { error: reqError } = await (supabase as any)
+          .from('richiesta_nuovo_corso')
+          .insert({
+            nome_corso: corsoAltro.trim(),
+            tipo_corso: tipoCorsoAltro,
+            studente_id: user.id
+          })
+          
+        if (reqError) throw reqError
+        
+        // Resetta la selezione in modo visivo
+        setCorsoSelezionato(studenteCorsoId ? (corsiDisponibili.find(c => c.id === corsoSelezionato)?.id || null) : null)
+        
+      } else if (corsoSelezionato) {
         if (studenteCorsoId) {
           await supabase.from('studente_corso').update({ corso_id: corsoSelezionato, anno_inizio: annoInizio }).eq('id', studenteCorsoId)
         } else {
@@ -474,17 +499,54 @@ export default function ProfilePage() {
                 <span className="absolute -top-3.5 sm:-top-5 left-4 sm:left-6 bg-white border-2 sm:border-4 border-gray-900 px-3 py-0.5 sm:px-4 sm:py-1 rounded-lg sm:rounded-xl font-black uppercase tracking-widest text-gray-900 text-[10px] sm:text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">Studi 📚</span>
                 {isEditing ? (
                   <div className="grid gap-3 sm:gap-4 mt-1 sm:mt-2">
+                    
+                    {/* BARRA DI RICERCA */}
+                    <input 
+                      type="text" 
+                      placeholder="🔍 Cerca il tuo corso..." 
+                      value={ricercaCorso}
+                      onChange={(e) => setRicercaCorso(e.target.value)}
+                      className="w-full px-3 py-2 sm:px-4 sm:py-3 bg-white rounded-lg sm:rounded-xl border-[3px] sm:border-4 border-gray-900 focus:outline-none focus:translate-x-[2px] focus:translate-y-[2px] shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] font-bold text-gray-900 text-xs sm:text-base transition-all"
+                    />
+
+                    {/* SELECT DEI CORSI FILTRATI */}
                     <select value={corsoSelezionato || ''} onChange={(e) => setCorsoSelezionato(e.target.value || null)} className="w-full px-3 py-2 sm:px-4 sm:py-3 bg-white rounded-lg sm:rounded-xl border-[3px] sm:border-4 border-gray-900 focus:outline-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] font-bold text-gray-900 text-xs sm:text-base cursor-pointer">
                       <option value="">Seleziona un corso...</option>
-                      {corsiDisponibili.map(corso => <option key={corso.id} value={corso.id}>{corso.nome}</option>)}
+                      {corsiDisponibili
+                        .filter(c => c.nome.toLowerCase().includes(ricercaCorso.toLowerCase()))
+                        .map(corso => <option key={corso.id} value={corso.id}>{corso.nome}</option>)
+                      }
+                      <option value="altro" className="font-black bg-blue-100 text-blue-900">➕ Non trovo il mio corso (Aggiungilo)</option>
                     </select>
+                    
+                    {/* FORM "ALTRO" A SCOMPARSA */}
+                    {corsoSelezionato === 'altro' && (
+                      <div className="p-3 sm:p-4 bg-white border-[3px] sm:border-4 border-blue-900 rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-3 animate-in fade-in zoom-in-95">
+                        <div>
+                          <label className="block text-[10px] sm:text-xs font-black uppercase tracking-widest text-gray-900 mb-1">Tipo di Laurea *</label>
+                          <select value={tipoCorsoAltro} onChange={e => setTipoCorsoAltro(e.target.value)} required className="w-full px-3 py-2 bg-gray-50 border-2 border-gray-900 rounded-lg text-xs sm:text-sm font-bold text-gray-900 focus:outline-none">
+                            <option value="" disabled>Seleziona il tipo...</option>
+                            <option value="Triennale">Triennale (3 anni)</option>
+                            <option value="Magistrale">Magistrale (2 anni)</option>
+                            <option value="Ciclo Unico">Ciclo Unico (5/6 anni)</option>
+                            <option value="Master">Master / Specializzazione</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] sm:text-xs font-black uppercase tracking-widest text-gray-900 mb-1">Nome esatto *</label>
+                          <input type="text" value={corsoAltro} onChange={e => setCorsoAltro(e.target.value)} required placeholder="Es: Ingegneria Aerospaziale" className="w-full px-3 py-2 bg-gray-50 border-2 border-gray-900 rounded-lg text-xs sm:text-sm font-bold text-gray-900 focus:outline-none" />
+                        </div>
+                        <p className="text-[9px] sm:text-[10px] font-bold text-gray-600 italic">⚠️ Il corso andrà in approvazione allo staff.</p>
+                      </div>
+                    )}
+
                     <select value={annoInizio} onChange={(e) => setAnnoInizio(parseInt(e.target.value))} className="w-full px-3 py-2 sm:px-4 sm:py-3 bg-white rounded-lg sm:rounded-xl border-[3px] sm:border-4 border-gray-900 focus:outline-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] font-bold text-gray-900 text-xs sm:text-base cursor-pointer">
                       {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(year => <option key={year} value={year}>{year}</option>)}
                     </select>
                   </div>
                 ) : (
                   <div className="mt-1 sm:mt-2 flex items-center gap-3 sm:gap-4">
-                    {corsoSelezionato ? (
+                    {corsoSelezionato && corsoSelezionato !== 'altro' ? (
                       <>
                         <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg sm:rounded-xl bg-white border-2 sm:border-4 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center -rotate-6"><span className="text-xl sm:text-3xl">🎓</span></div>
                         <div>
@@ -496,7 +558,7 @@ export default function ProfilePage() {
                       <span className="text-gray-500 font-bold italic text-sm">Nessun corso selezionato</span>
                     )}
                   </div>
-                )}
+                )} 
               </div>
 
               <div className="bg-green-50 border-[3px] sm:border-4 border-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 relative mt-2 md:mt-0">
