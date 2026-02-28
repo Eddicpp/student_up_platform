@@ -729,7 +729,7 @@ export default function CreateProjectPage() {
               </div>
             )}
 
-            {/* SEZIONE: Figure Ricercate (MODIFICATA PER LEGGIBILITÀ) */}
+            {/* SEZIONE: Figure Ricercate */}
             {activeSection === 'figure' && (
               <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
                 <div className="bg-white rounded-2xl sm:rounded-3xl border-3 sm:border-4 border-gray-900 p-4 sm:p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
@@ -773,7 +773,7 @@ export default function CreateProjectPage() {
                                 <select
                                   value={figura.corso_id || ''}
                                   onChange={(e) => updateFigura(figura.id, { corso_id: e.target.value || null })}
-                                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 rounded-xl border-2 border-gray-900 text-sm sm:text-base font-bold focus:border-blue-500 outline-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 rounded-xl border-2 border-gray-900 text-sm sm:text-base font-bold text-gray-900 focus:border-blue-500 outline-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
                                 >
                                   <option value="">Qualsiasi corso</option>
                                   {corsiDisponibili.map(corso => (
@@ -789,7 +789,7 @@ export default function CreateProjectPage() {
                                 <select
                                   value={figura.anno_preferito || ''}
                                   onChange={(e) => updateFigura(figura.id, { anno_preferito: e.target.value ? parseInt(e.target.value) : null })}
-                                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 rounded-xl border-2 border-gray-900 text-sm sm:text-base font-bold focus:border-blue-500 outline-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 rounded-xl border-2 border-gray-900 text-sm sm:text-base font-bold text-gray-900 focus:border-blue-500 outline-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
                                 >
                                   <option value="">Qualsiasi anno</option>
                                   <option value="1">1° Anno</option>
@@ -805,7 +805,7 @@ export default function CreateProjectPage() {
                                 <select
                                   value={figura.quantita}
                                   onChange={(e) => updateFigura(figura.id, { quantita: parseInt(e.target.value) })}
-                                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 rounded-xl border-2 border-gray-900 text-sm sm:text-base font-bold focus:border-blue-500 outline-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 rounded-xl border-2 border-gray-900 text-sm sm:text-base font-bold text-gray-900 focus:border-blue-500 outline-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
                                 >
                                   {[1,2,3,4,5,6,7,8,9,10].map(n => (
                                     <option key={n} value={n}>{n} {n === 1 ? 'persona' : 'persone'}</option>
@@ -847,7 +847,7 @@ export default function CreateProjectPage() {
                                   placeholder="Inserisci il ruolo..."
                                   value={figura.titolo_libero}
                                   onChange={(e) => updateFigura(figura.id, { titolo_libero: e.target.value })}
-                                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 rounded-xl border-2 border-gray-900 text-sm sm:text-base font-bold placeholder:text-gray-400 focus:border-purple-500 outline-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 rounded-xl border-2 border-gray-900 text-sm sm:text-base font-bold text-gray-900 placeholder:text-gray-400 focus:border-purple-500 outline-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
                                 />
                               </div>
                               <div>
@@ -855,7 +855,7 @@ export default function CreateProjectPage() {
                                 <select
                                   value={figura.quantita}
                                   onChange={(e) => updateFigura(figura.id, { quantita: parseInt(e.target.value) })}
-                                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 rounded-xl border-2 border-gray-900 text-sm sm:text-base font-bold focus:border-purple-500 outline-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 rounded-xl border-2 border-gray-900 text-sm sm:text-base font-bold text-gray-900 focus:border-purple-500 outline-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
                                 >
                                   {[1,2,3,4,5,6,7,8,9,10].map(n => (
                                     <option key={n} value={n}>{n} {n === 1 ? 'persona' : 'persone'}</option>
@@ -870,7 +870,7 @@ export default function CreateProjectPage() {
                                 rows={3}
                                 value={figura.descrizione_libera}
                                 onChange={(e) => updateFigura(figura.id, { descrizione_libera: e.target.value })}
-                                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 rounded-xl border-2 border-gray-900 text-sm sm:text-base font-bold placeholder:text-gray-400 focus:border-purple-500 outline-none resize-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 rounded-xl border-2 border-gray-900 text-sm sm:text-base font-bold text-gray-900 placeholder:text-gray-400 focus:border-purple-500 outline-none resize-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
                               />
                             </div>
                           </div>

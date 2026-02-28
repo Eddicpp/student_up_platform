@@ -48,7 +48,7 @@ export default function ManageApplicationPage() {
   const [newCoverFile, setNewCoverFile] = useState<File | null>(null)
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
   const [coverPositionY, setCoverPositionY] = useState(50) 
-  const [coverZoom, setCoverZoom] = useState(1) // NUOVO: Gestione zoom (da 1 a 3)
+  const [coverZoom, setCoverZoom] = useState(1)
   const [savingEdit, setSavingEdit] = useState(false)
   const [editSuccess, setEditSuccess] = useState(false)
 
@@ -210,28 +210,65 @@ export default function ManageApplicationPage() {
     if (!selectedApp || !modalAction) return
     setActionLoading(true)
 
-    const { error } = await supabase
-      .from('partecipazione')
-      .update({ stato: modalAction })
-      .eq('id', selectedApp.id)
+    try {
+      // 1. Aggiorna DB
+      const { error } = await supabase
+        .from('partecipazione')
+        .update({ stato: modalAction })
+        .eq('id', selectedApp.id)
 
-    if (!error) {
+      if (error) throw error;
+
+      // 2. Aggiorna UI
       setApplications(apps => apps.map(app => 
         app.id === selectedApp.id ? { ...app, stato: modalAction } : app
       ))
-      setSelectedApp({ ...selectedApp, stato: modalAction })
+      setSelectedApp((prev: any) => prev ? ({ ...prev, stato: modalAction }) : null)
       
+      // LOGICA TEAM CORRETTA
       if (modalAction === 'accepted') {
-        setTeamMembers(prev => [...prev, { ...selectedApp, stato: 'accepted' }])
+        setTeamMembers(prev => {
+          if (prev.some(m => m.id === selectedApp.id)) return prev;
+          return [...prev, { ...selectedApp, stato: 'accepted' }];
+        })
       } else {
         setTeamMembers(prev => prev.filter(m => m.id !== selectedApp.id))
       }
-    }
-    
-    setActionLoading(false)
-    setShowModal(false)
-  }
 
+      // 3. Email (All'indirizzo VERO dello studente)
+      if ((modalAction === 'accepted' || modalAction === 'rejected') && selectedApp.studente?.email) {
+        const emailObject = {
+          to: selectedApp.studente.email,
+          subject: modalAction === 'accepted' 
+            ? `🎉 Sei nel team! Candidatura Accettata per ${project?.titolo || 'il progetto'}` 
+            : `Risposta alla tua candidatura per ${project?.titolo || 'il progetto'}`,
+          message: modalAction === 'accepted'
+            ? `Ottime notizie! Il creatore ha accettato la tua candidatura per il progetto "${project?.titolo || ''}". Entra ora in StudentUP per accedere al Workspace del team e iniziare a collaborare.`
+            : `Ti informiamo che, sfortunatamente, la tua candidatura per il progetto "${project?.titolo || ''}" non è stata selezionata. Non scoraggiarti, ci sono tante altre idee su StudentUP!`,
+          projectName: project?.titolo || 'Progetto StudentUP'
+        }
+
+        const res = await fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(emailObject)
+        })
+        
+        if (!res.ok) {
+          console.warn("Errore server email, controlla i log di Vercel/Resend.")
+        }
+      }
+
+    } catch (err) {
+      console.error("Errore durante l'azione:", err)
+      alert("C'è stato un errore nell'aggiornamento. Riprova.")
+    } finally {
+      setActionLoading(false)
+      setShowModal(false)
+      setModalAction(null)
+    }
+  }
+  
   // Gestione ruoli
   const handleRoleChange = async (partecipazioneId: string, nuovoRuolo: 'admin' | 'membro') => {
     if (!window.confirm(`Cambiare ruolo in ${nuovoRuolo.toUpperCase()}?`)) return
@@ -333,12 +370,11 @@ export default function ManageApplicationPage() {
       setNewCoverFile(file)
       const previewUrl = URL.createObjectURL(file)
       setCoverPreview(previewUrl)
-      setCoverPositionY(50) // Resetta la posizione al centro
+      setCoverPositionY(50)
+      setCoverZoom(1)
     }
   }
 
-  // Funzione per generare l'immagine ritagliata tramite HTML5 Canvas
-  // Funzione per generare l'immagine ritagliata tramite HTML5 Canvas con Posizione e Zoom
   const generateCroppedFile = (imageUrl: string, positionY: number, zoom: number): Promise<File> => {
     return new Promise((resolve, reject) => {
       const img = new Image()
@@ -353,7 +389,6 @@ export default function ManageApplicationPage() {
         const ctx = canvas.getContext('2d')
         if (!ctx) return reject(new Error("Canvas context missing"))
 
-        // Calcoliamo la porzione di immagine da catturare in base allo zoom
         const sourceWidth = img.width / zoom
         const sourceHeight = img.height / zoom
 
@@ -368,7 +403,6 @@ export default function ManageApplicationPage() {
           cropHeight = sourceWidth / targetRatio
         }
 
-        // Calcolo offset: X al centro, Y basato sullo slider
         const sourceX = (img.width - cropWidth) / 2
         const sourceY = (img.height - cropHeight) * (positionY / 100)
 
@@ -384,7 +418,6 @@ export default function ManageApplicationPage() {
     })
   }
 
-  // Salva le modifiche al progetto (incluso il crop)
   const handleSaveEdit = async () => {
     setSavingEdit(true)
     setEditSuccess(false)
@@ -392,7 +425,6 @@ export default function ManageApplicationPage() {
     try {
       let finalFotoUrl = editForm.foto_url
 
-      // Se c'è un'immagine, applichiamo ritaglio e zoom (anche a quella già esistente se l'utente ha mosso gli slider)
       if (coverPreview && (newCoverFile || coverPositionY !== 50 || coverZoom !== 1)) {
         const croppedFile = await generateCroppedFile(coverPreview, coverPositionY, coverZoom)
         finalFotoUrl = await uploadImage(croppedFile)
@@ -414,13 +446,11 @@ export default function ManageApplicationPage() {
           descrizione: editForm.descrizione,
           foto_url: finalFotoUrl
         }))
+        
         setEditForm(prev => ({ ...prev, foto_url: finalFotoUrl }))
         setNewCoverFile(null) 
-        setCoverPositionY(50) // Resetta posizione
-        setCoverZoom(1)       // Resetta zoom
-        setEditForm(prev => ({ ...prev, foto_url: finalFotoUrl }))
-        setNewCoverFile(null) // Resetta il file nuovo così lo slider scompare
-        setCoverPositionY(50) // Resetta dopo il salvataggio
+        setCoverPositionY(50)
+        setCoverZoom(1)
         
         if (finalFotoUrl) {
           setCoverPreview(finalFotoUrl)
@@ -448,7 +478,6 @@ export default function ManageApplicationPage() {
       const subject = encodeURIComponent(`[${project?.titolo}] Aggiornamento dal team`)
       const body = encodeURIComponent(`Ciao team!\n\n`)
       
-      // Apre Gmail in una nuova scheda precompilando i campi
       window.open(
         `https://mail.google.com/mail/?view=cm&fs=1&bcc=${bcc}&su=${subject}&body=${body}`,
         '_blank'
@@ -477,7 +506,6 @@ export default function ManageApplicationPage() {
 
   const filteredApps = applications?.filter(a => a?.stato === filter) || []
 
-  // Stili grafici
   const cardStyle = "bg-white rounded-2xl border-2 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
   const cardStyleLight = "bg-white rounded-2xl border-2 border-gray-800 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.8)]"
 
@@ -553,7 +581,6 @@ export default function ManageApplicationPage() {
         {/* Tab: Candidature */}
         {activeTab === 'candidature' && (
           <div className="space-y-6">
-            {/* Stats mini */}
             <div className="grid grid-cols-3 gap-4">
               <div className={`${cardStyleLight} p-4`}>
                 <p className="text-2xl font-black text-amber-600">{stats.pending}</p>
@@ -569,7 +596,6 @@ export default function ManageApplicationPage() {
               </div>
             </div>
 
-            {/* Filtri */}
             <div className="flex gap-2 overflow-x-auto pb-2">
               {[
                 { id: 'pending' as const, label: 'In Attesa', count: stats.pending, color: 'amber' },
@@ -597,7 +623,6 @@ export default function ManageApplicationPage() {
               ))}
             </div>
 
-            {/* Lista candidature */}
             <div className="grid lg:grid-cols-3 gap-6">
               <div className="lg:col-span-1 space-y-3 max-h-[600px] overflow-y-auto pr-2">
                 {filteredApps.length === 0 ? (
@@ -845,7 +870,6 @@ export default function ManageApplicationPage() {
               </div>
             </div>
 
-            {/* Conversioni */}
             <div className={`${cardStyle} p-6`}>
               <h3 className="text-base font-black text-gray-900 mb-4">📈 Tassi di Conversione</h3>
               <div className="grid sm:grid-cols-2 gap-6">
@@ -880,7 +904,6 @@ export default function ManageApplicationPage() {
               </div>
             </div>
 
-            {/* Summary */}
             <div className="bg-gray-900 rounded-2xl p-6 text-white border-2 border-gray-700 shadow-[4px_4px_0px_0px_rgba(55,65,81,1)]">
               <h3 className="text-base font-black mb-4">📋 Riepilogo</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -926,7 +949,6 @@ export default function ManageApplicationPage() {
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">Immagine di Copertina</label>
                   
-                  {/* Container Anteprima 16:9 */}
                   <div 
                     className="relative border-2 border-dashed border-gray-400 rounded-xl overflow-hidden hover:border-gray-900 transition-colors group cursor-pointer bg-gray-50"
                     style={{ aspectRatio: '16/9' }}
@@ -943,7 +965,6 @@ export default function ManageApplicationPage() {
                           src={coverPreview} 
                           alt="Preview" 
                           className="w-full h-full object-cover transition-all" 
-                          // Applica visivamente il posizionamento e zoom SEMPRE
                           style={{ 
                             objectPosition: `center ${coverPositionY}%`,
                             transform: `scale(${coverZoom})`
@@ -965,7 +986,6 @@ export default function ManageApplicationPage() {
                     )}
                   </div>
 
-                  {/* Slider Visibili SEMPRE se c'è un'immagine, non solo nuova */}
                   {coverPreview && (
                     <div className="mt-4 p-4 bg-white/60 border-2 border-gray-300 rounded-xl backdrop-blur-sm animate-in fade-in zoom-in duration-300 space-y-4">
                       <div>
