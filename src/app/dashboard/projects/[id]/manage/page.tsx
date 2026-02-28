@@ -210,57 +210,72 @@ export default function ManageApplicationPage() {
     if (!selectedApp || !modalAction) return
     setActionLoading(true)
 
-    const { error } = await supabase
-      .from('partecipazione')
-      .update({ stato: modalAction })
-      .eq('id', selectedApp.id)
+    try {
+      // 1. Aggiorna il database Supabase
+      const { error } = await supabase
+        .from('partecipazione')
+        .update({ stato: modalAction })
+        .eq('id', selectedApp.id)
 
-    if (!error) {
-      // 1. Aggiorna lo stato visivo nel sito
+      if (error) throw error;
+
+      // 2. Aggiorna l'interfaccia (React State)
       setApplications(apps => apps.map(app => 
         app.id === selectedApp.id ? { ...app, stato: modalAction } : app
       ))
-      setSelectedApp({ ...selectedApp, stato: modalAction })
+      setSelectedApp(prev => ({ ...prev, stato: modalAction }))
       
+      // LOGICA CORRETTA PER IL TEAM
       if (modalAction === 'accepted') {
-        setTeamMembers(prev => [...prev, { ...selectedApp, stato: 'accepted' }])
+        // Aggiunge al team SOLO se non c'è già
+        setTeamMembers(prev => {
+          if (prev.find(m => m.id === selectedApp.id)) return prev;
+          return [...prev, { ...selectedApp, stato: 'accepted' }];
+        })
       } else {
+        // Rimuove dal team in tutti gli altri casi (rejected o pending)
         setTeamMembers(prev => prev.filter(m => m.id !== selectedApp.id))
       }
 
-      // 2. INVIO EMAIL CON RESEND
-      // Manda la mail solo se l'utente è stato accettato o rifiutato (non se viene riportato in 'pending')
+      // 3. INVIO EMAIL CON RESEND
       if (modalAction === 'accepted' || modalAction === 'rejected') {
-        try {
-          const emailObject = {
-            // Usa la mail dello studente dal DB. (Per i test gratuiti di Resend, qui andrà la TUA mail fissa)
-            to: selectedApp.studente?.email, 
-            subject: modalAction === 'accepted' 
-              ? '🎉 Sei nel team! Candidatura Accettata' 
-              : 'Risposta alla tua candidatura su StudentUP',
-            message: modalAction === 'accepted'
-              ? `Ottime notizie! Il creatore ha accettato la tua candidatura per il progetto. Entra ora in StudentUP per accedere al Workspace del team e iniziare a collaborare.`
-              : `Ti informiamo che, sfortunatamente, la tua candidatura per questo progetto non è stata selezionata. Non scoraggiarti, ci sono tanti altri progetti che cercano le tue skill!`,
-            projectName: project?.titolo || 'Un progetto'
-          }
+        
+        // 🔴 PER I TEST: Usa la tua mail di Resend. 
+        // Quando andrai online cambieremo questa riga con: selectedApp.studente?.email
+        const destinatario = 'INSERISCI_QUI_LA_TUA_MAIL_DI_RESEND@GMAIL.COM'
 
-          // Chiama la nostra API Route
-          await fetch('/api/send-email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(emailObject)
-          })
-          
-        } catch (emailError) {
-          console.error("Errore durante l'invio della mail:", emailError)
-          // Nota: non blocchiamo l'utente se la mail fallisce, il cambio di stato nel DB è già avvenuto
+        const emailObject = {
+          to: destinatario, 
+          subject: modalAction === 'accepted' 
+            ? '🎉 Sei nel team! Candidatura Accettata' 
+            : 'Risposta alla tua candidatura su StudentUP',
+          message: modalAction === 'accepted'
+            ? `Ottime notizie! Il creatore ha accettato la tua candidatura per il progetto. Entra ora in StudentUP per accedere al Workspace del team.`
+            : `Ti informiamo che, sfortunatamente, la tua candidatura per questo progetto non è stata selezionata. Non scoraggiarti, cerca altre sfide!`,
+          projectName: project?.titolo || 'Progetto StudentUP'
         }
+
+        const res = await fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(emailObject)
+        })
+        
+        // Stampiamo la risposta di Resend nella console per capire se ci blocca
+        const data = await res.json()
+        console.log("Risposta server email:", data)
       }
+
+    } catch (err) {
+      console.error("Errore durante l'azione:", err)
+      alert("C'è stato un errore nell'aggiornamento. Riprova.")
+    } finally {
+      setActionLoading(false)
+      setShowModal(false)
+      setModalAction(null)
     }
-    
-    setActionLoading(false)
-    setShowModal(false)
   }
+  
   // Gestione ruoli
   const handleRoleChange = async (partecipazioneId: string, nuovoRuolo: 'admin' | 'membro') => {
     if (!window.confirm(`Cambiare ruolo in ${nuovoRuolo.toUpperCase()}?`)) return
