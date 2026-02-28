@@ -216,6 +216,7 @@ export default function ManageApplicationPage() {
       .eq('id', selectedApp.id)
 
     if (!error) {
+      // 1. Aggiorna lo stato visivo nel sito
       setApplications(apps => apps.map(app => 
         app.id === selectedApp.id ? { ...app, stato: modalAction } : app
       ))
@@ -226,12 +227,40 @@ export default function ManageApplicationPage() {
       } else {
         setTeamMembers(prev => prev.filter(m => m.id !== selectedApp.id))
       }
+
+      // 2. INVIO EMAIL CON RESEND
+      // Manda la mail solo se l'utente è stato accettato o rifiutato (non se viene riportato in 'pending')
+      if (modalAction === 'accepted' || modalAction === 'rejected') {
+        try {
+          const emailObject = {
+            // Usa la mail dello studente dal DB. (Per i test gratuiti di Resend, qui andrà la TUA mail fissa)
+            to: selectedApp.studente?.email, 
+            subject: modalAction === 'accepted' 
+              ? '🎉 Sei nel team! Candidatura Accettata' 
+              : 'Risposta alla tua candidatura su StudentUP',
+            message: modalAction === 'accepted'
+              ? `Ottime notizie! Il creatore ha accettato la tua candidatura per il progetto. Entra ora in StudentUP per accedere al Workspace del team e iniziare a collaborare.`
+              : `Ti informiamo che, sfortunatamente, la tua candidatura per questo progetto non è stata selezionata. Non scoraggiarti, ci sono tanti altri progetti che cercano le tue skill!`,
+            projectName: project?.titolo || 'Un progetto'
+          }
+
+          // Chiama la nostra API Route
+          await fetch('/api/send-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(emailObject)
+          })
+          
+        } catch (emailError) {
+          console.error("Errore durante l'invio della mail:", emailError)
+          // Nota: non blocchiamo l'utente se la mail fallisce, il cambio di stato nel DB è già avvenuto
+        }
+      }
     }
     
     setActionLoading(false)
     setShowModal(false)
   }
-
   // Gestione ruoli
   const handleRoleChange = async (partecipazioneId: string, nuovoRuolo: 'admin' | 'membro') => {
     if (!window.confirm(`Cambiare ruolo in ${nuovoRuolo.toUpperCase()}?`)) return
