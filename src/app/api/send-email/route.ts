@@ -17,7 +17,7 @@ export async function POST(request: Request) {
 
     // Invia la mail tramite Resend
     const { data, error } = await resend.emails.send({
-      from: 'StudentUP <onboarding@resend.dev>', // Finché non verifichi il dominio, usa questa
+      from: 'StudentUP <noreply@studentup.org>',
       to: [to],
       subject: subject,
       html: `
