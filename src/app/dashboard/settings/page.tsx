@@ -242,7 +242,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-3 sm:px-4 pb-20 dark:text-white transition-colors duration-300">
+    <div className="max-w-3xl mx-auto px-4 ... dark:bg-[#1f2937] dark:text-white transition-colors duration-300">
       
       {/* Toast Notification aggiornato */}
       {toast && (

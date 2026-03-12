@@ -3,31 +3,22 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* 1. QUESTA DICE A TAILWIND DI ASCOLTARE IL CAMBIO TEMA */
+@custom-variant dark (&:is(.dark *));
 
 :root, .light {
   --background: #ffffff;
   --foreground: #171717;
 }
 
+/* 2. QUESTO È IL COLORE DELLO SFONDO QUANDO CLICCHI "SCURO" */
 .dark {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  --background: #1f2937; /* Grigio scuro/bluastro */
+  --foreground: #f9fafb; /* Testo chiaro */
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-  transition: background-color 0.3s, color 0.3s; /* Rende il cambio fluido */
+  transition: background-color 0.3s, color 0.3s;
 }
