@@ -293,28 +293,61 @@ export default function AdminPanel() {
 
       {/* TABS - Scrollable on mobile */}
       <div className="flex gap-2 sm:gap-4 overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0">
-        {[
-          { id: 'utenti' as const, label: 'Utenti', icon: '👤', count: users.length, color: 'blue' },
-          { id: 'progetti' as const, label: 'Progetti', icon: '📁', count: projects.length, color: 'red' },
-          { id: 'corsi' as const, label: 'Corsi', icon: '🎓', count: richiesteCorsi.length, color: 'green', badge: richiesteCorsi.length > 0 },
-          ...(user?.is_owner ? [{ id: 'logs' as const, label: 'Log', icon: '🕵️', count: logs.length, color: 'gray' }] : [])
-        ].map(tab => (
+        <button 
+          onClick={() => setActiveTab('utenti')}
+          className={`flex-shrink-0 px-3 sm:px-6 py-2.5 sm:py-4 rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-wider transition-all border-2 sm:border-4 border-gray-900 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap ${
+            activeTab === 'utenti' 
+              ? 'bg-blue-400 text-gray-900 shadow-none translate-x-[2px] translate-y-[2px]' 
+              : 'bg-white text-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+          }`}
+        >
+          <span className="text-base sm:text-xl">👤</span>
+          <span className="hidden sm:inline">Utenti</span>
+          <span className="text-[9px] sm:text-xs bg-gray-900 text-white px-1.5 sm:px-2 py-0.5 rounded-lg font-black">{users.length}</span>
+        </button>
+
+        <button 
+          onClick={() => setActiveTab('progetti')}
+          className={`flex-shrink-0 px-3 sm:px-6 py-2.5 sm:py-4 rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-wider transition-all border-2 sm:border-4 border-gray-900 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap ${
+            activeTab === 'progetti' 
+              ? 'bg-red-400 text-gray-900 shadow-none translate-x-[2px] translate-y-[2px]' 
+              : 'bg-white text-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+          }`}
+        >
+          <span className="text-base sm:text-xl">📁</span>
+          <span className="hidden sm:inline">Progetti</span>
+          <span className="text-[9px] sm:text-xs bg-gray-900 text-white px-1.5 sm:px-2 py-0.5 rounded-lg font-black">{projects.length}</span>
+        </button>
+
+        <button 
+          onClick={() => setActiveTab('corsi')}
+          className={`flex-shrink-0 px-3 sm:px-6 py-2.5 sm:py-4 rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-wider transition-all border-2 sm:border-4 border-gray-900 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap ${
+            activeTab === 'corsi' 
+              ? 'bg-green-400 text-gray-900 shadow-none translate-x-[2px] translate-y-[2px]' 
+              : 'bg-white text-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+          }`}
+        >
+          <span className="text-base sm:text-xl">🎓</span>
+          <span className="hidden sm:inline">Corsi</span>
+          {richiesteCorsi.length > 0 && (
+            <span className="text-[9px] sm:text-xs bg-red-500 text-white px-1.5 sm:px-2 py-0.5 rounded-lg font-black animate-pulse">{richiesteCorsi.length}</span>
+          )}
+        </button>
+
+        {user?.is_owner && (
           <button 
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => setActiveTab('logs')}
             className={`flex-shrink-0 px-3 sm:px-6 py-2.5 sm:py-4 rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-wider transition-all border-2 sm:border-4 border-gray-900 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap ${
-              activeTab === tab.id 
-                ? `bg-${tab.color}-400 text-gray-900 shadow-none translate-x-[2px] translate-y-[2px]` 
+              activeTab === 'logs' 
+                ? 'bg-gray-900 text-white shadow-none translate-x-[2px] translate-y-[2px]' 
                 : 'bg-white text-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
             }`}
-            style={activeTab === tab.id ? { backgroundColor: tab.color === 'blue' ? '#60a5fa' : tab.color === 'red' ? '#f87171' : tab.color === 'green' ? '#4ade80' : '#374151', color: tab.color === 'gray' ? 'white' : '#111827' } : {}}
           >
-            <span className="text-base sm:text-xl">{tab.icon}</span>
-            <span className="hidden sm:inline">{tab.label}</span>
-            <span className="text-[9px] sm:text-xs bg-white/80 text-gray-900 px-1.5 sm:px-2 py-0.5 rounded-lg font-black">{tab.count}</span>
-            {tab.badge && <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />}
+            <span className="text-base sm:text-xl">🕵️</span>
+            <span className="hidden sm:inline">Log</span>
+            <span className="text-[9px] sm:text-xs bg-amber-400 text-gray-900 px-1.5 sm:px-2 py-0.5 rounded-lg font-black">{logs.length}</span>
           </button>
-        ))}
+        )}
       </div>
 
       {/* TAB: UTENTI */}
@@ -395,31 +428,31 @@ export default function AdminPanel() {
                   <img src={u.avatar_url || '/default-avatar.png'} alt="" className="w-12 h-12 rounded-xl object-cover border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]" />
                   <div className="flex-1 min-w-0">
                     <p className="font-black text-gray-900 uppercase text-sm truncate">{u.nome} {u.cognome}</p>
-                    <p className="text-[10px] text-gray-500 font-bold truncate">{u.email}</p>
+                    <p className="text-[10px] text-gray-700 font-bold truncate">{u.email}</p>
                     
                     <div className="flex flex-wrap gap-1.5 mt-2">
                       {u.is_owner ? (
-                        <span className="bg-yellow-300 text-gray-900 border-2 border-gray-900 text-[9px] font-black px-2 py-0.5 rounded-lg uppercase">👑 OWNER</span>
+                        <span className="bg-yellow-400 text-gray-900 border-2 border-gray-900 text-[9px] font-black px-2 py-0.5 rounded-lg uppercase shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">👑 OWNER</span>
                       ) : u.is_system_admin ? (
                         <span className="bg-gray-900 text-white text-[9px] font-black px-2 py-0.5 rounded-lg uppercase">🛡️ STAFF</span>
                       ) : (
-                        <span className="bg-gray-200 text-gray-600 text-[9px] font-black px-2 py-0.5 rounded-lg uppercase">Studente</span>
+                        <span className="bg-gray-300 text-gray-800 text-[9px] font-black px-2 py-0.5 rounded-lg uppercase">Studente</span>
                       )}
                       
                       {u.stato_account === 'bannato' ? (
                         <span className="bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-lg uppercase">🚫 Ban</span>
                       ) : u.stato_account === 'in_pausa' ? (
-                        <span className="bg-orange-400 text-gray-900 text-[9px] font-black px-2 py-0.5 rounded-lg uppercase">⏸ Pausa</span>
+                        <span className="bg-orange-500 text-white text-[9px] font-black px-2 py-0.5 rounded-lg uppercase">⏸ Pausa</span>
                       ) : (
-                        <span className="bg-green-400 text-gray-900 text-[9px] font-black px-2 py-0.5 rounded-lg uppercase">✅ Attivo</span>
+                        <span className="bg-green-500 text-white text-[9px] font-black px-2 py-0.5 rounded-lg uppercase">✅ Attivo</span>
                       )}
                     </div>
                   </div>
                 </div>
                 
                 {/* Actions */}
-                <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t-2 border-gray-200">
-                  <Link href={`/dashboard/user/${u.id}`} className={`flex-1 text-center px-3 py-2 rounded-lg font-black text-[10px] uppercase bg-white ${buttonStyle}`}>
+                <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t-2 border-gray-300">
+                  <Link href={`/dashboard/user/${u.id}`} className={`flex-1 text-center px-3 py-2 rounded-lg font-black text-[10px] uppercase bg-white text-gray-900 ${buttonStyle}`}>
                     👁️ Profilo
                   </Link>
                   {!u.is_owner && (
@@ -427,7 +460,7 @@ export default function AdminPanel() {
                       {u.stato_account === 'attivo' && (
                         <select 
                           onChange={(e) => e.target.value && applyPause(u, parseInt(e.target.value))}
-                          className={`px-2 py-2 rounded-lg font-black text-[10px] uppercase bg-orange-100 ${buttonStyle} cursor-pointer`}
+                          className={`px-2 py-2 rounded-lg font-black text-[10px] uppercase bg-orange-200 text-gray-900 ${buttonStyle} cursor-pointer`}
                           defaultValue=""
                         >
                           <option value="" disabled>⏸ Pausa</option>
@@ -439,13 +472,13 @@ export default function AdminPanel() {
                       )}
                       {user?.is_owner && (
                         <>
-                          <button onClick={() => toggleAdmin(u)} className={`px-3 py-2 rounded-lg font-black text-[10px] uppercase ${u.is_system_admin ? 'bg-gray-900 text-white' : 'bg-blue-300'} ${buttonStyle}`}>
+                          <button onClick={() => toggleAdmin(u)} className={`px-3 py-2 rounded-lg font-black text-[10px] uppercase ${u.is_system_admin ? 'bg-gray-900 text-white' : 'bg-blue-400 text-gray-900'} ${buttonStyle}`}>
                             {u.is_system_admin ? '- Staff' : '+ Staff'}
                           </button>
                           {u.stato_account !== 'bannato' ? (
                             <button onClick={() => changeAccountStatus(u, 'bannato')} className={`px-3 py-2 rounded-lg font-black text-[10px] uppercase bg-red-500 text-white ${buttonStyle}`}>🚫</button>
                           ) : (
-                            <button onClick={() => changeAccountStatus(u, 'attivo')} className={`px-3 py-2 rounded-lg font-black text-[10px] uppercase bg-green-400 ${buttonStyle}`}>Sblocca</button>
+                            <button onClick={() => changeAccountStatus(u, 'attivo')} className={`px-3 py-2 rounded-lg font-black text-[10px] uppercase bg-green-500 text-white ${buttonStyle}`}>Sblocca</button>
                           )}
                         </>
                       )}
@@ -457,7 +490,7 @@ export default function AdminPanel() {
             {filteredUsers.length === 0 && (
               <div className={`${cardStyle} p-8 text-center`}>
                 <span className="text-4xl block mb-2">🔍</span>
-                <p className="font-black text-gray-500 uppercase text-sm">Nessun utente trovato</p>
+                <p className="font-black text-gray-600 uppercase text-sm">Nessun utente trovato</p>
               </div>
             )}
           </div>
@@ -537,19 +570,19 @@ export default function AdminPanel() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <p className="font-black text-gray-900 uppercase text-sm">{p.titolo}</p>
-                    <p className="text-[10px] text-gray-500 font-bold line-clamp-2 mt-1">{p.descrizione}</p>
+                    <p className="text-[10px] text-gray-700 font-bold line-clamp-2 mt-1">{p.descrizione}</p>
                   </div>
                   {p.stato === 'pausa' ? (
-                    <span className="bg-orange-400 text-gray-900 text-[9px] font-black px-2 py-1 rounded-lg uppercase flex-shrink-0">⏸</span>
+                    <span className="bg-orange-500 text-white text-[9px] font-black px-2 py-1 rounded-lg uppercase flex-shrink-0">⏸</span>
                   ) : p.stato === 'chiuso' ? (
                     <span className="bg-gray-700 text-white text-[9px] font-black px-2 py-1 rounded-lg uppercase flex-shrink-0">🔒</span>
                   ) : (
-                    <span className="bg-green-400 text-gray-900 text-[9px] font-black px-2 py-1 rounded-lg uppercase flex-shrink-0">✅</span>
+                    <span className="bg-green-500 text-white text-[9px] font-black px-2 py-1 rounded-lg uppercase flex-shrink-0">✅</span>
                   )}
                 </div>
                 
                 {p.autore && (
-                  <div className="flex items-center gap-2 mt-3 pt-3 border-t-2 border-gray-200">
+                  <div className="flex items-center gap-2 mt-3 pt-3 border-t-2 border-gray-300">
                     <img src={p.autore.avatar_url || '/default-avatar.png'} alt="" className="w-8 h-8 rounded-full object-cover border-2 border-gray-900" />
                     <div>
                       <span className="text-[10px] font-black text-gray-900 uppercase">{p.autore.nome} {p.autore.cognome}</span>
@@ -561,7 +594,7 @@ export default function AdminPanel() {
                 )}
                 
                 <div className="flex gap-2 mt-3">
-                  <button onClick={() => toggleProjectPause(p)} className={`flex-1 px-3 py-2 rounded-lg font-black text-[10px] uppercase bg-white ${buttonStyle}`}>
+                  <button onClick={() => toggleProjectPause(p)} className={`flex-1 px-3 py-2 rounded-lg font-black text-[10px] uppercase bg-white text-gray-900 ${buttonStyle}`}>
                     {p.stato === 'pausa' ? '▶ Riattiva' : '⏸ Pausa'}
                   </button>
                   <button onClick={() => deleteProject(p)} className={`px-4 py-2 rounded-lg font-black text-[10px] uppercase bg-red-500 text-white ${buttonStyle}`}>
@@ -573,7 +606,7 @@ export default function AdminPanel() {
             {filteredProjects.length === 0 && (
               <div className={`${cardStyle} p-8 text-center`}>
                 <span className="text-4xl block mb-2">📁</span>
-                <p className="font-black text-gray-500 uppercase text-sm">Nessun progetto trovato</p>
+                <p className="font-black text-gray-600 uppercase text-sm">Nessun progetto trovato</p>
               </div>
             )}
           </div>
@@ -724,25 +757,25 @@ export default function AdminPanel() {
               <div key={log.id} className={`${cardStyle} p-4`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <span className={`text-[10px] font-black px-2 py-1 rounded-lg uppercase inline-block ${
-                      log.azione.includes('ELIMINA') || log.azione.includes('BAN') ? 'bg-red-400' :
-                      log.azione.includes('SOSPENSIONE') ? 'bg-orange-400' :
-                      log.azione.includes('APPROVAZ') ? 'bg-green-400' : 'bg-gray-200'
+                    <span className={`text-[10px] font-black px-2 py-1 rounded-lg uppercase inline-block text-white ${
+                      log.azione.includes('ELIMINA') || log.azione.includes('BAN') ? 'bg-red-500' :
+                      log.azione.includes('SOSPENSIONE') ? 'bg-orange-500' :
+                      log.azione.includes('APPROVAZ') ? 'bg-green-500' : 'bg-gray-700'
                     }`}>
                       {log.azione}
                     </span>
                     <p className="font-black text-gray-900 uppercase text-sm mt-2">{log.bersaglio}</p>
-                    {log.dettagli && <p className="text-[10px] text-gray-500 font-bold mt-1">{log.dettagli}</p>}
+                    {log.dettagli && <p className="text-[10px] text-gray-700 font-bold mt-1">{log.dettagli}</p>}
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p className="text-[10px] font-black text-gray-900">{new Date(log.created_at).toLocaleDateString('it-IT')}</p>
-                    <p className="text-[9px] text-gray-500">{new Date(log.created_at).toLocaleTimeString('it-IT')}</p>
+                    <p className="text-[9px] text-gray-600 font-bold">{new Date(log.created_at).toLocaleTimeString('it-IT')}</p>
                   </div>
                 </div>
                 {log.studente && (
-                  <div className="flex items-center gap-2 mt-3 pt-3 border-t-2 border-gray-200">
+                  <div className="flex items-center gap-2 mt-3 pt-3 border-t-2 border-gray-300">
                     <img src={log.studente.avatar_url || '/default-avatar.png'} alt="" className="w-6 h-6 rounded-full border border-gray-900" />
-                    <span className="text-[10px] font-bold text-gray-600">{log.studente.nome} {log.studente.cognome}</span>
+                    <span className="text-[10px] font-bold text-gray-800">{log.studente.nome} {log.studente.cognome}</span>
                   </div>
                 )}
               </div>
@@ -750,7 +783,7 @@ export default function AdminPanel() {
             {filteredLogs.length === 0 && (
               <div className={`${cardStyle} p-8 text-center`}>
                 <span className="text-4xl block mb-2">📋</span>
-                <p className="font-black text-gray-500 uppercase text-sm">Nessun log registrato</p>
+                <p className="font-black text-gray-600 uppercase text-sm">Nessun log registrato</p>
               </div>
             )}
           </div>
