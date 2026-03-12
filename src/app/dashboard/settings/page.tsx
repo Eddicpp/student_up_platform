@@ -63,7 +63,7 @@ export default function SettingsPage() {
       if (!user?.id) return
       
       const { data, error } = await (supabase
-        .from('impostazioni_utente' as any)
+        .from('user_settings' as any)
         .select('*')
         .eq('studente_id', user.id)
         .single()) as { data: any; error: any }
@@ -82,7 +82,7 @@ export default function SettingsPage() {
         if (data.tema) setTheme(data.tema)
       } else if (error?.code === 'PGRST116') {
         // No settings found, create default
-        await (supabase as any).from('impostazioni_utente').insert({ studente_id: user.id })
+        await (supabase as any).from('user_settings').insert({ studente_id: user.id })
       }
       
       setLoading(false)
@@ -99,7 +99,7 @@ export default function SettingsPage() {
     setSaving(true)
     
     const { error } = await (supabase as any)
-      .from('impostazioni_utente')
+      .from('user_settings')
       .update({ [key]: value })
       .eq('studente_id', user.id)
 
