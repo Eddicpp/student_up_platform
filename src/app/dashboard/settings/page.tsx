@@ -46,10 +46,10 @@ export default function SettingsPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [deleting, setDeleting] = useState(false)
 
-  // Stili condivisi
-  const cardStyle = "bg-white rounded-xl sm:rounded-2xl border-2 sm:border-3 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] sm:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
-  const buttonStyle = "border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
-  const inputStyle = "w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border-2 border-gray-900 rounded-xl text-gray-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+  // Stili condivisi aggiornati con supporto Dark Mode
+  const cardStyle = "bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl border-2 sm:border-3 border-gray-900 dark:border-gray-100 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.2)] sm:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:sm:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.2)] transition-colors duration-300"
+  const buttonStyle = "border-2 border-gray-900 dark:border-gray-100 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] hover:shadow-none dark:hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+  const inputStyle = "w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white dark:bg-gray-700 border-2 border-gray-900 dark:border-gray-400 rounded-xl text-gray-900 dark:text-white font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-500 transition-colors duration-300"
 
   // Toast notification
   const showToast = (message: string, type: 'success' | 'error') => {
@@ -191,22 +191,22 @@ export default function SettingsPage() {
     }
   }
 
-  // Toggle component
+  // Toggle component aggiornato
   const Toggle = ({ enabled, onChange, disabled = false }: { enabled: boolean; onChange: (val: boolean) => void; disabled?: boolean }) => (
     <button
       onClick={() => !disabled && onChange(!enabled)}
       disabled={disabled}
-      className={`relative w-12 sm:w-14 h-7 sm:h-8 rounded-full border-2 border-gray-900 transition-all ${
-        enabled ? 'bg-green-400' : 'bg-gray-300'
+      className={`relative w-12 sm:w-14 h-7 sm:h-8 rounded-full border-2 border-gray-900 dark:border-gray-100 transition-all ${
+        enabled ? 'bg-green-400 dark:bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
       } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${buttonStyle}`}
     >
-      <div className={`absolute top-0.5 sm:top-1 w-5 h-5 sm:w-5 sm:h-5 bg-white border-2 border-gray-900 rounded-full transition-all ${
+      <div className={`absolute top-0.5 sm:top-1 w-5 h-5 sm:w-5 sm:h-5 bg-white dark:bg-gray-200 border-2 border-gray-900 dark:border-gray-100 rounded-full transition-all ${
         enabled ? 'left-5 sm:left-7' : 'left-0.5 sm:left-1'
       }`} />
     </button>
   )
 
-  // Setting row component
+  // Setting row component aggiornato
   const SettingRow = ({ 
     icon, 
     title, 
@@ -218,12 +218,12 @@ export default function SettingsPage() {
     description?: string
     children: React.ReactNode 
   }) => (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-4 border-b-2 border-gray-200 last:border-0">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-4 border-b-2 border-gray-200 dark:border-gray-700 last:border-0 transition-colors duration-300">
       <div className="flex items-start gap-3">
         <span className="text-xl sm:text-2xl">{icon}</span>
         <div>
-          <p className="font-black text-gray-900 text-sm sm:text-base uppercase tracking-wide">{title}</p>
-          {description && <p className="text-[10px] sm:text-xs text-gray-600 font-bold mt-0.5">{description}</p>}
+          <p className="font-black text-gray-900 dark:text-white text-sm sm:text-base uppercase tracking-wide">{title}</p>
+          {description && <p className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-bold mt-0.5">{description}</p>}
         </div>
       </div>
       <div className="ml-9 sm:ml-0">{children}</div>
@@ -235,32 +235,32 @@ export default function SettingsPage() {
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className={`${cardStyle} p-6 sm:p-10 text-center`}>
           <div className="text-5xl sm:text-6xl animate-bounce mb-4">⚙️</div>
-          <p className="text-gray-900 font-black uppercase tracking-widest text-sm sm:text-lg">Caricamento...</p>
+          <p className="text-gray-900 dark:text-white font-black uppercase tracking-widest text-sm sm:text-lg">Caricamento...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-3 sm:px-4 pb-20">
+    <div className="max-w-3xl mx-auto px-3 sm:px-4 pb-20 dark:text-white transition-colors duration-300">
       
-      {/* Toast Notification */}
+      {/* Toast Notification aggiornato */}
       {toast && (
-        <div className={`fixed top-4 right-4 z-50 px-4 sm:px-6 py-3 sm:py-4 rounded-xl border-2 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-black text-sm uppercase tracking-wide animate-in slide-in-from-top ${
-          toast.type === 'success' ? 'bg-green-400 text-gray-900' : 'bg-red-500 text-white'
+        <div className={`fixed top-4 right-4 z-50 px-4 sm:px-6 py-3 sm:py-4 rounded-xl border-2 border-gray-900 dark:border-gray-100 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)] font-black text-sm uppercase tracking-wide animate-in slide-in-from-top ${
+          toast.type === 'success' ? 'bg-green-400 dark:bg-green-500 text-gray-900 dark:text-white' : 'bg-red-500 dark:bg-red-600 text-white'
         }`}>
           {toast.type === 'success' ? '✅' : '❌'} {toast.message}
         </div>
       )}
 
-      {/* Header */}
-      <div className={`${cardStyle} p-4 sm:p-6 bg-gradient-to-r from-blue-400 to-purple-400 mb-6 sm:mb-8 relative overflow-hidden`}>
+      {/* Header aggiornato */}
+      <div className={`${cardStyle} p-4 sm:p-6 bg-gradient-to-r from-blue-400 to-purple-400 dark:from-blue-600 dark:to-purple-700 mb-6 sm:mb-8 relative overflow-hidden`}>
         <div className="absolute top-[-10px] right-[-10px] text-6xl sm:text-8xl opacity-20 rotate-12">⚙️</div>
         <div className="relative z-10">
-          <h1 className="text-2xl sm:text-4xl font-black uppercase italic tracking-tighter text-gray-900 leading-none">
+          <h1 className="text-2xl sm:text-4xl font-black uppercase italic tracking-tighter text-gray-900 dark:text-white leading-none">
             Impostazioni
           </h1>
-          <p className="text-gray-900 font-bold uppercase text-[10px] sm:text-sm tracking-widest mt-2 bg-white inline-block px-2 sm:px-3 py-1 rounded-lg border-2 border-gray-900">
+          <p className="text-gray-900 dark:text-gray-900 font-bold uppercase text-[10px] sm:text-sm tracking-widest mt-2 bg-white inline-block px-2 sm:px-3 py-1 rounded-lg border-2 border-gray-900">
             Personalizza la tua esperienza
           </p>
         </div>
@@ -270,45 +270,41 @@ export default function SettingsPage() {
 
         {/* 🔒 ACCOUNT & SICUREZZA */}
         <div className={cardStyle}>
-          <div className="bg-red-400 px-4 sm:px-6 py-3 sm:py-4 border-b-2 sm:border-b-3 border-gray-900 rounded-t-xl sm:rounded-t-2xl">
-            <h2 className="font-black text-gray-900 uppercase tracking-widest text-xs sm:text-sm flex items-center gap-2">
+          <div className="bg-red-400 dark:bg-red-600 px-4 sm:px-6 py-3 sm:py-4 border-b-2 sm:border-b-3 border-gray-900 dark:border-gray-100 rounded-t-xl sm:rounded-t-2xl">
+            <h2 className="font-black text-gray-900 dark:text-white uppercase tracking-widest text-xs sm:text-sm flex items-center gap-2">
               <span className="text-lg sm:text-xl">🔒</span> Account & Sicurezza
             </h2>
           </div>
           <div className="p-4 sm:p-6 space-y-1">
             
-            {/* Email (readonly) */}
             <SettingRow icon="📧" title="Email" description="La tua email di accesso">
-              <span className="text-xs sm:text-sm font-bold text-gray-600 bg-gray-100 px-3 py-1.5 rounded-lg border-2 border-gray-300">
+              <span className="text-xs sm:text-sm font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-lg border-2 border-gray-300 dark:border-gray-500">
                 {user?.email}
               </span>
             </SettingRow>
 
-            {/* Change Password */}
             <SettingRow icon="🔑" title="Password" description="Modifica la password del tuo account">
               <button 
                 onClick={() => setShowPasswordModal(true)}
-                className={`px-4 py-2 bg-white rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-wider text-gray-900 ${buttonStyle}`}
+                className={`px-4 py-2 bg-white dark:bg-gray-700 rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-wider text-gray-900 dark:text-white ${buttonStyle}`}
               >
                 Modifica
               </button>
             </SettingRow>
 
-            {/* Logout all devices */}
             <SettingRow icon="📱" title="Sessioni Attive" description="Disconnetti da tutti i dispositivi">
               <button 
                 onClick={handleLogoutAllDevices}
-                className={`px-4 py-2 bg-orange-400 rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-wider text-gray-900 ${buttonStyle}`}
+                className={`px-4 py-2 bg-orange-400 dark:bg-orange-500 rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-wider text-gray-900 dark:text-white ${buttonStyle}`}
               >
                 Logout Ovunque
               </button>
             </SettingRow>
 
-            {/* Delete Account */}
             <SettingRow icon="🗑️" title="Elimina Account" description="Cancella definitivamente il tuo account (GDPR)">
               <button 
                 onClick={() => setShowDeleteModal(true)}
-                className={`px-4 py-2 bg-red-500 rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-wider text-white ${buttonStyle}`}
+                className={`px-4 py-2 bg-red-500 dark:bg-red-600 rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-wider text-white ${buttonStyle}`}
               >
                 Elimina
               </button>
@@ -318,87 +314,51 @@ export default function SettingsPage() {
 
         {/* 🔔 NOTIFICHE */}
         <div className={cardStyle}>
-          <div className="bg-yellow-400 px-4 sm:px-6 py-3 sm:py-4 border-b-2 sm:border-b-3 border-gray-900 rounded-t-xl sm:rounded-t-2xl">
-            <h2 className="font-black text-gray-900 uppercase tracking-widest text-xs sm:text-sm flex items-center gap-2">
+          <div className="bg-yellow-400 dark:bg-yellow-500 px-4 sm:px-6 py-3 sm:py-4 border-b-2 sm:border-b-3 border-gray-900 dark:border-gray-100 rounded-t-xl sm:rounded-t-2xl">
+            <h2 className="font-black text-gray-900 dark:text-gray-900 uppercase tracking-widest text-xs sm:text-sm flex items-center gap-2">
               <span className="text-lg sm:text-xl">🔔</span> Centro Notifiche
             </h2>
           </div>
           <div className="p-4 sm:p-6 space-y-1">
             
-            <SettingRow 
-              icon="📬" 
-              title="Candidature Ricevute" 
-              description="Email quando qualcuno si candida ai tuoi progetti"
-            >
-              <Toggle 
-                enabled={settings.notifica_candidature} 
-                onChange={(val) => saveSetting('notifica_candidature', val)}
-                disabled={saving}
-              />
+            <SettingRow icon="📬" title="Candidature Ricevute" description="Email quando qualcuno si candida ai tuoi progetti">
+              <Toggle enabled={settings.notifica_candidature} onChange={(val) => saveSetting('notifica_candidature', val)} disabled={saving} />
             </SettingRow>
 
-            <SettingRow 
-              icon="📋" 
-              title="Esito Applicazioni" 
-              description="Email quando le tue candidature vengono valutate"
-            >
-              <Toggle 
-                enabled={settings.notifica_esito_applicazioni} 
-                onChange={(val) => saveSetting('notifica_esito_applicazioni', val)}
-                disabled={saving}
-              />
+            <SettingRow icon="📋" title="Esito Applicazioni" description="Email quando le tue candidature vengono valutate">
+              <Toggle enabled={settings.notifica_esito_applicazioni} onChange={(val) => saveSetting('notifica_esito_applicazioni', val)} disabled={saving} />
             </SettingRow>
 
-            <SettingRow 
-              icon="💬" 
-              title="Messaggi Team" 
-              description="Email per messaggi importanti nelle chat di gruppo"
-            >
-              <Toggle 
-                enabled={settings.notifica_messaggi_team} 
-                onChange={(val) => saveSetting('notifica_messaggi_team', val)}
-                disabled={saving}
-              />
+            <SettingRow icon="💬" title="Messaggi Team" description="Email per messaggi importanti nelle chat di gruppo">
+              <Toggle enabled={settings.notifica_messaggi_team} onChange={(val) => saveSetting('notifica_messaggi_team', val)} disabled={saving} />
             </SettingRow>
           </div>
         </div>
 
         {/* 👁️ PRIVACY */}
         <div className={cardStyle}>
-          <div className="bg-green-400 px-4 sm:px-6 py-3 sm:py-4 border-b-2 sm:border-b-3 border-gray-900 rounded-t-xl sm:rounded-t-2xl">
-            <h2 className="font-black text-gray-900 uppercase tracking-widest text-xs sm:text-sm flex items-center gap-2">
+          <div className="bg-green-400 dark:bg-green-600 px-4 sm:px-6 py-3 sm:py-4 border-b-2 sm:border-b-3 border-gray-900 dark:border-gray-100 rounded-t-xl sm:rounded-t-2xl">
+            <h2 className="font-black text-gray-900 dark:text-white uppercase tracking-widest text-xs sm:text-sm flex items-center gap-2">
               <span className="text-lg sm:text-xl">👁️</span> Privacy e Visibilità
             </h2>
           </div>
           <div className="p-4 sm:p-6 space-y-1">
             
-            <SettingRow 
-              icon="🟢" 
-              title="Disponibilità" 
-              description="Mostra se sei disponibile per nuovi progetti"
-            >
+            <SettingRow icon="🟢" title="Disponibilità" description="Mostra se sei disponibile per nuovi progetti">
               <div className="flex items-center gap-2">
-                <span className={`text-[10px] font-black uppercase ${settings.disponibile_progetti ? 'text-green-600' : 'text-gray-500'}`}>
+                <span className={`text-[10px] font-black uppercase ${settings.disponibile_progetti ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
                   {settings.disponibile_progetti ? 'Disponibile' : 'Occupato'}
                 </span>
-                <Toggle 
-                  enabled={settings.disponibile_progetti} 
-                  onChange={(val) => saveSetting('disponibile_progetti', val)}
-                  disabled={saving}
-                />
+                <Toggle enabled={settings.disponibile_progetti} onChange={(val) => saveSetting('disponibile_progetti', val)} disabled={saving} />
               </div>
             </SettingRow>
 
-            <SettingRow 
-              icon="🔐" 
-              title="Visibilità Profilo" 
-              description="Chi può vedere il tuo profilo completo"
-            >
+            <SettingRow icon="🔐" title="Visibilità Profilo" description="Chi può vedere il tuo profilo completo">
               <select
                 value={settings.visibilita_profilo}
                 onChange={(e) => saveSetting('visibilita_profilo', e.target.value)}
                 disabled={saving}
-                className={`px-3 py-2 bg-white rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-wider text-gray-900 cursor-pointer ${buttonStyle}`}
+                className={`px-3 py-2 bg-white dark:bg-gray-700 rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-wider text-gray-900 dark:text-white cursor-pointer ${buttonStyle}`}
               >
                 <option value="pubblico">🌍 Pubblico</option>
                 <option value="solo_team">🔒 Solo Team</option>
@@ -409,18 +369,14 @@ export default function SettingsPage() {
 
         {/* 🎨 INTERFACCIA */}
         <div className={cardStyle}>
-          <div className="bg-purple-400 px-4 sm:px-6 py-3 sm:py-4 border-b-2 sm:border-b-3 border-gray-900 rounded-t-xl sm:rounded-t-2xl">
-            <h2 className="font-black text-gray-900 uppercase tracking-widest text-xs sm:text-sm flex items-center gap-2">
+          <div className="bg-purple-400 dark:bg-purple-600 px-4 sm:px-6 py-3 sm:py-4 border-b-2 sm:border-b-3 border-gray-900 dark:border-gray-100 rounded-t-xl sm:rounded-t-2xl">
+            <h2 className="font-black text-gray-900 dark:text-white uppercase tracking-widest text-xs sm:text-sm flex items-center gap-2">
               <span className="text-lg sm:text-xl">🎨</span> Preferenze Interfaccia
             </h2>
           </div>
           <div className="p-4 sm:p-6 space-y-1">
             
-            <SettingRow 
-              icon="🌓" 
-              title="Tema" 
-              description="Scegli l'aspetto della piattaforma"
-            >
+            <SettingRow icon="🌓" title="Tema" description="Scegli l'aspetto della piattaforma">
               <div className="flex gap-1 sm:gap-2">
                 {[
                   { value: 'light', icon: '☀️', label: 'Chiaro' },
@@ -431,10 +387,10 @@ export default function SettingsPage() {
                     key={opt.value}
                     onClick={() => saveSetting('tema', opt.value)}
                     disabled={saving}
-                    className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg font-black text-[10px] sm:text-xs uppercase border-2 border-gray-900 transition-all ${
+                    className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg font-black text-[10px] sm:text-xs uppercase border-2 border-gray-900 dark:border-gray-100 transition-all ${
                       settings.tema === opt.value 
-                        ? 'bg-gray-900 text-white shadow-none translate-x-[2px] translate-y-[2px]' 
-                        : `bg-white text-gray-900 ${buttonStyle}`
+                        ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-none translate-x-[2px] translate-y-[2px]' 
+                        : `bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${buttonStyle}`
                     }`}
                   >
                     <span className="text-sm sm:text-base">{opt.icon}</span>
@@ -444,16 +400,12 @@ export default function SettingsPage() {
               </div>
             </SettingRow>
 
-            <SettingRow 
-              icon="🌐" 
-              title="Lingua" 
-              description="Lingua dell'interfaccia"
-            >
+            <SettingRow icon="🌐" title="Lingua" description="Lingua dell'interfaccia">
               <select
                 value={settings.lingua}
                 onChange={(e) => saveSetting('lingua', e.target.value)}
                 disabled={saving}
-                className={`px-3 py-2 bg-white rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-wider text-gray-900 cursor-pointer ${buttonStyle}`}
+                className={`px-3 py-2 bg-white dark:bg-gray-700 rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-wider text-gray-900 dark:text-white cursor-pointer ${buttonStyle}`}
               >
                 <option value="it">🇮🇹 Italiano</option>
                 <option value="en">🇬🇧 English</option>
@@ -463,12 +415,12 @@ export default function SettingsPage() {
         </div>
 
         {/* ℹ️ INFO */}
-        <div className={`${cardStyle} p-4 sm:p-6 bg-gray-100`}>
+        <div className={`${cardStyle} p-4 sm:p-6 bg-gray-100 dark:bg-gray-800`}>
           <div className="flex items-center gap-3">
             <span className="text-2xl sm:text-3xl">ℹ️</span>
             <div>
-              <p className="font-black text-gray-900 text-sm sm:text-base uppercase">StudentUP</p>
-              <p className="text-[10px] sm:text-xs text-gray-600 font-bold">Versione 1.0.0 • Made with ❤️ by Eduardo</p>
+              <p className="font-black text-gray-900 dark:text-white text-sm sm:text-base uppercase">StudentUP</p>
+              <p className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-bold">Versione 1.0.0 • Made with ❤️ by Eduardo</p>
             </div>
           </div>
         </div>
@@ -477,15 +429,15 @@ export default function SettingsPage() {
 
       {/* MODAL: Cambio Password */}
       {showPasswordModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
           <div className={`${cardStyle} w-full max-w-md p-4 sm:p-6 animate-in zoom-in-95`}>
             <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h3 className="font-black text-gray-900 uppercase tracking-wider text-sm sm:text-lg flex items-center gap-2">
+              <h3 className="font-black text-gray-900 dark:text-white uppercase tracking-wider text-sm sm:text-lg flex items-center gap-2">
                 <span className="text-xl sm:text-2xl">🔑</span> Cambia Password
               </h3>
               <button 
                 onClick={() => setShowPasswordModal(false)}
-                className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 rounded-full flex items-center justify-center font-black text-gray-900 hover:bg-gray-300 transition-colors"
+                className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center font-black text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
               >
                 ✕
               </button>
@@ -493,7 +445,7 @@ export default function SettingsPage() {
 
             <div className="space-y-3 sm:space-y-4">
               <div>
-                <label className="text-[10px] sm:text-xs font-black text-gray-700 uppercase tracking-wider mb-1 block">Nuova Password</label>
+                <label className="text-[10px] sm:text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1 block">Nuova Password</label>
                 <input
                   type="password"
                   value={passwordData.new}
@@ -503,7 +455,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="text-[10px] sm:text-xs font-black text-gray-700 uppercase tracking-wider mb-1 block">Conferma Password</label>
+                <label className="text-[10px] sm:text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1 block">Conferma Password</label>
                 <input
                   type="password"
                   value={passwordData.confirm}
@@ -516,14 +468,14 @@ export default function SettingsPage() {
               <div className="flex gap-2 sm:gap-3 pt-2">
                 <button
                   onClick={() => setShowPasswordModal(false)}
-                  className={`flex-1 px-4 py-2.5 sm:py-3 bg-gray-200 rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider text-gray-900 ${buttonStyle}`}
+                  className={`flex-1 px-4 py-2.5 sm:py-3 bg-gray-200 dark:bg-gray-700 rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider text-gray-900 dark:text-white ${buttonStyle}`}
                 >
                   Annulla
                 </button>
                 <button
                   onClick={handleChangePassword}
                   disabled={changingPassword || !passwordData.new || !passwordData.confirm}
-                  className={`flex-1 px-4 py-2.5 sm:py-3 bg-green-400 rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider text-gray-900 disabled:opacity-50 ${buttonStyle}`}
+                  className={`flex-1 px-4 py-2.5 sm:py-3 bg-green-400 dark:bg-green-500 rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider text-gray-900 dark:text-white disabled:opacity-50 ${buttonStyle}`}
                 >
                   {changingPassword ? '⏳' : '✅'} Salva
                 </button>
@@ -535,22 +487,22 @@ export default function SettingsPage() {
 
       {/* MODAL: Elimina Account */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
           <div className={`${cardStyle} w-full max-w-md p-4 sm:p-6 animate-in zoom-in-95`}>
             <div className="text-center mb-4 sm:mb-6">
               <span className="text-5xl sm:text-6xl block mb-3">⚠️</span>
-              <h3 className="font-black text-gray-900 uppercase tracking-wider text-lg sm:text-xl">
+              <h3 className="font-black text-gray-900 dark:text-white uppercase tracking-wider text-lg sm:text-xl">
                 Eliminare l'account?
               </h3>
-              <p className="text-xs sm:text-sm text-gray-600 font-bold mt-2">
-                Questa azione è <span className="text-red-500 font-black">IRREVERSIBILE</span>. 
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-bold mt-2">
+                Questa azione è <span className="text-red-500 dark:text-red-400 font-black">IRREVERSIBILE</span>. 
                 Tutti i tuoi dati, progetti e candidature verranno eliminati definitivamente.
               </p>
             </div>
 
             <div className="space-y-3 sm:space-y-4">
               <div>
-                <label className="text-[10px] sm:text-xs font-black text-gray-700 uppercase tracking-wider mb-1 block">
+                <label className="text-[10px] sm:text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1 block">
                   Scrivi "ELIMINA" per confermare
                 </label>
                 <input
@@ -558,7 +510,7 @@ export default function SettingsPage() {
                   value={deleteConfirmText}
                   onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
                   placeholder="ELIMINA"
-                  className={`${inputStyle} ${deleteConfirmText === 'ELIMINA' ? 'border-red-500 bg-red-50' : ''}`}
+                  className={`${inputStyle} ${deleteConfirmText === 'ELIMINA' ? 'border-red-500 dark:border-red-400 bg-red-50 dark:bg-red-900/30' : ''}`}
                 />
               </div>
 
@@ -568,14 +520,14 @@ export default function SettingsPage() {
                     setShowDeleteModal(false)
                     setDeleteConfirmText('')
                   }}
-                  className={`flex-1 px-4 py-2.5 sm:py-3 bg-gray-200 rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider text-gray-900 ${buttonStyle}`}
+                  className={`flex-1 px-4 py-2.5 sm:py-3 bg-gray-200 dark:bg-gray-700 rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider text-gray-900 dark:text-white ${buttonStyle}`}
                 >
                   Annulla
                 </button>
                 <button
                   onClick={handleDeleteAccount}
                   disabled={deleting || deleteConfirmText !== 'ELIMINA'}
-                  className={`flex-1 px-4 py-2.5 sm:py-3 bg-red-500 rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider text-white disabled:opacity-50 ${buttonStyle}`}
+                  className={`flex-1 px-4 py-2.5 sm:py-3 bg-red-500 dark:bg-red-600 rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider text-white disabled:opacity-50 ${buttonStyle}`}
                 >
                   {deleting ? '⏳ Eliminazione...' : '🗑️ Elimina'}
                 </button>
