@@ -10,22 +10,19 @@ import ChatWidget from '@/components/ChatWidget'
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
-  
-  // ✅ NUOVO STATO: Traccia se la chat fluttuante è aperta
+
   const [isChatWidgetOpen, setIsChatWidgetOpen] = useState(false)
 
   const [notifications, setNotifications] = useState<any[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
-  
+
   const notificationRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
-  const pathname = usePathname() 
+  const pathname = usePathname()
   const supabase = createClient()
-  
+
   const { user, loading: userLoading } = useUser()
 
-  // ✅ LOGICA DI CHIUSURA RECIPROCA
-  // Quando apro il menu laterale, se la chat è aperta, la chiudo.
   const handleToggleMenu = () => {
     const newState = !isMenuOpen;
     setIsMenuOpen(newState);
@@ -34,7 +31,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }
 
-  // Quando la chat fluttuante viene aperta, chiudo il menu laterale (se è aperto).
   const handleChatWidgetToggle = (isOpen: boolean) => {
     setIsChatWidgetOpen(isOpen);
     if (isOpen && isMenuOpen) {
@@ -42,14 +38,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }
 
-
   // Chiudi menu con ESC
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsMenuOpen(false)
         setIsNotificationsOpen(false)
-        setIsChatWidgetOpen(false) // Chiude anche la chat
+        setIsChatWidgetOpen(false)
       }
     }
     window.addEventListener('keydown', handleEsc)
@@ -71,7 +66,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     const fetchNotifications = async () => {
       if (!user) return
-      
+
       const { data: notifiche, error } = await supabase
         .from('notifica')
         .select('*')
@@ -102,7 +97,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .update({ letto: true })
         .eq('id', notification.id)
 
-      setNotifications(prev => 
+      setNotifications(prev =>
         prev.map(n => n.id === notification.id ? { ...n, letto: true } : n)
       )
       setUnreadCount(prev => Math.max(0, prev - 1))
@@ -116,7 +111,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const markAllAsRead = async () => {
     if (!user) return
-    
+
     await supabase
       .from('notifica')
       .update({ letto: true })
@@ -160,7 +155,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }
 
-  // Menu items con icone SVG
   const menuItems = [
     {
       href: '/dashboard',
@@ -238,16 +232,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       {/* NAVBAR */}
-      <nav className="fixed top-0 w-full h-16 z-50 bg-white/90 backdrop-blur-xl border-b-2 border-gray-900">
+      <nav className="fixed top-0 w-full h-16 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b-2 border-gray-900 dark:border-gray-700 transition-colors duration-300">
         <div className="h-full px-4 lg:px-6 flex items-center justify-between">
-          
+
           {/* Left: Menu + Logo */}
           <div className="flex items-center gap-4">
-            <button 
-              onClick={handleToggleMenu} // ✅ Usa la nuova funzione
-              className="p-2 hover:bg-gray-100 rounded-xl text-gray-600 hover:text-gray-900 transition-colors border-2 border-transparent hover:border-gray-300"
+            <button
+              onClick={handleToggleMenu}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600"
               aria-label="Menu"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -256,32 +250,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </button>
 
             <Link href="/dashboard" className="flex items-center gap-2 group">
-              <div className="w-9 h-9 bg-gray-900 rounded-xl flex items-center justify-center border-2 border-gray-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] group-hover:shadow-none group-hover:translate-x-[2px] group-hover:translate-y-[2px] transition-all">
-                <span className="text-white font-black text-sm italic">S</span>
+              <div className="w-9 h-9 bg-gray-900 dark:bg-white rounded-xl flex items-center justify-center border-2 border-gray-700 dark:border-gray-300 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] group-hover:shadow-none group-hover:translate-x-[2px] group-hover:translate-y-[2px] transition-all">
+                <span className="text-white dark:text-gray-900 font-black text-sm italic">S</span>
               </div>
-              <span className="font-black text-gray-900 hidden sm:block">StudentUP</span>
+              <span className="font-black text-gray-900 dark:text-white hidden sm:block">StudentUP</span>
             </Link>
           </div>
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2">
-            
+
             {/* Notifications */}
             <div className="relative" ref={notificationRef}>
-              <button 
+              <button
                 onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
                 className={`relative w-10 h-10 rounded-xl flex items-center justify-center transition-all border-2 ${
-                  isNotificationsOpen 
-                    ? 'bg-gray-900 text-white border-gray-700' 
-                    : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900 border-transparent hover:border-gray-300'
+                  isNotificationsOpen
+                    ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-700 dark:border-gray-300'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border-transparent hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
-                
+
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white">
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white dark:border-gray-900">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
@@ -289,13 +283,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
               {/* Notifications Dropdown */}
               {isNotificationsOpen && (
-                <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-2xl border-2 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
-                  <div className="p-4 border-b-2 border-gray-200 flex items-center justify-between bg-gray-50">
-                    <h3 className="font-black text-gray-900">🔔 Notifiche</h3>
+                <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-900 dark:border-gray-700 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)] overflow-hidden">
+                  <div className="p-4 border-b-2 border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-900">
+                    <h3 className="font-black text-gray-900 dark:text-white">🔔 Notifiche</h3>
                     {unreadCount > 0 && (
-                      <button 
+                      <button
                         onClick={markAllAsRead}
-                        className="text-xs text-red-600 hover:text-red-700 font-bold transition-colors"
+                        className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-bold transition-colors"
                       >
                         Segna tutte lette
                       </button>
@@ -308,22 +302,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         <button
                           key={notifica.id}
                           onClick={() => handleNotificationClick(notifica)}
-                          className={`w-full p-4 text-left border-b border-gray-100 hover:bg-gray-50 transition-colors flex gap-3 ${
-                            !notifica.letto ? 'bg-red-50/50' : ''
+                          className={`w-full p-4 text-left border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex gap-3 ${
+                            !notifica.letto ? 'bg-red-50/50 dark:bg-red-900/10' : ''
                           }`}
                         >
                           <span className="text-xl flex-shrink-0 mt-0.5">
                             {getNotificationIcon(notifica.tipo)}
                           </span>
-                          
+
                           <div className="flex-1 min-w-0">
                             {notifica.titolo && (
-                              <p className="text-sm font-bold text-gray-900 mb-0.5">{notifica.titolo}</p>
+                              <p className="text-sm font-bold text-gray-900 dark:text-white mb-0.5">{notifica.titolo}</p>
                             )}
-                            <p className={`text-sm leading-relaxed ${!notifica.letto ? 'text-gray-900 font-medium' : 'text-gray-600'}`}>
+                            <p className={`text-sm leading-relaxed ${!notifica.letto ? 'text-gray-900 dark:text-gray-100 font-medium' : 'text-gray-600 dark:text-gray-400'}`}>
                               {notifica.messaggio || notifica.tipo}
                             </p>
-                            <p className="text-xs text-gray-400 mt-1 font-medium">
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 font-medium">
                               {formatTimeAgo(notifica.created_at)}
                             </p>
                           </div>
@@ -336,17 +330,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     ) : (
                       <div className="p-8 text-center">
                         <span className="text-4xl block mb-2">🔔</span>
-                        <p className="text-gray-500 font-bold">Nessuna notifica</p>
+                        <p className="text-gray-500 dark:text-gray-400 font-bold">Nessuna notifica</p>
                       </div>
                     )}
                   </div>
 
                   {notifications.length > 0 && (
-                    <div className="p-3 border-t-2 border-gray-200 bg-gray-50">
-                      <Link 
+                    <div className="p-3 border-t-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                      <Link
                         href="/dashboard/notifications"
                         onClick={() => setIsNotificationsOpen(false)}
-                        className="block text-center text-sm text-gray-600 hover:text-gray-900 font-bold transition-colors"
+                        className="block text-center text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-bold transition-colors"
                       >
                         Vedi tutte →
                       </Link>
@@ -356,19 +350,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               )}
             </div>
 
-            {/* Avatar - Solo foto profilo */}
-            <Link 
-              href="/dashboard/profile" 
-              className="w-10 h-10 rounded-xl overflow-hidden border-2 border-gray-900 hover:border-gray-700 transition-all hover:scale-105 flex-shrink-0 relative"
+            {/* Avatar */}
+            <Link
+              href="/dashboard/profile"
+              className="w-10 h-10 rounded-xl overflow-hidden border-2 border-gray-900 dark:border-gray-600 hover:border-gray-700 dark:hover:border-gray-400 transition-all hover:scale-105 flex-shrink-0 relative"
             >
               {user ? (
-                <img 
-                  src={user.avatar_url || '/default-avatar.png'} 
+                <img
+                  src={user.avatar_url || '/default-avatar.png'}
                   alt="Profilo"
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-gray-200 animate-pulse" />
+                <div className="w-full h-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
               )}
             </Link>
           </div>
@@ -378,31 +372,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* SIDEBAR */}
       <div className={`fixed inset-0 z-40 transition-all duration-300 ${isMenuOpen ? 'visible' : 'invisible'}`}>
         {/* Overlay */}
-        <div 
-          className={`absolute inset-0 bg-black/30 backdrop-blur-sm transition-opacity duration-300 ${
+        <div
+          className={`absolute inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
             isMenuOpen ? 'opacity-100' : 'opacity-0'
           }`}
           onClick={() => setIsMenuOpen(false)}
         />
-        
+
         {/* Panel */}
         <div className={`
-          absolute left-0 top-0 h-full w-72 bg-white border-r-2 border-gray-900 shadow-[4px_0px_0px_0px_rgba(0,0,0,1)] flex flex-col
+          absolute left-0 top-0 h-full w-72 bg-white dark:bg-gray-900 border-r-2 border-gray-900 dark:border-gray-700 shadow-[4px_0px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_0px_0px_0px_rgba(255,255,255,0.05)] flex flex-col
           transition-transform duration-300 ease-out
           ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}
         `}>
           {/* Header */}
-          <div className="p-4 border-b-2 border-gray-900 bg-gray-50">
+          <div className="p-4 border-b-2 border-gray-900 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gray-900 rounded-xl flex items-center justify-center">
-                  <span className="text-white font-black text-sm italic">S</span>
+                <div className="w-8 h-8 bg-gray-900 dark:bg-white rounded-xl flex items-center justify-center">
+                  <span className="text-white dark:text-gray-900 font-black text-sm italic">S</span>
                 </div>
-                <span className="font-black text-gray-900">StudentUP</span>
+                <span className="font-black text-gray-900 dark:text-white">StudentUP</span>
               </div>
-              <button 
+              <button
                 onClick={() => setIsMenuOpen(false)}
-                className="p-2 hover:bg-gray-200 rounded-xl text-gray-600 hover:text-gray-900 transition-colors border-2 border-transparent hover:border-gray-300"
+                className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -414,30 +408,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* User Card */}
           <div className="px-4 py-3">
             {user ? (
-              <Link 
-                href="/dashboard/profile" 
+              <Link
+                href="/dashboard/profile"
                 onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-3 p-3 rounded-xl border-2 border-gray-200 hover:border-gray-900 bg-white transition-all"
+                className="flex items-center gap-3 p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-gray-900 dark:hover:border-gray-400 bg-white dark:bg-gray-800 transition-all"
               >
-                <img 
-                  src={user.avatar_url || '/default-avatar.png'} 
+                <img
+                  src={user.avatar_url || '/default-avatar.png'}
                   alt=""
-                  className="w-10 h-10 rounded-xl object-cover border-2 border-gray-900"
+                  className="w-10 h-10 rounded-xl object-cover border-2 border-gray-900 dark:border-gray-600"
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="font-bold text-gray-900 text-sm truncate">
+                    <p className="font-bold text-gray-900 dark:text-white text-sm truncate">
                       {user.nome} {user.cognome}
                     </p>
                   </div>
-                  
+
                   <div className="flex items-center gap-2 mt-0.5">
                     {user.is_system_admin && (
-                      <span className="bg-black text-white text-[10px] px-2 py-0.5 rounded-md font-black uppercase tracking-widest shadow-sm">
+                      <span className="bg-black dark:bg-white text-white dark:text-black text-[10px] px-2 py-0.5 rounded-md font-black uppercase tracking-widest shadow-sm">
                         STAFF
                       </span>
                     )}
-                    <p className="text-xs text-gray-500 font-medium">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                       Vedi profilo →
                     </p>
                   </div>
@@ -445,10 +439,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </Link>
             ) : (
               <div className="flex items-center gap-3 p-3">
-                <div className="w-10 h-10 rounded-xl bg-gray-200 animate-pulse" />
+                <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-gray-700 animate-pulse" />
                 <div className="flex-1">
-                  <div className="w-24 h-4 bg-gray-200 rounded animate-pulse mb-1" />
-                  <div className="w-16 h-3 bg-gray-200 rounded animate-pulse" />
+                  <div className="w-24 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-1" />
+                  <div className="w-16 h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
                 </div>
               </div>
             )}
@@ -464,10 +458,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 className={`
                   flex items-center gap-3 px-3 py-3 rounded-xl font-bold text-sm transition-all border-2
                   ${isActive(item.href)
-                    ? 'bg-gray-900 text-white border-gray-700'
+                    ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-700 dark:border-gray-300'
                     : item.highlight
                       ? 'bg-red-600 text-white border-red-700 hover:bg-red-700'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 border-transparent hover:border-gray-300'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white border-transparent hover:border-gray-300 dark:hover:border-gray-600'
                   }
                 `}
               >
@@ -476,7 +470,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </Link>
             ))}
 
-            <div className="h-0.5 bg-gray-200 my-3" />
+            <div className="h-0.5 bg-gray-200 dark:bg-gray-700 my-3" />
 
             {secondaryItems.map((item) => (
               <Link
@@ -486,8 +480,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 className={`
                   flex items-center gap-3 px-3 py-3 rounded-xl font-bold text-sm transition-all border-2
                   ${isActive(item.href)
-                    ? 'bg-gray-900 text-white border-gray-700'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 border-transparent hover:border-gray-300'
+                    ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-700 dark:border-gray-300'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white border-transparent hover:border-gray-300 dark:hover:border-gray-600'
                   }
                 `}
               >
@@ -504,7 +498,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {/* Admin Link */}
             {user?.is_system_admin && (
               <>
-                <div className="h-0.5 bg-gray-200 my-3" />
+                <div className="h-0.5 bg-gray-200 dark:bg-gray-700 my-3" />
                 <Link
                   href="/dashboard/admin"
                   onClick={() => setIsMenuOpen(false)}
@@ -519,8 +513,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </>
             )}
 
-            <div className="h-0.5 bg-gray-200 my-3" />
-            
+            <div className="h-0.5 bg-gray-200 dark:bg-gray-700 my-3" />
+
             {/* Credits */}
             <Link
               href="/dashboard/credits"
@@ -528,8 +522,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               className={`
                 flex items-center gap-3 px-3 py-3 rounded-xl font-bold text-sm transition-all border-2
                 ${isActive('/dashboard/credits')
-                  ? 'bg-gray-900 text-white border-gray-700'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 border-transparent hover:border-gray-300'
+                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-700 dark:border-gray-300'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white border-transparent hover:border-gray-300 dark:hover:border-gray-600'
                 }
               `}
             >
@@ -546,8 +540,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               className={`
                 flex items-center gap-3 px-3 py-3 rounded-xl font-bold text-sm transition-all border-2
                 ${isActive('/dashboard/settings')
-                  ? 'bg-gray-900 text-white border-gray-700'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 border-transparent hover:border-gray-300'
+                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-700 dark:border-gray-300'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white border-transparent hover:border-gray-300 dark:hover:border-gray-600'
                 }
               `}
             >
@@ -559,9 +553,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Link>
 
             {/* Logout */}
-            <button 
+            <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-3 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-red-50 hover:text-red-600 transition-all border-2 border-transparent hover:border-red-300"
+              className="w-full flex items-center gap-3 px-3 py-3 rounded-xl font-bold text-sm text-gray-600 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-all border-2 border-transparent hover:border-red-300 dark:hover:border-red-700"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -571,8 +565,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </nav>
 
           {/* Footer */}
-          <div className="p-4 border-t-2 border-gray-200 bg-gray-50">
-            <p className="text-[11px] text-gray-500 text-center font-bold">
+          <div className="p-4 border-t-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 text-center font-bold">
               StudentUP v1.0 • Made with ❤️ in Italy
             </p>
           </div>
@@ -586,11 +580,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </main>
 
-      {/* ✅ CHAT WIDGET - Nascosto su mobile (hidden md:block), riceve prop per comunicazione bidirezionale */}
       <div className="hidden md:block">
-        <ChatWidget 
-          isOpen={isChatWidgetOpen} 
-          onToggle={handleChatWidgetToggle} 
+        <ChatWidget
+          isOpen={isChatWidgetOpen}
+          onToggle={handleChatWidgetToggle}
         />
       </div>
     </div>
