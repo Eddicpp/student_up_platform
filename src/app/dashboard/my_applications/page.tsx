@@ -173,7 +173,7 @@ export default function MyApplicationsPage() {
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl sm:text-6xl animate-bounce mb-4">📨</div>
-          <p className="text-gray-900 font-black uppercase tracking-widest text-sm sm:text-base">Caricamento...</p>
+          <p className="text-gray-900 dark:text-white font-black uppercase tracking-widest text-sm sm:text-base">Caricamento...</p>
         </div>
       </div>
     )
@@ -202,26 +202,26 @@ export default function MyApplicationsPage() {
       {/* MODAL MODIFICA */}
       {editingApp && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl sm:rounded-3xl border-3 sm:border-4 border-gray-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] w-full max-w-lg p-5 sm:p-8">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl border-3 sm:border-4 border-gray-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] w-full max-w-lg p-5 sm:p-8">
             <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h3 className="text-lg sm:text-2xl font-black text-gray-900 uppercase">✏️ Modifica Candidatura</h3>
-              <button 
+              <h3 className="text-lg sm:text-2xl font-black text-gray-900 dark:text-white uppercase">✏️ Modifica Candidatura</h3>
+              <button
                 onClick={() => { setEditingApp(null); setEditMessage(''); setEditRole(''); }}
-                className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 hover:bg-gray-300 rounded-lg sm:rounded-xl border-2 border-gray-900 flex items-center justify-center font-black text-gray-900 transition-colors"
+                className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg sm:rounded-xl border-2 border-gray-900 flex items-center justify-center font-black text-gray-900 dark:text-white transition-colors"
               >
                 ×
               </button>
             </div>
             
-            <p className="text-xs sm:text-sm font-bold text-gray-600 mb-2 uppercase">Progetto:</p>
-            <p className="text-base sm:text-lg font-black text-gray-900 mb-4 sm:mb-6">{editingApp.bando?.titolo}</p>
-            
+            <p className="text-xs sm:text-sm font-bold text-gray-600 dark:text-gray-400 mb-2 uppercase">Progetto:</p>
+            <p className="text-base sm:text-lg font-black text-gray-900 dark:text-white mb-4 sm:mb-6">{editingApp.bando?.titolo}</p>
+
             {/* ✅ NUOVA TENDINA PER LA SELEZIONE DEL RUOLO */}
-            <label className="block text-xs sm:text-sm font-black text-gray-900 mb-2 uppercase">🎯 Ruolo per cui ti candidi</label>
+            <label className="block text-xs sm:text-sm font-black text-gray-900 dark:text-white mb-2 uppercase">🎯 Ruolo per cui ti candidi</label>
             <select
               value={editRole}
               onChange={(e) => setEditRole(e.target.value)}
-              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 mb-4 sm:mb-6 bg-gray-50 rounded-lg sm:rounded-xl border-2 sm:border-3 border-gray-900 focus:border-blue-500 focus:ring-0 outline-none font-bold text-gray-900 text-sm sm:text-base shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] focus:shadow-none focus:translate-x-[3px] focus:translate-y-[3px] transition-all cursor-pointer appearance-none"
+              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 mb-4 sm:mb-6 bg-gray-50 dark:bg-gray-700 rounded-lg sm:rounded-xl border-2 sm:border-3 border-gray-900 focus:border-blue-500 focus:ring-0 outline-none font-bold text-gray-900 dark:text-white text-sm sm:text-base shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] focus:shadow-none focus:translate-x-[3px] focus:translate-y-[3px] transition-all cursor-pointer appearance-none"
             >
               <option value="">-- Seleziona un ruolo --</option>
               {/* Estraiamo in automatico le figure ricercate scritte dal creatore del bando */}
@@ -236,19 +236,19 @@ export default function MyApplicationsPage() {
               <option value="Candidatura Spontanea / Altro">Candidatura Spontanea / Altro</option>
             </select>
 
-            <label className="block text-xs sm:text-sm font-black text-gray-900 mb-2 uppercase">📝 Messaggio al Team</label>
+            <label className="block text-xs sm:text-sm font-black text-gray-900 dark:text-white mb-2 uppercase">📝 Messaggio al Team</label>
             <textarea
               value={editMessage}
               onChange={(e) => setEditMessage(e.target.value)}
               placeholder="Perché sei la persona giusta per questo progetto?..."
               rows={4}
-              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 rounded-lg sm:rounded-xl border-2 sm:border-3 border-gray-900 focus:border-blue-500 focus:ring-0 outline-none font-bold text-gray-900 text-sm sm:text-base placeholder:text-gray-400 resize-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] focus:shadow-none focus:translate-x-[3px] focus:translate-y-[3px] transition-all"
+              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 dark:bg-gray-700 rounded-lg sm:rounded-xl border-2 sm:border-3 border-gray-900 focus:border-blue-500 focus:ring-0 outline-none font-bold text-gray-900 dark:text-white text-sm sm:text-base placeholder:text-gray-400 resize-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] focus:shadow-none focus:translate-x-[3px] focus:translate-y-[3px] transition-all"
             />
             
             <div className="flex gap-3 mt-4 sm:mt-6">
               <button
                 onClick={() => { setEditingApp(null); setEditMessage(''); setEditRole(''); }}
-                className="flex-1 py-2.5 sm:py-3 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg sm:rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider border-2 sm:border-3 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
+                className="flex-1 py-2.5 sm:py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg sm:rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider border-2 sm:border-3 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
               >
                 Annulla
               </button>
@@ -267,20 +267,20 @@ export default function MyApplicationsPage() {
       {/* MODAL ELIMINA */}
       {deletingApp && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl sm:rounded-3xl border-3 sm:border-4 border-gray-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] w-full max-w-md p-5 sm:p-8 text-center">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl border-3 sm:border-4 border-gray-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] w-full max-w-md p-5 sm:p-8 text-center">
             <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 rounded-2xl bg-red-100 border-3 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center">
               <span className="text-3xl sm:text-4xl">🗑️</span>
             </div>
             
-            <h3 className="text-lg sm:text-2xl font-black text-gray-900 uppercase mb-2">Eliminare Candidatura?</h3>
-            <p className="text-xs sm:text-sm font-bold text-gray-600 mb-4 sm:mb-6">
-              Stai per eliminare la candidatura per "<span className="text-gray-900">{deletingApp.bando?.titolo}</span>". Questa azione non può essere annullata!
+            <h3 className="text-lg sm:text-2xl font-black text-gray-900 dark:text-white uppercase mb-2">Eliminare Candidatura?</h3>
+            <p className="text-xs sm:text-sm font-bold text-gray-600 dark:text-gray-400 mb-4 sm:mb-6">
+              Stai per eliminare la candidatura per "<span className="text-gray-900 dark:text-white">{deletingApp.bando?.titolo}</span>". Questa azione non può essere annullata!
             </p>
             
             <div className="flex gap-3">
               <button
                 onClick={() => setDeletingApp(null)}
-                className="flex-1 py-2.5 sm:py-3 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg sm:rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider border-2 sm:border-3 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
+                className="flex-1 py-2.5 sm:py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg sm:rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider border-2 sm:border-3 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
               >
                 Annulla
               </button>
@@ -298,9 +298,9 @@ export default function MyApplicationsPage() {
 
       {/* HEADER */}
       <div className="mb-6 sm:mb-10 pt-4 sm:pt-6">
-        <Link 
-          href="/dashboard" 
-          className="mb-4 sm:mb-6 inline-flex items-center gap-1.5 sm:gap-2 bg-white text-gray-900 font-black text-[10px] sm:text-xs uppercase tracking-widest px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+        <Link
+          href="/dashboard"
+          className="mb-4 sm:mb-6 inline-flex items-center gap-1.5 sm:gap-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-black text-[10px] sm:text-xs uppercase tracking-widest px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
         >
           <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -308,10 +308,10 @@ export default function MyApplicationsPage() {
           Bacheca
         </Link>
         
-        <h1 className="text-2xl sm:text-5xl lg:text-6xl font-black text-gray-900 uppercase italic tracking-tighter leading-none">
+        <h1 className="text-2xl sm:text-5xl lg:text-6xl font-black text-gray-900 dark:text-white uppercase italic tracking-tighter leading-none">
           Le Mie <span className="text-red-600">Candidature</span>
         </h1>
-        <p className="text-gray-600 mt-2 sm:mt-3 font-bold text-xs sm:text-base">
+        <p className="text-gray-600 dark:text-gray-400 mt-2 sm:mt-3 font-bold text-xs sm:text-base">
           Monitora lo stato delle tue richieste
         </p>
       </div>
@@ -321,13 +321,13 @@ export default function MyApplicationsPage() {
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
           
           <div className="overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 sm:pb-0">
-            <div className="bg-white border-2 sm:border-3 border-gray-900 rounded-xl sm:rounded-2xl p-1 sm:p-1.5 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] inline-flex gap-0.5 sm:gap-1 min-w-max">
+            <div className="bg-white dark:bg-gray-800 border-2 sm:border-3 border-gray-900 rounded-xl sm:rounded-2xl p-1 sm:p-1.5 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] inline-flex gap-0.5 sm:gap-1 min-w-max">
               {filterConfig.map((filter) => (
                 <button 
                   key={filter.id}
                   onClick={() => setStatusFilter(filter.id as any)} 
                   className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl font-black text-[9px] sm:text-xs uppercase tracking-wider transition-all whitespace-nowrap ${
-                    statusFilter === filter.id ? 'bg-gray-900 text-white' : 'bg-transparent text-gray-600 hover:bg-gray-100'
+                    statusFilter === filter.id ? 'bg-gray-900 text-white' : 'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                 >
                   <span className="text-xs sm:text-base">{filter.icon}</span>

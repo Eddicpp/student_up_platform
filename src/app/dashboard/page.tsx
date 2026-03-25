@@ -138,7 +138,7 @@ function DashboardContent() {
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl sm:text-6xl animate-bounce mb-4">🚀</div>
-          <p className="text-gray-900 font-black uppercase tracking-widest text-sm sm:text-base">Caricamento...</p>
+          <p className="text-gray-900 dark:text-white font-black uppercase tracking-widest text-sm sm:text-base">Caricamento...</p>
         </div>
       </div>
     )
@@ -165,18 +165,18 @@ function DashboardContent() {
           
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 sm:gap-6">
             <div>
-              <h1 className="text-2xl sm:text-5xl lg:text-6xl font-black text-gray-900 tracking-tighter uppercase italic leading-none">
+              <h1 className="text-2xl sm:text-5xl lg:text-6xl font-black text-gray-900 dark:text-white tracking-tighter uppercase italic leading-none">
                 Bacheca <span className="text-red-600">Progetti</span>
               </h1>
-              <p className="text-gray-600 mt-2 sm:mt-4 max-w-lg font-bold text-xs sm:text-base leading-tight">
+              <p className="text-gray-600 dark:text-gray-400 mt-2 sm:mt-4 max-w-lg font-bold text-xs sm:text-base leading-tight">
                 Esplora i progetti aperti e trova il team perfetto.
               </p>
               
               {/* Stats badges - compatti */}
               <div className="flex flex-wrap gap-2 mt-3 sm:mt-6">
-                <div className="flex items-center gap-1.5 bg-white border-2 border-gray-900 rounded-lg sm:rounded-xl px-2 sm:px-4 py-1 sm:py-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                <div className="flex items-center gap-1.5 bg-white dark:bg-gray-800 border-2 border-gray-900 rounded-lg sm:rounded-xl px-2 sm:px-4 py-1 sm:py-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                   <span className="w-2 h-2 sm:w-3 sm:h-3 bg-green-500 border border-gray-900 rounded-full animate-pulse" />
-                  <span className="text-[10px] sm:text-sm font-black text-gray-900 uppercase">{totalProjects} progetti</span>
+                  <span className="text-[10px] sm:text-sm font-black text-gray-900 dark:text-white uppercase">{totalProjects} progetti</span>
                 </div>
                 {myProjects > 0 && (
                   <div className="flex items-center gap-1.5 bg-amber-300 border-2 border-gray-900 rounded-lg sm:rounded-xl px-2 sm:px-4 py-1 sm:py-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
@@ -218,12 +218,12 @@ function DashboardContent() {
               placeholder="Cerca progetti..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 sm:pl-12 pr-9 sm:pr-12 py-2.5 sm:py-3 bg-white border-2 sm:border-3 border-gray-900 rounded-xl text-gray-900 font-bold text-sm sm:text-base placeholder:text-gray-500 placeholder:font-bold shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none focus:shadow-none focus:translate-x-[3px] focus:translate-y-[3px] transition-all"
+              className="w-full pl-9 sm:pl-12 pr-9 sm:pr-12 py-2.5 sm:py-3 bg-white dark:bg-gray-700 border-2 sm:border-3 border-gray-900 rounded-xl text-gray-900 dark:text-white font-bold text-sm sm:text-base placeholder:text-gray-500 dark:placeholder:text-gray-400 placeholder:font-bold shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none focus:shadow-none focus:translate-x-[3px] focus:translate-y-[3px] transition-all"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 text-gray-900 hover:bg-gray-200 p-1 rounded-lg transition-colors z-10"
+                className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700 p-1 rounded-lg transition-colors z-10"
               >
                 <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -236,7 +236,7 @@ function DashboardContent() {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
-            className="px-2 sm:px-4 py-2.5 sm:py-3 bg-white rounded-xl border-2 sm:border-3 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] outline-none text-xs sm:text-sm font-black text-gray-900 uppercase cursor-pointer focus:shadow-none focus:translate-x-[3px] focus:translate-y-[3px] transition-all appearance-none"
+            className="px-2 sm:px-4 py-2.5 sm:py-3 bg-white dark:bg-gray-700 rounded-xl border-2 sm:border-3 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] outline-none text-xs sm:text-sm font-black text-gray-900 dark:text-white uppercase cursor-pointer focus:shadow-none focus:translate-x-[3px] focus:translate-y-[3px] transition-all appearance-none"
             style={{ 
               backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='black' stroke-width='3'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, 
               backgroundPosition: 'right 0.5rem center', 
@@ -253,7 +253,7 @@ function DashboardContent() {
         </div>
 
         {/* Filter Tabs - ELEGANTE E COMPATTO */}
-        <div className="bg-white border-2 sm:border-3 border-gray-900 rounded-xl sm:rounded-2xl p-1 sm:p-1.5 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] inline-flex gap-1">
+        <div className="bg-white dark:bg-gray-800 border-2 sm:border-3 border-gray-900 rounded-xl sm:rounded-2xl p-1 sm:p-1.5 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] inline-flex gap-1">
           {[
             { id: 'tutti', label: 'Tutti', icon: '📋', mobileLabel: '📋' },
             { id: 'miei', label: 'I miei', icon: '👑', mobileLabel: '👑' },
@@ -266,16 +266,16 @@ function DashboardContent() {
               className={`relative flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-wider transition-all ${
                 filterTab === tab.id
                   ? 'bg-gray-900 text-white'
-                  : 'bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  : 'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
               <span className="text-sm sm:text-base">{tab.icon}</span>
               <span className="hidden sm:inline">{tab.label}</span>
               {counts[tab.id as keyof typeof counts] > 0 && (
                 <span className={`ml-0.5 sm:ml-1 px-1.5 sm:px-2 py-0.5 rounded-md text-[8px] sm:text-[10px] font-black ${
-                  filterTab === tab.id 
-                    ? 'bg-red-500 text-white' 
-                    : 'bg-gray-200 text-gray-700'
+                  filterTab === tab.id
+                    ? 'bg-red-500 text-white'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                 }`}>
                   {counts[tab.id as keyof typeof counts]}
                 </span>
@@ -373,7 +373,7 @@ function DashboardContent() {
             >
               <article className={`
                 relative rounded-xl sm:rounded-2xl overflow-hidden border-2 sm:border-3 border-gray-900 transition-all duration-200
-                ${config.cardBg} shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]
+                ${config.cardBg} dark:bg-gray-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]
                 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] sm:hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]
               `}>
                 
@@ -420,11 +420,11 @@ function DashboardContent() {
 
                 {/* Contenuto */}
                 <div className="p-3 sm:p-5">
-                  <h3 className="font-black text-gray-900 text-sm sm:text-lg leading-tight line-clamp-2 mb-2 uppercase group-hover:text-red-600 transition-colors">
+                  <h3 className="font-black text-gray-900 dark:text-white text-sm sm:text-lg leading-tight line-clamp-2 mb-2 uppercase group-hover:text-red-600 transition-colors">
                     {bando.titolo}
                   </h3>
-                  
-                  <p className="text-gray-700 font-bold text-xs sm:text-sm line-clamp-2 mb-3 sm:mb-4">
+
+                  <p className="text-gray-700 dark:text-gray-300 font-bold text-xs sm:text-sm line-clamp-2 mb-3 sm:mb-4">
                     {bando.descrizione}
                   </p>
 
@@ -439,15 +439,15 @@ function DashboardContent() {
                       </span>
                     ))}
                     {bando.bando_interesse?.length > 2 && (
-                      <span className="text-[8px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded font-black uppercase bg-gray-200 text-gray-700 border border-gray-900">
+                      <span className="text-[8px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded font-black uppercase bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-900">
                         +{bando.bando_interesse.length - 2}
                       </span>
                     )}
                   </div>
 
                   {/* Footer */}
-                  <div className="flex items-center justify-between pt-2 sm:pt-3 border-t-2 border-dashed border-gray-200">
-                    <span className="text-[9px] sm:text-xs font-bold text-gray-500 uppercase">
+                  <div className="flex items-center justify-between pt-2 sm:pt-3 border-t-2 border-dashed border-gray-200 dark:border-gray-700">
+                    <span className="text-[9px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">
                       {new Date(bando.data_creazione).toLocaleDateString('it-IT', {
                         day: '2-digit',
                         month: '2-digit'
@@ -473,7 +473,7 @@ function DashboardContent() {
 
       {/* EMPTY STATE */}
       {filteredBandi.length === 0 && (
-        <div className="text-center py-12 sm:py-24 bg-white border-3 sm:border-4 border-gray-900 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] rounded-2xl sm:rounded-3xl mt-6 sm:mt-8">
+        <div className="text-center py-12 sm:py-24 bg-white dark:bg-gray-800 border-3 sm:border-4 border-gray-900 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] rounded-2xl sm:rounded-3xl mt-6 sm:mt-8">
           <div className="w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-6 rounded-2xl sm:rounded-3xl bg-blue-100 border-3 sm:border-4 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center -rotate-6">
             {searchQuery ? (
               <span className="text-3xl sm:text-5xl">🕵️‍♂️</span>
@@ -481,10 +481,10 @@ function DashboardContent() {
               <span className="text-3xl sm:text-5xl">🏜️</span>
             )}
           </div>
-          <h3 className="text-xl sm:text-3xl font-black text-gray-900 mb-2 sm:mb-4 uppercase tracking-tight">
+          <h3 className="text-xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2 sm:mb-4 uppercase tracking-tight">
             {searchQuery ? 'Nessun risultato' : 'Nessun progetto'}
           </h3>
-          <p className="text-gray-600 font-bold mb-4 sm:mb-8 max-w-md mx-auto text-sm sm:text-lg leading-tight px-4">
+          <p className="text-gray-600 dark:text-gray-400 font-bold mb-4 sm:mb-8 max-w-md mx-auto text-sm sm:text-lg leading-tight px-4">
             {searchQuery 
               ? `Nessun progetto corrisponde a "${searchQuery}".`
               : 'Sii il primo a creare un progetto!'
@@ -493,7 +493,7 @@ function DashboardContent() {
           {searchQuery ? (
             <button 
               onClick={() => setSearchQuery('')}
-              className="inline-flex items-center gap-2 bg-white text-gray-900 px-4 sm:px-8 py-2.5 sm:py-4 rounded-xl font-black uppercase tracking-widest text-sm sm:text-lg border-3 sm:border-4 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all"
+              className="inline-flex items-center gap-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-4 sm:px-8 py-2.5 sm:py-4 rounded-xl font-black uppercase tracking-widest text-sm sm:text-lg border-3 sm:border-4 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all"
             >
               <svg className="w-4 h-4 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -533,8 +533,8 @@ function DashboardContent() {
 export default function HomePage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-lg sm:text-xl font-black text-red-800 uppercase tracking-widest animate-pulse border-3 sm:border-4 border-red-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-[4px_4px_0px_0px_rgba(153,27,27,1)] bg-white">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-lg sm:text-xl font-black text-red-800 uppercase tracking-widest animate-pulse border-3 sm:border-4 border-red-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-[4px_4px_0px_0px_rgba(153,27,27,1)] bg-white dark:bg-gray-800">
           ⏳ Caricamento...
         </div>
       </div>

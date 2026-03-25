@@ -231,7 +231,7 @@ export default function MyProjectsPage() {
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center">
           <div className="text-5xl md:text-6xl animate-bounce mb-4">🚀</div>
-          <p className="text-gray-900 font-black uppercase tracking-widest text-sm md:text-base">Caricamento...</p>
+          <p className="text-gray-900 dark:text-white font-black uppercase tracking-widest text-sm md:text-base">Caricamento...</p>
         </div>
       </div>
     )
@@ -244,23 +244,23 @@ export default function MyProjectsPage() {
         <div className="flex items-center gap-3 md:gap-4">
           <button 
             onClick={() => router.push('/dashboard')}
-            className="p-2 md:p-3 bg-white border-2 border-gray-900 rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+            className="p-2 md:p-3 bg-white dark:bg-gray-800 border-2 border-gray-900 rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
           >
-            <svg className="w-5 h-5 md:w-6 md:h-6 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
+            <svg className="w-5 h-5 md:w-6 md:h-6 text-gray-900 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
           <div>
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-gray-900 uppercase italic tracking-tighter leading-none">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-gray-900 dark:text-white uppercase italic tracking-tighter leading-none">
               I Miei <span className="text-red-600">Progetti</span>
             </h1>
-            <p className="text-[10px] md:text-sm font-bold text-gray-600 mt-1 md:mt-2 uppercase tracking-widest">Gestisci le tue collaborazioni</p>
+            <p className="text-[10px] md:text-sm font-bold text-gray-600 dark:text-gray-400 mt-1 md:mt-2 uppercase tracking-widest">Gestisci le tue collaborazioni</p>
           </div>
         </div>
 
         {/* ✅ Barra di Ricerca Ridisegnata */}
         <div className="w-full lg:w-96 flex flex-col">
-          <label className="block text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-900 mb-1.5 ml-1">
+          <label className="block text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-900 dark:text-white mb-1.5 ml-1">
             🔎 Cosa stai cercando?
           </label>
           <div className="relative">
@@ -269,7 +269,7 @@ export default function MyProjectsPage() {
               placeholder="Scrivi una parola chiave..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-2.5 md:py-3 bg-yellow-100 focus:bg-white border-2 md:border-3 border-gray-900 rounded-xl text-gray-900 font-black text-sm md:text-base placeholder:text-gray-700 placeholder:italic shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none focus:translate-x-[3px] focus:translate-y-[3px] focus:shadow-none transition-all"
+              className="w-full pl-12 pr-4 py-2.5 md:py-3 bg-yellow-100 dark:bg-gray-700 focus:bg-white dark:focus:bg-gray-600 border-2 md:border-3 border-gray-900 rounded-xl text-gray-900 dark:text-white font-black text-sm md:text-base placeholder:text-gray-700 placeholder:italic shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none focus:translate-x-[3px] focus:translate-y-[3px] focus:shadow-none transition-all"
             />
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg md:text-xl grayscale opacity-70">🔍</span>
           </div>
@@ -290,9 +290,9 @@ export default function MyProjectsPage() {
           <p className="text-2xl md:text-4xl font-black text-gray-900 leading-none">{counts.membro}</p>
           <p className="text-[10px] md:text-xs text-gray-900 font-black uppercase tracking-widest mt-1 md:mt-2">👤 Membro</p>
         </div>
-        <div className="bg-gray-200 rounded-xl md:rounded-2xl p-3 md:p-5 border-2 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-transform">
-          <p className="text-2xl md:text-4xl font-black text-gray-900 leading-none">{counts.abbandonato}</p>
-          <p className="text-[10px] md:text-xs text-gray-900 font-black uppercase tracking-widest mt-1 md:mt-2">💀 Abbandonati</p>
+        <div className="bg-gray-200 dark:bg-gray-700 rounded-xl md:rounded-2xl p-3 md:p-5 border-2 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-transform">
+          <p className="text-2xl md:text-4xl font-black text-gray-900 dark:text-white leading-none">{counts.abbandonato}</p>
+          <p className="text-[10px] md:text-xs text-gray-900 dark:text-white font-black uppercase tracking-widest mt-1 md:mt-2">💀 Abbandonati</p>
         </div>
       </div>
 
@@ -305,14 +305,14 @@ export default function MyProjectsPage() {
             className={`flex items-center whitespace-nowrap snap-start gap-1.5 md:gap-2 px-4 py-2 md:px-5 md:py-3 rounded-xl font-black text-xs md:text-sm uppercase tracking-widest transition-all border-2 border-gray-900 ${
               activeTab === tab.id
                 ? 'bg-gray-900 text-white shadow-[3px_3px_0px_0px_rgba(220,38,38,1)] translate-x-[1px] translate-y-[1px]'
-                : 'bg-white text-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px]'
+                : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px]'
             }`}
           >
             <span className="text-sm md:text-lg">{tab.icon}</span>
             <span>{tab.label}</span>
             {counts[tab.id] > 0 && (
               <span className={`px-1.5 py-0.5 rounded-md text-[9px] md:text-[10px] font-black ${
-                activeTab === tab.id ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-900'
+                activeTab === tab.id ? 'bg-red-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'
               }`}>
                 {counts[tab.id]}
               </span>
@@ -330,7 +330,7 @@ export default function MyProjectsPage() {
           return (
             <div 
               key={project.id}
-              className={`group relative bg-white rounded-xl md:rounded-2xl border-2 border-gray-900 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden transition-all duration-200 hover:-translate-y-1 md:hover:-translate-y-2 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col h-full ${
+              className={`group relative bg-white dark:bg-gray-800 rounded-xl md:rounded-2xl border-2 border-gray-900 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden transition-all duration-200 hover:-translate-y-1 md:hover:-translate-y-2 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col h-full ${
                 isAbandoned ? 'opacity-70 grayscale hover:grayscale-0' : ''
               }`}
             >
@@ -342,7 +342,7 @@ export default function MyProjectsPage() {
                     e.stopPropagation()
                     setOpenMenuId(openMenuId === project.id ? null : project.id)
                   }}
-                  className="p-1.5 md:p-2 bg-white border-2 border-gray-900 rounded-lg md:rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+                  className="p-1.5 md:p-2 bg-white dark:bg-gray-700 border-2 border-gray-900 rounded-lg md:rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
                 >
                   <svg className="w-4 h-4 md:w-5 md:h-5 text-gray-900" fill="currentColor" viewBox="0 0 24 24">
                     <circle cx="12" cy="5" r="2.5" />
@@ -352,13 +352,13 @@ export default function MyProjectsPage() {
                 </button>
 
                 {openMenuId === project.id && (
-                  <div 
-                    className="absolute right-0 top-full mt-2 w-48 md:w-56 bg-white rounded-xl border-2 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] py-2 z-40 overflow-hidden"
+                  <div
+                    className="absolute right-0 top-full mt-2 w-48 md:w-56 bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] py-2 z-40 overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
                       onClick={() => handlePin(project)}
-                      className="w-full px-3 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm font-black text-gray-900 hover:bg-gray-100 flex items-center gap-2 md:gap-3 transition-colors border-b-2 border-transparent hover:border-gray-900"
+                      className="w-full px-3 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm font-black text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 md:gap-3 transition-colors border-b-2 border-transparent hover:border-gray-900"
                     >
                       <span className="text-lg md:text-xl">{project.pinned ? '📌' : '📍'}</span>
                       <span className="uppercase tracking-widest">{project.pinned ? 'Rimuovi pin' : 'Fissa in alto'}</span>
@@ -366,7 +366,7 @@ export default function MyProjectsPage() {
 
                     <button
                       onClick={() => handleMute(project)}
-                      className="w-full px-3 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm font-black text-gray-900 hover:bg-gray-100 flex items-center gap-2 md:gap-3 transition-colors border-b-2 border-transparent hover:border-gray-900"
+                      className="w-full px-3 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm font-black text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 md:gap-3 transition-colors border-b-2 border-transparent hover:border-gray-900"
                     >
                       <span className="text-lg md:text-xl">{project.muted ? '🔔' : '🔕'}</span>
                       <span className="uppercase tracking-widest">{project.muted ? 'Riattiva notif.' : 'Silenzia'}</span>
@@ -378,7 +378,7 @@ export default function MyProjectsPage() {
                         {project.category !== 'abbandonato' ? (
                           <button
                             onClick={() => setConfirmLeave(project.id)}
-                            className="w-full px-3 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm font-black text-red-600 hover:bg-red-50 flex items-center gap-2 md:gap-3 transition-colors"
+                            className="w-full px-3 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm font-black text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 md:gap-3 transition-colors"
                           >
                             <span className="text-lg md:text-xl">🚪</span>
                             <span className="uppercase tracking-widest">Abbandona</span>
@@ -425,9 +425,9 @@ export default function MyProjectsPage() {
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-100 pattern-dots">
-                      <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-white border-2 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center">
-                        <svg className="w-6 h-6 md:w-8 md:h-8 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                    <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-700 pattern-dots">
+                      <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-white dark:bg-gray-600 border-2 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center">
+                        <svg className="w-6 h-6 md:w-8 md:h-8 text-gray-900 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                         </svg>
                       </div>
@@ -443,17 +443,17 @@ export default function MyProjectsPage() {
                   </div>
                 </div>
 
-                <div className="p-4 md:p-6 flex flex-col flex-1 bg-white">
-                  <h3 className="font-black text-gray-900 text-lg md:text-xl leading-tight line-clamp-2 mb-2 md:mb-3 uppercase">
+                <div className="p-4 md:p-6 flex flex-col flex-1 bg-white dark:bg-gray-800">
+                  <h3 className="font-black text-gray-900 dark:text-white text-lg md:text-xl leading-tight line-clamp-2 mb-2 md:mb-3 uppercase">
                     {project.titolo}
                   </h3>
-                  
-                  <p className="text-gray-700 font-medium text-xs md:text-sm line-clamp-2 mb-4 md:mb-6 flex-1">
+
+                  <p className="text-gray-700 dark:text-gray-300 font-medium text-xs md:text-sm line-clamp-2 mb-4 md:mb-6 flex-1">
                     {project.descrizione}
                   </p>
 
-                  <div className="flex items-center justify-between pt-3 md:pt-4 border-t-2 border-dashed border-gray-300 mt-auto">
-                    <span className="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-widest">
+                  <div className="flex items-center justify-between pt-3 md:pt-4 border-t-2 border-dashed border-gray-300 dark:border-gray-600 mt-auto">
+                    <span className="text-[10px] md:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
                       {new Date(project.data_creazione).toLocaleDateString('it-IT', {
                         day: '2-digit', month: '2-digit', year: 'numeric'
                       })}
@@ -477,14 +477,14 @@ export default function MyProjectsPage() {
 
       {/* Empty State */}
       {filteredProjects.length === 0 && (
-        <div className="text-center py-16 md:py-24 bg-white border-4 border-gray-900 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-2xl md:rounded-3xl mt-6 md:mt-8 px-4">
-          <div className="w-20 h-20 md:w-24 md:h-24 mx-auto mb-4 md:mb-6 rounded-2xl md:rounded-3xl bg-gray-100 border-4 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center rotate-3">
+        <div className="text-center py-16 md:py-24 bg-white dark:bg-gray-800 border-4 border-gray-900 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-2xl md:rounded-3xl mt-6 md:mt-8 px-4">
+          <div className="w-20 h-20 md:w-24 md:h-24 mx-auto mb-4 md:mb-6 rounded-2xl md:rounded-3xl bg-gray-100 dark:bg-gray-700 border-4 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center rotate-3">
             <span className="text-4xl md:text-5xl">🕵️‍♂️</span>
           </div>
-          <h3 className="text-2xl md:text-3xl font-black text-gray-900 mb-3 md:mb-4 uppercase tracking-tight">
+          <h3 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white mb-3 md:mb-4 uppercase tracking-tight">
             {searchQuery ? 'Nessun Risultato' : activeTab === 'tutti' ? 'Nessun progetto' : `Nessuno come ${tabs.find(t => t.id === activeTab)?.label}`}
           </h3>
-          <p className="text-sm md:text-base text-gray-600 font-bold mb-6 md:mb-8 max-w-md mx-auto">
+          <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 font-bold mb-6 md:mb-8 max-w-md mx-auto">
             {searchQuery 
               ? 'Non abbiamo trovato progetti con questa ricerca. Prova a usare altre parole!'
               : activeTab === 'proprietario' 
@@ -514,18 +514,18 @@ export default function MyProjectsPage() {
       {/* Modal Conferma Abbandono */}
       {confirmLeave && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl md:rounded-3xl p-6 md:p-8 max-w-md w-full border-4 border-gray-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] animate-in fade-in zoom-in-95">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl p-6 md:p-8 max-w-md w-full border-4 border-gray-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] animate-in fade-in zoom-in-95">
             <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 md:mb-6 rounded-full bg-red-400 border-3 md:border-4 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center -rotate-6">
               <span className="text-3xl md:text-4xl">🚪</span>
             </div>
-            <h3 className="text-xl md:text-2xl font-black text-gray-900 text-center mb-3 md:mb-4 uppercase tracking-tighter">Sicuro di uscire?</h3>
-            <p className="text-sm md:text-base text-gray-700 font-bold text-center mb-6 md:mb-8">
+            <h3 className="text-xl md:text-2xl font-black text-gray-900 dark:text-white text-center mb-3 md:mb-4 uppercase tracking-tighter">Sicuro di uscire?</h3>
+            <p className="text-sm md:text-base text-gray-700 dark:text-gray-300 font-bold text-center mb-6 md:mb-8">
               Abbandonerai il team e non potrai più accedere al workspace. Il progetto rimarrà visibile in bacheca.
             </p>
             <div className="flex gap-3 md:gap-4">
               <button
                 onClick={() => setConfirmLeave(null)}
-                className="flex-1 py-3 md:py-4 rounded-xl font-black text-xs md:text-sm uppercase tracking-widest text-gray-900 bg-white border-3 md:border-4 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
+                className="flex-1 py-3 md:py-4 rounded-xl font-black text-xs md:text-sm uppercase tracking-widest text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-3 md:border-4 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
               >
                 Annulla
               </button>
