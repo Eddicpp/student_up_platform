@@ -81,8 +81,14 @@ export default function SettingsPage() {
         // Sync theme with next-themes
         if (data.tema) setTheme(data.tema)
       } else if (error?.code === 'PGRST116') {
-        // No settings found, create default
-        await (supabase as any).from('user_settings').insert({ studente_id: user.id })
+        // No settings found, create default with upsert
+        const { error: insertError } = await (supabase as any)
+          .from('user_settings')
+          .upsert({ studente_id: user.id }, { onConflict: 'studente_id' })
+        if (insertError) {
+          console.error('Errore creazione impostazioni:', insertError)
+          showToast('Errore nel caricamento delle impostazioni', 'error')
+        }
       }
       
       setLoading(false)
@@ -100,8 +106,7 @@ export default function SettingsPage() {
     
     const { error } = await (supabase as any)
       .from('user_settings')
-      .update({ [key]: value })
-      .eq('studente_id', user.id)
+      .upsert({ studente_id: user.id, [key]: value }, { onConflict: 'studente_id' })
 
     if (error) {
       showToast('Errore nel salvataggio', 'error')
