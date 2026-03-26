@@ -235,30 +235,6 @@ export default function ManageApplicationPage() {
         setTeamMembers(prev => prev.filter(m => m.id !== selectedApp.id))
       }
 
-      // 3. Email (All'indirizzo VERO dello studente)
-      if ((modalAction === 'accepted' || modalAction === 'rejected') && selectedApp.studente?.email) {
-        const emailObject = {
-          to: selectedApp.studente.email,
-          subject: modalAction === 'accepted' 
-            ? `🎉 Sei nel team! Candidatura Accettata per ${project?.titolo || 'il progetto'}` 
-            : `Risposta alla tua candidatura per ${project?.titolo || 'il progetto'}`,
-          message: modalAction === 'accepted'
-            ? `Ottime notizie! Il creatore ha accettato la tua candidatura per il progetto "${project?.titolo || ''}". Entra ora in StudentUP per accedere al Workspace del team e iniziare a collaborare.`
-            : `Ti informiamo che, sfortunatamente, la tua candidatura per il progetto "${project?.titolo || ''}" non è stata selezionata. Non scoraggiarti, ci sono tante altre idee su StudentUP!`,
-          projectName: project?.titolo || 'Progetto StudentUP'
-        }
-
-        const res = await fetch('/api/send-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(emailObject)
-        })
-        
-        if (!res.ok) {
-          console.warn("Errore server email, controlla i log di Vercel/Resend.")
-        }
-      }
-
     } catch (err) {
       console.error("Errore durante l'azione:", err)
       alert("C'è stato un errore nell'aggiornamento. Riprova.")
