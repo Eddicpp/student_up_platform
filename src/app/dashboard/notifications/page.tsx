@@ -56,7 +56,8 @@ export default function NotificationsPage() {
       if (n.bando_id) {
         if (n.tipo === 'candidatura_ricevuta') {
           grouped.miei_progetti.push(n)
-        } else if (n.tipo === 'candidatura_accettata' || n.tipo === 'candidatura_rifiutata') {
+        // Sostituisci la riga 49 attuale con questa:
+        } else if (n.tipo === 'candidatura_accettata' || n.tipo === 'candidatura_rifiutata' || n.tipo === 'candidatura_in_attesa') {
           grouped.candidature.push(n)
         } else {
           grouped.miei_progetti.push(n)
@@ -134,6 +135,8 @@ export default function NotificationsPage() {
         return { icon: '✅', bg: 'bg-green-400', text: 'text-gray-900' }
       case 'candidatura_rifiutata': 
         return { icon: '❌', bg: 'bg-red-400', text: 'text-white' }
+      case 'candidatura_in_attesa': 
+        return { icon: '📬', bg: 'bg-yellow-400', text: 'text-gray-900' }
       case 'nuovo_membro': 
         return { icon: '👋', bg: 'bg-purple-400', text: 'text-gray-900' }
       case 'bando_aggiornato': 

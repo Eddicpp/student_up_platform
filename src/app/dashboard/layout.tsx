@@ -179,6 +179,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       case 'candidatura_rifiutata': return '❌'
       case 'nuovo_membro': return '👋'
       case 'bando_aggiornato': return '📝'
+      case 'esito': return '📬'
       case 'benvenuto': return '🎉'
       case 'messaggio_privato': return '💬'
       default: return '🔔'
