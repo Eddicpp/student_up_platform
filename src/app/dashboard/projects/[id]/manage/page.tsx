@@ -11,6 +11,9 @@ export default function ManageApplicationPage() {
   const bandoId = params?.id as string
   const supabase = createClient()
 
+
+  const [motivazione, setMotivazione] = useState('');
+
   // Stati
   const [project, setProject] = useState<any>(null)
   const [applications, setApplications] = useState<any[]>([])
@@ -211,21 +214,27 @@ export default function ManageApplicationPage() {
     setActionLoading(true)
 
     try {
-      // 1. Aggiorna DB
+      // 1. Prepara i dati da salvare (Include la motivazione se rifiutato)
+      const updateData: any = { stato: modalAction }
+      if (modalAction === 'rejected') {
+        updateData.motivazione = motivazione || null
+      }
+
+      // 2. Aggiorna DB
       const { error } = await supabase
         .from('partecipazione')
-        .update({ stato: modalAction })
+        .update(updateData)
         .eq('id', selectedApp.id)
 
       if (error) throw error;
 
-      // 2. Aggiorna UI
+      // 3. Aggiorna UI
       setApplications(apps => apps.map(app => 
         app.id === selectedApp.id ? { ...app, stato: modalAction } : app
       ))
       setSelectedApp((prev: any) => prev ? ({ ...prev, stato: modalAction }) : null)
       
-      // LOGICA TEAM CORRETTA
+      // LOGICA TEAM
       if (modalAction === 'accepted') {
         setTeamMembers(prev => {
           if (prev.some(m => m.id === selectedApp.id)) return prev;
@@ -242,6 +251,7 @@ export default function ManageApplicationPage() {
       setActionLoading(false)
       setShowModal(false)
       setModalAction(null)
+      setMotivazione('') // Svuota il campo di testo dopo l'uso
     }
   }
   
@@ -700,12 +710,16 @@ export default function ManageApplicationPage() {
                         }`}>
                           {selectedApp.stato === 'accepted' ? '✅ Nel team' : '❌ Rifiutata'}
                         </p>
-                        <button 
-                          onClick={() => { setModalAction('pending'); setShowModal(true) }}
-                          className="text-xs text-gray-500 hover:text-gray-700 font-bold underline"
-                        >
-                          Riporta in attesa
-                        </button>
+                        
+                        {/* BLOCCO MODIFICATO: Mostra il tasto solo se NON è accettato */}
+                        {selectedApp.stato !== 'accepted' && (
+                          <button 
+                            onClick={() => { setModalAction('pending'); setShowModal(true) }}
+                            className="text-xs text-gray-500 hover:text-gray-700 font-bold underline"
+                          >
+                            Riporta in attesa
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1109,6 +1123,21 @@ export default function ManageApplicationPage() {
               {modalAction === 'rejected' && `Rifiutare la candidatura di ${selectedApp?.studente?.nome}?`}
               {modalAction === 'pending' && `Riportare ${selectedApp?.studente?.nome} in attesa?`}
             </p>
+            {/* NUOVO BLOCCO PER LA MOTIVAZIONE */}
+            {modalAction === 'rejected' && (
+              <div className="mb-6 text-left">
+                <label className="block text-sm font-black text-gray-900 mb-2">
+                  Vuoi aggiungere una motivazione? (Opzionale)
+                </label>
+                <textarea
+                  className="w-full p-3 bg-gray-50 text-gray-900 rounded-xl border-2 border-gray-300 focus:border-gray-900 outline-none resize-none font-medium transition-all"
+                  placeholder="Es: Cerchiamo un profilo con maggiore disponibilità oraria..."
+                  value={motivazione}
+                  onChange={(e) => setMotivazione(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            )}
             <div className="flex gap-3">
               <button
                 onClick={() => setShowModal(false)}
