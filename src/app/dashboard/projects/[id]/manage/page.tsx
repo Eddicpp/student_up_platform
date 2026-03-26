@@ -215,7 +215,11 @@ export default function ManageApplicationPage() {
 
     try {
       // 1. Prepara i dati da salvare (Include la motivazione se rifiutato)
-      const updateData: any = { stato: modalAction }
+      const updateData: any = { stato: modalAction } // modalAction deve essere 'pending'
+      if (modalAction === 'pending') {
+        updateData.motivazione = null // Puliamo la vecchia motivazione se torna in attesa
+      }
+
       if (modalAction === 'rejected') {
         updateData.motivazione = motivazione || null
       }
