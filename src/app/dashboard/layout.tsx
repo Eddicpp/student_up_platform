@@ -62,15 +62,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Fetch notifiche
+ // Fetch notifiche con correzione TypeScript 🛡️
   useEffect(() => {
-    const fetchNotifications = async () => {
-      if (!user) return
+    // 1. Guard iniziale: se non c'è l'utente o l'ID, fermati subito
+    if (!user?.id) return
 
+    // 2. Creiamo una costante locale: TypeScript ora sa che userId è una stringa sicura
+    const userId = user.id
+
+    const fetchNotifications = async () => {
       const { data: notifiche, error } = await supabase
         .from('notifica')
         .select('*')
-        .eq('utente_id', user.id)
+        .eq('utente_id', userId) // Usiamo la costante sicura
         .order('created_at', { ascending: false })
         .limit(10)
 
@@ -86,9 +90,35 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
 
     fetchNotifications()
-    const interval = setInterval(fetchNotifications, 30000)
-    return () => clearInterval(interval)
-  }, [supabase, pathname, user])
+
+    // Real-time con filtro sicuro
+    const channel = supabase
+      .channel('notifiche-in-diretta')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifica',
+          filter: `utente_id=eq.${userId}` // Usiamo la costante sicura
+        },
+        (payload) => {
+          setNotifications((prev) => [payload.new, ...prev].slice(0, 10))
+          setUnreadCount((prev) => prev + 1)
+        }
+      )
+      .subscribe()
+
+    const interval = setInterval(fetchNotifications, 60000)
+
+    return () => {
+      clearInterval(interval)
+      supabase.removeChannel(channel)
+    }
+    // Usiamo user?.id come dipendenza per essere precisi
+  }, [supabase, pathname, user?.id])
+
+  
 
   const handleNotificationClick = async (notification: any) => {
     if (!notification.letto) {
